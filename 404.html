@@ -1,0 +1,18 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Redirecting...</title>
+    <script>
+        const pathSegments = window.location.pathname.split('/');
+        const repoName = 'insta_clone'; // Cambia questo con il nome del tuo repository
+        const baseUrl = window.location.origin + 
+                      (pathSegments[1] === repoName ? '/' + repoName : '');
+        window.location.replace(baseUrl + '/#' + window.location.pathname);
+    </script>
+</head>
+<body>
+    <h2>Redirecting...</h2>
+</body>
+</html>

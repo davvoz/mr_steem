@@ -21,7 +21,7 @@ export const routes = {
             setupInfiniteScroll();
         }
     },
-    'explore': { 
+    '/explore': { 
         viewId: 'explore-view',
         handler: async () => {
             hideAllViews();
@@ -31,7 +31,7 @@ export const routes = {
             }
         }
     },
-    'activity': { 
+    '/activity': { 
         viewId: 'activity-view',
         handler: () => {
             hideAllViews();
@@ -39,7 +39,7 @@ export const routes = {
             showLikedPosts();
         }
     },
-    'profile': { 
+    '/profile': { 
         viewId: 'profile-view',
         handler: async () => {
             hideAllViews();
@@ -51,7 +51,7 @@ export const routes = {
             await loadUserProfile(steemConnection.username);
         }
     },
-    'profile/:username': {
+    '/profile/:username': {
         viewId: 'profile-view',
         handler: async (params) => {
             hideAllViews();
@@ -59,7 +59,7 @@ export const routes = {
             await loadUserProfile(params.username);
         }
     },
-    'suggestions': {
+    '/suggestions': {
         viewId: 'suggestions-view',
         handler: async () => {
             hideAllViews();

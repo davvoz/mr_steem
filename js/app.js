@@ -7,10 +7,12 @@ import { checkExistingLogin } from './auth/login-manager.js';
 class App {
     constructor() {
         this.router = null;
+        // Aggiungi configurazione per GitHub Pages
+        this.basePath = location.hostname === 'yourusername.github.io' ? '/your-repo-name' : '';
     }
 
     async init() {
-        this.router = new Router(routes);
+        this.router = new Router(routes, this.basePath);
         
         // Controlla il login esistente prima di tutto
         const isLoggedIn = checkExistingLogin();
