@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SteemGram - Steem Edition</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="./styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/steem/dist/steem.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@hiveio/hive-js/dist/hive.min.js"></script>
@@ -46,10 +46,14 @@
                     <i class="far fa-plus-square"></i>
                     <span>Create</span>
                 </a>
-                <a href="#/profile" class="nav-item nav-profile" data-route="/profile">
+                <a href="#/profile" class="nav-item nav-profile" data-route="/profile" id="profile-link">
                     <div class="nav-profile-image">
                         <img src="https://material.io/resources/icons/static/icons/baseline-account_circle-24px.svg" alt="profile" style="width: 50px;height:50px;">
                     </div>
+                </a>
+                <a href="#" class="nav-item login-link" id="login-link" style="display: none;">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Login</span>
                 </a>
                 <a href="#" class="nav-item" id="theme-toggle">
                     <i class="fas fa-moon"></i>

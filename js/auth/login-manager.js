@@ -67,6 +67,10 @@ export async function handleLogin(username, key) {
             steemConnection.isConnected = true;
             steemConnection.username = username;
             
+            // Update visibility of profile/login buttons
+            document.getElementById('profile-link').style.display = '';
+            document.getElementById('login-link').style.display = 'none';
+            
             // Salva i dati nel sessionStorage
             sessionStorage.setItem('steemUsername', username);
             if (key) {
@@ -97,10 +101,16 @@ export async function handleLogin(username, key) {
 
 export function checkExistingLogin() {
     const username = sessionStorage.getItem('steemUsername');
+    const profileLink = document.getElementById('profile-link');
+    const loginLink = document.getElementById('login-link');
     
     if (username) {
         steemConnection.username = username;
         steemConnection.isConnected = true;
+        
+        // Show profile, hide login
+        profileLink.style.display = '';
+        loginLink.style.display = 'none';
         
         // Carica i dati dell'account per ottenere l'immagine del profilo
         steem.api.getAccountsAsync([username]).then(accounts => {
@@ -114,6 +124,15 @@ export function checkExistingLogin() {
         
         return true;
     }
+
+    // Show login, hide profile
+    profileLink.style.display = 'none';
+    loginLink.style.display = '';
+    loginLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        showLoginModal();
+    });
+
     return false;
 }
 
