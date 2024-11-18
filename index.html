@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base href="." />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SteemGram - Steem Edition</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/steem/dist/steem.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@hiveio/hive-js/dist/hive.min.js"></script>
+    <script type="module"  src="./js/routes/router.js"></script>
+    <script type="module" src="./js/app.js"></script>
+</head>
+<body>
+    
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="logo">SteemGram</div>
+            <div class="nav-menu">
+                <a href="/" class="nav-item" data-route="/">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="/search" class="nav-item" data-route="/search">
+                    <i class="fas fa-search"></i>
+                    <span>Search</span>
+                </a>
+                <!-- <a href="/explore" class="nav-item" data-route="/explore">
+                    <i class="far fa-compass"></i>
+                    <span>Explore</span>
+                </a> -->
+                <!-- <a href="/reels" class="nav-item" data-route="/reels">
+                    <i class="fas fa-film"></i>
+                    <span>Reels</span>
+                </a>
+                <a href="/messages" class="nav-item" data-route="/messages">
+                    <i class="far fa-paper-plane"></i>
+                    <span>Messages</span>
+                </a> -->
+                <a href="/notifications" class="nav-item" data-route="/notifications">
+                    <i class="far fa-heart"></i>
+                    <span>Notifications</span>
+                </a>
+                <a href="/new" class="nav-item" data-route="/new">
+                    <i class="far fa-plus-square"></i>
+                    <span>Create</span>
+                </a>
+                <a href="#/profile" class="nav-item nav-profile" data-route="/profile">
+                    <div class="nav-profile-image">
+                        <img src="https://material.io/resources/icons/static/icons/baseline-account_circle-24px.svg" alt="profile" style="width: 50px;height:50px;">
+                    </div>
+                </a>
+                <a href="#" class="nav-item" id="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                    <span>Dark Mode</span>
+                </a>
+            </div>
+            <div class="nav-footer">
+               
+            </div>
+        </div>
+    </nav>
+    
+
+    
+    <div class="login-modal" id="loginModal">
+        <div class="login-form">
+            <h2>Connect to Steem Blockchain</h2>
+            <div class="steem-info">
+                <p>Using Steem.js v${steem.version} for blockchain integration</p>
+                <p>Documentation: <a href="https://developers.steem.io/resources/client_libs" target="_blank">Steem Developer Portal</a></p>
+            </div>
+            <input type="text" id="steemUsername" placeholder="Steem Username" required>
+            <input type="password" id="steemKey" placeholder="Private Posting Key (optional)">
+            <button id="loginButton">Connect to Steem</button>
+            <div class="steem-info">
+                <small>Your private key is stored securely in session storage and is only used for posting.</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="my-posts-modal" id="myPostsModal">
+        <div class="my-posts-container">
+            <h2>
+                My Posts
+                <span class="close-button" onclick="closeMyPosts()">&times;</span>
+            </h2>
+            <div id="my-posts-list"></div>
+        </div>
+    </div>
+
+    <div class="likes-modal" id="likesModal" onclick="if(event.target === this) closeLikesModal()">
+        <div class="likes-container">
+            <h2>
+                Posts You've Liked
+                <span class="close-button" onclick="closeLikesModal()">&times;</span>
+            </h2>
+            <div id="liked-posts-list"></div>
+        </div>
+    </div>
+    
+    <div class="main-container"  style="    min-width: -webkit-fill-available;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: space-between;
+    justify-content: space-evenly;
+    align-items: flex-start;">
+        <div class="feed">
+            <div id="home-view" class="view">
+                <div class="stories" id="stories-container">
+                    <!-- Stories will be loaded dynamically -->
+                </div>
+                <div class="posts" id="posts-container">
+                    <!-- Posts will be loaded dynamically -->
+                </div>
+            </div>
+
+            <div id="explore-view" class="view" style="display: none;">
+                <div class="posts" id="explore-container">
+                    <!-- Explore content will be loaded dynamically -->
+                </div>
+            </div>
+
+            <div id="activity-view" class="view" style="display: none;">
+                <div id="liked-posts-list">
+                    <!-- Liked posts will be loaded here -->
+                </div>
+            </div>
+
+            <div id="profile-view" class="view" style="display: none;">
+                <div id="user-profile">
+                    <!-- Profile content will be loaded here -->
+                </div>
+                <div id="my-posts-list">
+                    <!-- User's posts will be loaded here -->
+                </div>
+            </div>
+            <div id="suggestions-view" class="view" style="display: none;">
+                <!-- Extended suggestions will be loaded here -->
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div id="user-profile">
+                <!-- Il profilo utente verrà caricato qui dinamicamente -->
+                <div class="login-section" id="login-section">
+                    <h4>Connect to Steem</h4>
+                    <p>Login to follow creators, like photos, and view your profile.</p>
+                    <button id="connect-steem" class="connect-button">Connect to Steem</button>
+                </div>
+            </div>
+            <div class="suggestions" id="suggestions-container">
+                <h4>Suggestions For You</h4>
+                <!-- Suggestions will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+    
+    <div class="new-post-button" onclick="createNewPost()">
+        <i class="fas fa-plus"></i>
+    </div>
+    
+</body>
+</html>
