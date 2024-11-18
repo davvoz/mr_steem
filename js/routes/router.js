@@ -16,22 +16,29 @@ export class Router {
 
     navigate(path) {
         console.log('Router.navigate called with path:', path);
-        window.location.hash = path;
+        // Ensure path starts with # but not with #/
+        const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+        window.location.hash = normalizedPath;
         console.log('Hash set to:', window.location.hash);
     }
 
     async handleRoute() {
-        const hash = window.location.hash.slice(1) || '/';
-        console.log('handleRoute called with hash:', hash);
+        // Normalize the hash by removing leading slash if present
+        let hash = window.location.hash.slice(1);
+        if (!hash) hash = '/';
+        else if (hash.startsWith('/')) hash = hash.slice(1);
+
+        console.log('Normalized hash:', hash);
         
         // Check for dynamic routes first
         for (const [pattern, route] of Object.entries(this.routes)) {
-            if (pattern.includes(':')) {
-                const regex = new RegExp('^' + pattern.replace(/:(\w+)/g, '([^/]+)') + '$');
+            const normalizedPattern = pattern.startsWith('/') ? pattern.slice(1) : pattern;
+            if (normalizedPattern.includes(':')) {
+                const regex = new RegExp('^' + normalizedPattern.replace(/:(\w+)/g, '([^/]+)') + '$');
                 const match = hash.match(regex);
                 if (match) {
                     const params = {};
-                    const paramNames = pattern.match(/:(\w+)/g);
+                    const paramNames = normalizedPattern.match(/:(\w+)/g);
                     if (paramNames) {
                         paramNames.forEach((param, index) => {
                             params[param.slice(1)] = match[index + 1];
@@ -44,10 +51,10 @@ export class Router {
         }
 
         // Handle static routes
-        const route = this.routes[hash] || this.routes['/'];
+        const route = this.routes['/' + hash] || this.routes[hash] || this.routes['/'];
         if (route && route.handler) {
             await route.handler();
-            if (hash === '/') {
+            if (hash === '' || hash === '/') {
                 const username = sessionStorage.getItem('steemUsername');
                 if (username) {
                     await loadSuggestions();
@@ -55,10 +62,12 @@ export class Router {
             }
         }
         
-        // Update navigation state
+        // Update navigation state - normalize route paths for comparison
         document.querySelectorAll('.nav-icons i, .nav-item').forEach(el => {
             el.classList.remove('active');
-            if (el.dataset.route === hash) {
+            const routePath = el.dataset.route;
+            const normalizedRoute = routePath?.startsWith('/') ? routePath.slice(1) : routePath;
+            if (normalizedRoute === hash) {
                 el.classList.add('active');
             }
         });
