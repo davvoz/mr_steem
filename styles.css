@@ -958,7 +958,7 @@ body {
 }
 
 .story-content {
-    background: white;
+    background: var(--background);
     padding: 20px;
     border-radius: 12px;
     max-width: 500px;
@@ -1001,16 +1001,16 @@ body {
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
     .story-content {
-        background: #262626;
-        color: white;
+        background: var(--background);
+        color: var(--text-primary);
     }
 
     .story-header {
-        border-bottom-color: #363636;
+        border-bottom-color: var(--border-color);
     }
 
     .close-story {
-        color: white;
+        color:var(--primary-color);
     }
 }
 
@@ -1030,7 +1030,8 @@ body {
 }
 
 .story-content {
-    background: white;
+    background: var(--background);
+    color: var(--text-primary);
     border-radius: 12px;
     max-width: 600px;
     width: 90%;
@@ -1097,20 +1098,20 @@ body {
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
     .story-content {
-        background: #262626;
-        color: white;
+        background: var(--background);
+        color: var(--text-primary);
     }
 
     .story-header {
-        border-bottom-color: #363636;
+        border-bottom-color: var(--border-color);
     }
 
     .close-story {
-        color: white;
+        color:var(--primary-color);
     }
 
     .story-timestamp {
-        color: #a8a8a8;
+        color: var(--text-secondary);
     }
 }
 
