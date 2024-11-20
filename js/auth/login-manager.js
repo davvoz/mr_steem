@@ -6,31 +6,15 @@ export const steemConnection = {
 };
 
 export function showLoginModal() {
-    // Check if already logged in
-    if (steemConnection.isConnected && steemConnection.username) {
-        const confirmLogout = confirm(`You are already logged in as @${steemConnection.username}. Do you want to logout?`);
-        if (confirmLogout) {
-            // Logout user
-            steemConnection.isConnected = false;
-            steemConnection.username = null;
-            sessionStorage.removeItem('steemPostingKey');
-            
-            // Clear any cached user data
-            document.querySelector('.nav-profile-image img').src = 
-                'https://material.io/resources/icons/static/icons/baseline-account_circle-24px.svg';
-            
-            // Reset profile image to default
-            const navProfileImg = document.querySelector('.nav-profile-image img');
-            if (navProfileImg) {
-                navProfileImg.src = avatarCache.getDefaultAvatar();
-                navProfileImg.alt = 'Profile';
-            }
-        }
-        return;
-    }
-
+    // Remove previous check for already logged in since we want to show the modal anyway
     const loginModal = document.getElementById('loginModal');
     if (loginModal) {
+        // Reset form fields
+        const usernameInput = document.getElementById('steemUsername');
+        const keyInput = document.getElementById('steemKey');
+        if (usernameInput) usernameInput.value = '';
+        if (keyInput) keyInput.value = '';
+        
         loginModal.style.display = 'flex';
     }
 }
@@ -71,9 +55,14 @@ export async function handleLogin(username, key) {
                 sessionStorage.setItem('steemPostingKey', key);
             }
             
-            // Update UI
-            document.getElementById('profile-link').style.display = '';
-            document.getElementById('login-link').style.display = 'none';
+            // Update UI - Aggiungi l'aggiornamento del bottone logout
+            const profileLink = document.getElementById('profile-link');
+            const loginLink = document.getElementById('login-link');
+            const logoutLink = document.getElementById('logout-link');
+            
+            if (profileLink) profileLink.style.display = '';
+            if (loginLink) loginLink.style.display = 'none';
+            if (logoutLink) logoutLink.style.display = ''; // Mostra il bottone logout
             
             hideLoginModal();
             await updateProfileImage(accounts[0]);
@@ -81,7 +70,6 @@ export async function handleLogin(username, key) {
             // Emit a custom event instead of directly calling functions
             window.dispatchEvent(new CustomEvent('loginSuccess'));
             
-            //andiamo sul profilo
             window.location.hash = 'profile';
             
             return true;
@@ -93,18 +81,70 @@ export async function handleLogin(username, key) {
     }
 }
 
+export function handleLogout() {
+    steemConnection.isConnected = false;
+    steemConnection.username = null;
+    
+    // Clear session storage
+    sessionStorage.removeItem('steemUsername');
+    sessionStorage.removeItem('steemPostingKey');
+    
+    // Update UI elements
+    const profileLink = document.getElementById('profile-link');
+    const loginLink = document.getElementById('login-link');
+    const logoutLink = document.getElementById('logout-link');
+    
+    if (profileLink) profileLink.style.display = 'none';
+    if (loginLink) {
+        loginLink.style.display = '';
+        // Ensure login link is clickable
+        loginLink.replaceWith(loginLink.cloneNode(true));
+        // Re-attach click listener to new element
+        document.getElementById('login-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            showLoginModal();
+        });
+    }
+    if (logoutLink) logoutLink.style.display = 'none';
+    
+    // Reset profile image
+    const navProfileImg = document.querySelector('.nav-profile-image img');
+    if (navProfileImg) {
+        navProfileImg.src = 'https://material.io/resources/icons/static/icons/baseline-account_circle-24px.svg';
+        navProfileImg.alt = 'Profile';
+    }
+    
+    // Reset login modal
+    const loginModal = document.getElementById('loginModal');
+    if (loginModal) {
+        loginModal.style.display = 'none';
+        const usernameInput = document.getElementById('steemUsername');
+        const keyInput = document.getElementById('steemKey');
+        if (usernameInput) usernameInput.value = '';
+        if (keyInput) keyInput.value = '';
+    }
+    
+    // Redirect to home
+    window.location.hash = '/';
+    
+    // Dispatch logout event
+    window.dispatchEvent(new CustomEvent('logoutSuccess'));
+}
+
 export function checkExistingLogin() {
     const username = sessionStorage.getItem('steemUsername');
     const profileLink = document.getElementById('profile-link');
     const loginLink = document.getElementById('login-link');
+    const logoutLink = document.getElementById('logout-link');
     
     if (username) {
         steemConnection.username = username;
         steemConnection.isConnected = true;
         
-        // Show profile, hide login
-        profileLink.style.display = '';
-        loginLink.style.display = 'none';
+        // Show profile and logout, hide login
+        if (profileLink) profileLink.style.display = '';
+        if (loginLink) loginLink.style.display = 'none';
+        if (logoutLink) logoutLink.style.display = '';
         
         // Load account data for profile image
         steem.api.getAccountsAsync([username]).then(accounts => {
@@ -119,13 +159,21 @@ export function checkExistingLogin() {
         return true;
     }
 
-    // Show login, hide profile
-    profileLink.style.display = 'none';
-    loginLink.style.display = '';
-    loginLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        showLoginModal();
-    });
+    // Show login, hide profile and logout
+    if (profileLink) profileLink.style.display = 'none';
+    if (loginLink) {
+        loginLink.style.display = '';
+        // Rimuovi eventuali listener esistenti
+        loginLink.replaceWith(loginLink.cloneNode(true));
+        // Prendi il riferimento aggiornato dopo il clone
+        const newLoginLink = document.getElementById('login-link');
+        // Aggiungi il nuovo listener
+        newLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLoginModal();
+        });
+    }
+    if (logoutLink) logoutLink.style.display = 'none';
 
     return false;
 }

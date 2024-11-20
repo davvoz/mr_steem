@@ -123,3 +123,8 @@ function showWipNotification(feature) {
 
 const app = new App();
 app.init();
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupUIEventListeners();
+    // Rimuovi la gestione del menu da qui poiché ora è in ui-handlers.js
+});

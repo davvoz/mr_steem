@@ -18,7 +18,16 @@
     <nav class="navbar">
         <div class="nav-content">
             <div class="logo">SteemGram</div>
-            <div class="nav-menu">
+            <button class="hamburger-menu" 
+                    aria-label="Toggle menu" 
+                    aria-expanded="false" 
+                    aria-controls="nav-menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="nav-menu" 
+                 id="nav-menu" 
+                 aria-hidden="true" 
+                 role="navigation">
                 <a href="#/" class="nav-item" data-route="/">
                     <i class="fas fa-home"></i>
                     <span>Home</span>
@@ -58,6 +67,11 @@
                     </div>
                     <span>Profile</span>
                 </a>
+                <!-- Add logout button -->
+                <a href="#" class="nav-item" id="logout-link" style="display: none;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
                 <a href="#" class="nav-item login-link" id="login-link" style="display: none;">
                     <i class="fas fa-sign-in-alt"></i>
                     <span>Login</span>
@@ -67,9 +81,6 @@
                     <span>Dark Mode</span>
                 </a>
             </div>
-            <div class="hamburger-menu">
-                <i class="fas fa-bars"></i>
-            </div>
         </div>
     </nav>
     
@@ -78,10 +89,6 @@
     <div class="login-modal" id="loginModal">
         <div class="login-form">
             <h2>Connect to Steem Blockchain</h2>
-            <div class="steem-info">
-                <p>Using Steem.js v${steem.version} for blockchain integration</p>
-                <p>Documentation: <a href="https://developers.steem.io/resources/client_libs" target="_blank">Steem Developer Portal</a></p>
-            </div>
             <input type="text" id="steemUsername" placeholder="Steem Username" required>
             <input type="password" id="steemKey" placeholder="Private Posting Key (optional)">
             <button id="loginButton">Connect to Steem</button>

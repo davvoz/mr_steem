@@ -604,7 +604,8 @@ body {
 }
 
 .login-form {
-    background: white;
+    background: var(--background);
+    color: var(--text-primary);
     padding: 2rem;
     border-radius: 8px;
     width: 90%;
@@ -628,8 +629,6 @@ body {
 .login-form button {
     width: 100%;
     padding: 0.8rem;
-    background: #1a5099;
-    color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -645,7 +644,6 @@ body {
 .login-form .steem-info {
     margin-top: 1rem;
     padding: 1rem;
-    background: #f8f9fa;
     border-radius: 4px;
     font-size: 0.9rem;
     line-height: 1.4;
@@ -1335,7 +1333,7 @@ body {
     }
 
     .nav-icons i:active {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255,  255, 0.1);
     }
 
     .post,
@@ -2396,6 +2394,72 @@ body {
     background: var(--dark-surface);
 }
 
+/* Mobile Navigation Base Styles */
+@media (max-width: 768px) {
+    .nav-content {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 var(--spacing-md);
+    }
+
+    .hamburger-menu {
+        display: block;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: var(--spacing-sm);
+        z-index: 1001;
+    }
+
+    .hamburger-menu i {
+        font-size: 24px;
+        color: var(--text-primary);
+    }
+
+    .nav-menu {
+        position: fixed;
+        top: var(--header-height);
+        left: -100%;
+        width: 100%;
+        height: calc(100vh - var(--header-height));
+        background: var(--background);
+        transition: left 0.3s ease;
+        padding: var(--spacing-md);
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-md);
+        overflow-y: auto;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .nav-menu.active {
+        left: 0;
+    }
+
+    .nav-item {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        padding: var(--spacing-md);
+        gap: var(--spacing-md);
+        border-radius: var(--radius-md);
+    }
+
+    .nav-item:hover {
+        background: var(--secondary-color);
+    }
+}
+
+/* Desktop Nav Hide Burger */
+@media (min-width: 769px) {
+    .hamburger-menu {
+        display: none;
+    }
+}
+
 /* Mobile Navigation */
 @media (max-width: 768px) {
     .nav-menu {
@@ -2406,8 +2470,7 @@ body {
         height: calc(100vh - var(--header-height));
         background: var(--background);
         transition: 0.3s ease-in-out;
-        display: flex;
-        flex-direction: column;
+        display: block; /* Cambiato da none a block */
         padding: var(--spacing-md);
         z-index: 999;
         border-top: 1px solid var(--border-color);
@@ -2419,39 +2482,84 @@ body {
 
     .hamburger-menu {
         display: block;
+        z-index: 1000;
         cursor: pointer;
         padding: var(--spacing-sm);
     }
 
-    .hamburger-menu i {
-        font-size: 24px;
-        color: var(--text-primary);
-    }
-
-    .nav-content {
-        justify-content: space-between;
-    }
-
-    /* Hide desktop navigation items by default */
-    .nav-menu .nav-item {
-        width: 100%;
+    .nav-item {
+        display: flex;
         padding: var(--spacing-md);
+        margin: var(--spacing-xs) 0;
         border-radius: var(--radius-md);
     }
+}
 
-    .nav-menu .nav-item:hover {
-        background: var(--secondary-color);
+@media (min-width: 769px) {
+    .hamburger-menu {
+        display: none;
+    }
+
+    .nav-menu {
+        position: static;
+        display: flex;
+        width: auto;
+        height: auto;
+        background: none;
+        padding: 0;
+        border: none;
     }
 }
 
-/* Dark mode support for mobile menu */
-[data-theme="dark"] .nav-menu {
-    background: var(--dark-surface);
-    border-color: var(--dark-border);
+/* Mobile Navigation */
+@media (max-width: 768px) {
+    .nav-menu {
+        position: fixed;
+        top: var(--header-height);
+        left: -100%;
+        width: 100%;
+        height: calc(100vh - var(--header-height));
+        background: var(--background);
+        transition: 0.3s ease-in-out;
+        display: block; /* Cambiato da none a block */
+        padding: var(--spacing-md);
+        z-index: 999;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .nav-menu.active {
+        left: 0;
+    }
+
+    .hamburger-menu {
+        display: block;
+        z-index: 1000;
+        cursor: pointer;
+        padding: var(--spacing-sm);
+    }
+
+    .nav-item {
+        display: flex;
+        padding: var(--spacing-md);
+        margin: var(--spacing-xs) 0;
+        border-radius: var(--radius-md);
+    }
 }
 
-[data-theme="dark"] .nav-menu .nav-item:hover {
-    background: rgba(255, 255, 255, 0.1);
+@media (min-width: 769px) {
+    .hamburger-menu {
+        display: none;
+    }
+
+    .nav-menu {
+        position: static;
+        display: flex;
+        width: auto;
+        height: auto;
+        background: none;
+        padding: 0;
+        border: none;
+    }
 }
 
 /* Mobile Navigation Adjustments */
@@ -2472,7 +2580,7 @@ body {
         height: calc(100vh - var(--header-height));
         background: var(--background);
         transition: 0.3s ease-in-out;
-        display: flex;
+        display: flex !important;
         flex-direction: column;
         padding: var(--spacing-md);
         z-index: 999;
@@ -2685,7 +2793,7 @@ body {
     [data-theme="dark"] .my-posts-container {
         background: var(--dark-surface);
         border-color: var(--dark-border);
-        color: var(--dark-text);
+        color: var (--dark-text);
     }
 
     [data-theme="dark"] .nav-menu {
@@ -2787,3 +2895,120 @@ body {
 [data-theme="dark"] .hamburger-menu i {
     color: var(--dark-text);
 }
+
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.dialog {
+    background: var(--background);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    width: 90%;
+    max-width: 320px;
+    box-shadow: var(--shadow-md);
+    text-align: center;
+}
+
+.dialog-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+.dialog-message {
+    margin-bottom: var(--spacing-lg);
+    color: var(--text-secondary);
+}
+
+.dialog-buttons {
+    display: flex;
+    gap: var (--spacing-md);
+    justify-content: center;
+}
+
+.dialog-button {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-sm);
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.dialog-button.confirm {
+    background: #ed4956;
+    color: white;
+}
+
+.dialog-button.cancel {
+    background: var(--secondary-color);
+    color: var(--text-primary);
+}
+
+.dialog-button:hover {
+    opacity: 0.9;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .dialog {
+    background: var(--dark-surface);
+}
+
+[data-theme="dark"] .dialog-button.cancel {
+    background: var(--dark-border);
+    color: var(--dark-text);
+}
+
+/* Mobile Navigation - Core Styles */
+@media (max-width: 768px) {
+    .nav-menu {
+        position: fixed;
+        top: var(--header-height);
+        left: -100%;
+        width: 100%;
+        height: calc(100vh - var(--header-height));
+        background: var(--background);
+        transition: left 0.3s ease;
+        z-index: 999;
+        padding: var(--spacing-md);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        display: block !important;
+    }
+
+    .nav-menu.active {
+        left: 0;
+    }
+
+    .hamburger-menu {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        z-index: 1001;
+        position: relative;
+    }
+
+    .hamburger-menu i {
+        font-size: 24px;
+        color: var(--text-primary);
+        pointer-events: none;
+    }
+}
+
+/* Remove all other mobile navigation styles */
