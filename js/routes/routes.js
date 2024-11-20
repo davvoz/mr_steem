@@ -1,6 +1,6 @@
 import { hideAllViews, showView } from '../utils/view-manager.js';
 import { steemConnection, showLoginModal } from '../auth/login-manager.js';
-import { loadSteemPosts, loadStories, loadExploreContent, setupInfiniteScroll, loadUserProfile, loadExtendedSuggestions, updateSidebar } from '../services/posts-manager.js';
+import { loadSteemPosts, loadStories, loadExploreContent, setupInfiniteScroll, loadUserProfile, loadExtendedSuggestions, updateSidebar, loadSinglePost } from '../services/posts-manager.js';
 
 export const routes = {
     '/': { 
@@ -65,6 +65,14 @@ export const routes = {
             hideAllViews();
             showView('suggestions-view');
             await loadExtendedSuggestions();
+        }
+    },
+    '/post/:author/:permlink': {
+        viewId: 'post-view',
+        handler: async (params) => {
+            hideAllViews();
+            showView('post-view');
+            await loadSinglePost(params.author, params.permlink);
         }
     }
 };

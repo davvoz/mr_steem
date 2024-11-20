@@ -256,8 +256,8 @@ body {
     color: var(--text-secondary);
     font-size: var(--font-size-sm);
     line-height: 1.5;
-    max-height: 100px;
-    overflow: hidden;
+    max-height: none; /* Remove height restriction */
+    overflow: visible; /* Ensure content is not hidden */
     position: relative;
 }
 
@@ -333,18 +333,16 @@ body {
     scroll-behavior: smooth;
     scroll-snap-type: x mandatory;
     -ms-overflow-style: none;
-    /* scrollbar-width: none; */
+    scrollbar-width: none;
     white-space: nowrap;
-    overflow: scroll;
+    overflow-x: auto;
     padding-bottom: var(--spacing-md);
     align-items: flex-start;
-    justify-content: center;
-    flex-wrap: wrap;
-    flex-direction: row;
-
+    justify-content: flex-start;
+    position: relative;
+    padding: 20px 40px; /* Added padding for buttons */
 }
 
-/* Hide scrollbar but keep functionality */
 .stories::-webkit-scrollbar {
     display: none;
 }
@@ -364,15 +362,25 @@ body {
 }
 
 /* Stories Gradient Fade Effect */
+.stories::before,
 .stories::after {
     content: '';
     position: absolute;
-    right: 0;
     top: 0;
-    height: 100%;
+    bottom: 0;
     width: 40px;
-    background: linear-gradient(to right, transparent, var(--background));
     pointer-events: none;
+    z-index: 1;
+}
+
+.stories::before {
+    left: 0;
+    background: linear-gradient(to left, transparent, var(--background));
+}
+
+.stories::after {
+    right: 0;
+    background: linear-gradient(to right, transparent, var(--background));
 }
 
 .story-avatar {
@@ -389,6 +397,113 @@ body {
     border-radius: 50%;
     background: white;
     padding: 2px;
+}
+
+/* Scroll Buttons */
+.scroll-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+    transition: background 0.3s ease;
+}
+
+.scroll-button:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.scroll-button.left {
+    left: 10px;
+}
+
+.scroll-button.right {
+    right: 10px;
+}
+
+.story-scroll-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.story-scroll-button:hover {
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.story-scroll-button.left {
+    left: 5px;
+}
+
+.story-scroll-button.right {
+    right: 5px;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .story-scroll-button {
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+}
+
+[data-theme="dark"] .story-scroll-button:hover {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+.stories-container {
+    position: relative;
+    width: 100%;
+    /* background: var(--background); */
+    /* border: 1px solid var(--border-color); */
+    /* border-radius: var(--radius-md); */
+    margin-bottom: var(--spacing-md);
+    overflow: hidden;
+}
+
+.stories {
+    /* Update existing stories styles */
+    padding: 20px 40px;
+    margin: 0;
+    scroll-behavior: smooth;
+    position: relative;
+    background: var(--background); /* Assicura che il background sia uniforme */
+}
+
+/* Rimuovi le sfumature ai bordi */
+.stories::before,
+.stories::after {
+    display: none;
+}
+
+/* Aggiornamento dello stile dei pulsanti per posizionarli sopra le sfumature */
+.story-scroll-button {
+    z-index: 3;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .stories {
+    background: var(--dark-surface); /* Assicura che il background sia uniforme in modalità scura */
 }
 
 .suggestions {
@@ -2018,7 +2133,6 @@ iframe {
     }
 }
 
-
 .post-body {
     padding: 20px;
 }
@@ -2055,7 +2169,7 @@ iframe {
 
 /* Dark mode support */
 [data-theme="dark"] .login-link {
-    color: var(--primary-color);
+    color: var (--primary-color);
 }
 
 [data-theme="dark"] .login-link:hover {
@@ -2093,4 +2207,163 @@ iframe {
     height: 100%;
     object-fit: cover;
 }
+
+/* ...existing code... */
+
+.full-post {
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin: 0 auto;
+    max-width: 800px;
+    box-shadow: var(--shadow-sm);
+}
+
+.full-post .post-header {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.author-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.author-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.post-date {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.post-content {
+    padding: var(--spacing-lg);
+}
+
+.post-title {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-lg);
+    color: var(--text-primary);
+}
+
+.markdown-content {
+    font-size: var(--font-size-md);
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+.markdown-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-md) 0;
+}
+
+.markdown-content p {
+    margin: var(--spacing-md) 0;
+}
+
+.post-footer {
+    padding: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+.post-stats {
+    display: flex;
+    gap: var(--spacing-lg);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .full-post {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+/* ...existing code... */
+
+/* ...existing code... */
+
+.full-post {
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin: 20px auto;
+    max-width: 800px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.post-main-image {
+    width: 100%;
+    max-height: 500px;
+    overflow: hidden;
+    margin: 0 0 var(--spacing-lg);
+}
+
+.post-main-image img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.markdown-content {
+    font-size: var(--font-size-md);
+    line-height: 1.8;
+    color: var(--text-primary);
+    padding: 0 var(--spacing-lg);
+}
+
+.markdown-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-md) 0;
+}
+
+.markdown-content p {
+    margin: var(--spacing-md) 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+    margin: var(--spacing-lg) 0 var(--spacing-md);
+    color: var(--text-primary);
+}
+
+.post-tags {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+.tag {
+    display: inline-block;
+    padding: 4px 8px;
+    margin: 2px;
+    background: var(--secondary-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+}
+
+.tag:hover {
+    color: var(--primary-color);
+    background: rgba(0, 149, 246, 0.1);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .tag {
+    background: var(--dark-surface);
+}
+
+/* ...existing code... */
 

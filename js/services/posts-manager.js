@@ -125,7 +125,7 @@ export async function loadStories() {
             steemConnection.username,
             '',
             'blog',
-            10
+            100 // Load more following accounts for better story coverage
         );
 
         const followingAccounts = await steem.api.getAccountsAsync(
@@ -137,29 +137,82 @@ export async function loadStories() {
         const storiesContainer = document.getElementById('stories-container');
         if (!storiesContainer) return;
 
-        storiesContainer.innerHTML = followingAccounts.map(account => `
-            <div class="story">
-                <div class="story-avatar">
-                    <div class="story-avatar-inner">
-                        <img src="${avatarCache.get(account.name)}" 
-                             style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+        // Wrap the stories content
+        storiesContainer.className = 'stories-container';
+        storiesContainer.innerHTML = `
+            <button class="story-scroll-button left">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="stories">
+                ${followingAccounts.map(account => `
+                    <div class="story">
+                        <div class="story-avatar">
+                            <div class="story-avatar-inner">
+                                <img src="${avatarCache.get(account.name)}" 
+                                     alt="${account.name}"
+                                     style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                            </div>
+                        </div>
+                        <span>${account.name}</span>
                     </div>
-                </div>
-                <span>${account.name}</span>
+                `).join('')}
             </div>
-        `).join('');
+            <button class="story-scroll-button right">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        `;
 
-        // Add click handlers after creating the stories
+        // Set up scroll buttons
+        setupStoryScroll(storiesContainer);
+
+        // Add click handlers for stories
         storiesContainer.querySelectorAll('.story').forEach((storyElement, index) => {
             storyElement.addEventListener('click', () => viewStory(followingAccounts[index].name));
         });
+
     } catch (error) {
         console.error('Failed to load stories:', error);
-        const storiesContainer = document.getElementById('stories-container');
         if (storiesContainer) {
             storiesContainer.innerHTML = '<div class="error-message">Failed to load stories</div>';
         }
     }
+}
+
+function setupStoryScroll(container) {
+    const storiesDiv = container.querySelector('.stories');
+    const leftBtn = container.querySelector('.story-scroll-button.left');
+    const rightBtn = container.querySelector('.story-scroll-button.right');
+    
+    const updateButtonVisibility = () => {
+        leftBtn.style.display = storiesDiv.scrollLeft > 0 ? 'flex' : 'none';
+        rightBtn.style.display = 
+            storiesDiv.scrollLeft < (storiesDiv.scrollWidth - storiesDiv.clientWidth - 10)
+            ? 'flex' : 'none';
+    };
+
+    // Scroll amount for each click (show next set of stories)
+    const scrollAmount = 300;
+
+    leftBtn.addEventListener('click', () => {
+        storiesDiv.scrollBy({
+            left: -scrollAmount,
+            behavior: 'smooth'
+        });
+    });
+
+    rightBtn.addEventListener('click', () => {
+        storiesDiv.scrollBy({
+            left: scrollAmount,
+            behavior: 'smooth'
+        });
+    });
+
+    // Update button visibility on scroll and resize
+    storiesDiv.addEventListener('scroll', updateButtonVisibility);
+    window.addEventListener('resize', updateButtonVisibility);
+
+    // Initial check
+    updateButtonVisibility();
 }
 
 export async function viewStory(username) {
@@ -539,7 +592,10 @@ async function displayPosts(posts, containerId = 'posts-container', append = fal
                         </div>
                     </div>
                 ` : ''}
-                <div class="post-body">${post.body.substring(0, 150)}...</div>
+                <div class="post-body">
+                    <h3>${post.title}</h3>
+                    <p>${post.body.substring(0, 100)}...</p> <!-- Show snippet of text -->
+                </div>
                 <footer class="post-actions">
                     <i class="far fa-heart" data-post-id="${post.id}"></i>
                     <i class="far fa-comment"></i>
@@ -661,7 +717,7 @@ async function loadMoreProfilePosts(username, append = true) {
             const postsHTML = posts.map(post => {
                 let imageUrl = extractImageFromContent(post);
                 return `
-                    <div class="profile-post">
+                    <div class="profile-post" onclick="window.location.hash='#/post/${post.author}/${post.permlink}'">
                         ${imageUrl
                             ? `<img src="${imageUrl}" alt="${post.title}" loading="lazy">`
                             : '<div class="no-image">No Image</div>'
@@ -682,6 +738,72 @@ async function loadMoreProfilePosts(username, append = true) {
     } finally {
         isLoadingProfile = false;
         hideProfileLoadingIndicator();
+    }
+}
+
+export async function loadSinglePost(author, permlink) {
+    try {
+        const post = await steem.api.getContentAsync(author, permlink);
+        if (!post || !post.author) {
+            throw new Error('Post not found');
+        }
+
+        const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
+        const authorImage = authorAccount ? extractProfileImage(authorAccount) : null;
+        const avatarUrl = authorImage || `https://steemitimages.com/u/${post.author}/avatar/small`;
+
+        // Converti il markdown in HTML senza troncamento
+        const htmlContent = marked.parse(post.body, {
+            breaks: true,        // Converte i ritorni a capo in <br>
+            sanitize: false,     // Permette HTML nel markdown
+            gfm: true,           // Abilita GitHub Flavored Markdown
+            headerIds: false     // Disabilita gli id automatici negli header
+        });
+        
+        const postDate = new Date(post.created).toLocaleString();
+        const postImage = extractImageFromContent(post);
+
+        const postView = document.getElementById('post-view');
+        if (!postView) return;
+
+        postView.innerHTML = `
+            <article class="full-post">
+                <header class="post-header">
+                    <div class="author-info">
+                        <img src="${avatarUrl}" alt="${post.author}" class="author-avatar">
+                        <div class="author-details">
+                            <a href="#/profile/${post.author}" class="author-name">@${post.author}</a>
+                            <span class="post-date">${postDate}</span>
+                        </div>
+                    </div>
+                </header>
+                <div class="post-content">
+                    <h1 class="post-title">${post.title}</h1>
+                    
+                    <div class="post-body markdown-content">
+                        ${htmlContent}
+                    </div>
+                </div>
+                <footer class="post-footer">
+                    <div class="post-stats">
+                        <span><i class="far fa-heart"></i> ${post.net_votes} votes</span>
+                        <span><i class="far fa-comment"></i> ${post.children} comments</span>
+                        <span><i class="fas fa-dollar-sign"></i> ${parseFloat(post.pending_payout_value).toFixed(2)} payout</span>
+                    </div>
+                    <div class="post-tags">
+                        ${post.json_metadata ? JSON.parse(post.json_metadata)?.tags?.map(tag => 
+                            `<a href="#/tag/${tag}" class="tag">#${tag}</a>`
+                        ).join(' ') || '' : ''}
+                    </div>
+                </footer>
+            </article>
+        `;
+
+    } catch (error) {
+        console.error('Failed to load post:', error);
+        document.getElementById('post-view').innerHTML = `
+            <div class="error-message">Failed to load post</div>
+        `;
     }
 }
 
