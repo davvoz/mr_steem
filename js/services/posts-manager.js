@@ -250,11 +250,10 @@ function setupStoryScroll(container) {
 
 export async function viewStory(username) {
     try {
-        // Use a more reliable method to fetch recent posts
         const query = {
             tag: username,
             limit: 1,
-            truncate_body: 1000 // Limit body size for better performance
+            truncate_body: 1000
         };
 
         const posts = await steem.api.getDiscussionsByBlogAsync(query);
@@ -263,7 +262,6 @@ export async function viewStory(username) {
             const post = posts[0];
             let imageUrl = '';
 
-            // Try to extract image from post
             try {
                 const metadata = typeof post.json_metadata === 'string'
                     ? JSON.parse(post.json_metadata)
@@ -294,7 +292,7 @@ export async function viewStory(username) {
                         ` : ''}
                         <h3>${post.title}</h3>
                         <p>${post.body.substring(0, 280)}${post.body.length > 280 ? '...' : ''}</p>
-                        <a href="https://steemit.com${post.url}" target="_blank" class="view-full-post">
+                        <a href="#/post/${post.author}/${post.permlink}" class="view-full-post">
                             View Full Post
                         </a>
                     </div>
@@ -302,6 +300,11 @@ export async function viewStory(username) {
             `;
 
             document.body.appendChild(modal);
+
+            // Add click handler for the view full post link
+            modal.querySelector('.view-full-post').addEventListener('click', () => {
+                modal.remove(); // Close the modal when navigating to full post
+            });
 
             // Close on click outside or on close button
             modal.addEventListener('click', (e) => {
@@ -600,8 +603,7 @@ async function displayPosts(posts, containerId = 'posts-container', append = fal
         // Usa extractImageFromContent sia per il post che per l'autore
         const postImage = extractImageFromContent(post);
         const authorImage = authorAccount ? extractProfileImage(authorAccount) : null;
-        console.log('Post image:', postImage);
-        console.log('Author image:', authorImage);
+      
 
         const avatarUrl = authorImage || `https://steemitimages.com/u/${post.author}/avatar/small`;
 

@@ -2582,8 +2582,6 @@ body {
     }
 }
 
-/* ...existing code... */
-
 /* Mobile Navigation Adjustments */
 @media (max-width: 768px) {
     .nav-content {
@@ -2607,13 +2605,12 @@ body {
 
     /* Nasconde la nav quando non attiva */
     .nav-menu {
-        /* ...existing nav-menu code... */
+        display: none;
+
     }
 }
 
-/* ...existing code... */
 
-/* ...existing code... */
 
 @media (max-width: 768px) {
     .nav-item {
