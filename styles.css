@@ -2062,3 +2062,35 @@ iframe {
     background: rgba(0, 149, 246, 0.2);
 }
 
+.profile-loading-indicator {
+    text-align: center;
+    padding: 20px;
+    grid-column: 1 / -1; /* spans all columns */
+}
+
+.posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1px;
+    padding: var(--spacing-sm);
+    box-sizing: border-box;
+}
+
+.profile-post {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--secondary-color);
+    transition: transform 0.2s ease;
+}
+
+.profile-post:hover {
+    transform: scale(1.02);
+}
+
+.profile-post img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+

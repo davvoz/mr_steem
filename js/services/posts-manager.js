@@ -5,39 +5,10 @@ let lastPost = null;
 let isLoading = false;
 let hasMorePosts = true;
 
-// Add this helper function at the top of the file
 function extractProfileImage(account) {
-    console.log('Account from extractProfileImage:', account);
-    try {
-        let metadata;
-        // Fallback to json_metadata
-        metadata = account.json_metadata;
-        if (typeof metadata === 'string') {
-            console.log('metadata from json_metadata:', metadata);
-            metadata = JSON.parse(metadata);
-            if (metadata?.profile?.profile_image) {
-                return metadata.profile.profile_image;
-            }
-        }
-        console.log("la condizione non è stata soddisfatta per json_metadata");
-        // Try posting_json_metadata first (newer version)
-        metadata = account.posting_json_metadata;
-        console.log('metadata from posting_json_metadata:', metadata);
-        if (typeof metadata === 'string') {
-            metadata = JSON.parse(metadata);
-            if (metadata?.profile?.profile_image) {
-                return metadata.profile.profile_image;
-            }
-        }
-
-
-    } catch (e) {
-        console.warn(`Failed to parse metadata for ${account.name}:`, e);
-    }
     return  'https://steemitimages.com/u/' + account.name + '/avatar' 
 }
 
-// Nuova funzione dedicata per estrarre immagini da qualsiasi contenuto Steem
 function extractImageFromContent(content) {
     // 1. Cerca nelle immagini del metadata
     try {
@@ -481,7 +452,6 @@ export async function loadExtendedSuggestions() {
     }
 }
 
-// Add follow functionality
 export async function followUser(username) {
     if (!steemConnection.isConnected || !steemConnection.username) {
         alert('Please connect to Steem first');
@@ -531,7 +501,6 @@ async function submitPost(operations) {
     );
 }
 
-// Update the displayPosts function post header section
 async function displayPosts(posts, containerId = 'posts-container', append = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -590,7 +559,6 @@ async function displayPosts(posts, containerId = 'posts-container', append = fal
     }
 }
 
-// Update the preloadAvatars function
 async function preloadAvatars(accounts) {
     for (const account of accounts) {
         if (!avatarCache.has(account.name)) {
@@ -601,26 +569,27 @@ async function preloadAvatars(accounts) {
     }
 }
 
+let profileLastPost = null;
+let isLoadingProfile = false;
+let hasMoreProfilePosts = true;
+
 export async function loadUserProfile(username) {
+    // Reset dello stato per il nuovo profilo
+    profileLastPost = null;
+    isLoadingProfile = false;
+    hasMoreProfilePosts = true;
 
     try {
         const [account] = await steem.api.getAccountsAsync([username]);
         if (!account) throw new Error('Account not found');
 
-        const userPosts = await steem.api.getDiscussionsByBlogAsync({
-            tag: username,
-            limit: 10
-        });
-
         const followCount = await steem.api.getFollowCountAsync(username);
-
-        // Parse metadata with error handling
-        let metadata = account.json_metadata;
+        const profileImage = extractProfileImage(account);
 
         const profileView = document.getElementById('profile-view');
         if (!profileView) return;
-        const profileImage = extractProfileImage(account) ;
 
+        // Prima costruiamo e inseriamo la struttura base del profilo
         profileView.innerHTML = `
             <div class="profile-header">
                 <div class="profile-avatar">
@@ -634,41 +603,120 @@ export async function loadUserProfile(username) {
                         <span><strong>${followCount.following_count}</strong> following</span>
                     </div>
                     <div class="profile-bio">
-                        ${metadata.profile?.about || ''}
+                        ${account.json_metadata?.profile?.about || ''}
                     </div>
                 </div>
             </div>
             <div class="profile-posts">
                 <h3>Posts</h3>
-                <div class="posts-grid">
-                    ${userPosts.map(post => {
-            let imageUrl = '';
-            try {
-                const postMetadata = typeof post.json_metadata === 'string'
-                    ? JSON.parse(post.json_metadata)
-                    : post.json_metadata;
-                imageUrl = postMetadata?.image?.[0] || '';
-            } catch (e) {
-                console.warn('Failed to parse post metadata:', e);
-            }
-            return `
-                            <div class="profile-post">
-                                ${imageUrl
-                    ? `<img src="${imageUrl}" alt="${post.title}">`
-                    : '<div class="no-image">No Image</div>'
-                }
-                            </div>
-                        `;
-        }).join('')}
+                <div class="posts-grid" id="profile-posts-grid"></div>
+                <div class="profile-loading-indicator" style="display: none;">
+                    <div class="spinner"></div>
                 </div>
             </div>
         `;
+
+        // Configura l'infinite scroll prima di caricare i post
+        setupProfileInfiniteScroll(username);
+        
+        // Poi carichiamo i post in modo asincrono
+        await loadMoreProfilePosts(username, false);
 
     } catch (error) {
         console.error('Failed to load profile:', error);
         document.getElementById('profile-view').innerHTML =
             '<div class="error-message">Failed to load profile</div>';
     }
+}
+
+async function loadMoreProfilePosts(username, append = true) {
+    if (isLoadingProfile || !hasMoreProfilePosts) return;
+
+    try {
+        isLoadingProfile = true;
+        showProfileLoadingIndicator();
+
+        const query = {
+            tag: username,
+            limit: 12
+        };
+
+        if (profileLastPost) {
+            query.start_author = profileLastPost.author;
+            query.start_permlink = profileLastPost.permlink;
+        }
+
+        const posts = await steem.api.getDiscussionsByBlogAsync(query);
+
+        if (posts.length < query.limit) {
+            hasMoreProfilePosts = false;
+        }
+
+        if (posts.length > 0) {
+            profileLastPost = posts[posts.length - 1];
+            
+            const postsGrid = document.getElementById('profile-posts-grid');
+            if (!postsGrid) return;
+
+            const postsHTML = posts.map(post => {
+                let imageUrl = extractImageFromContent(post);
+                return `
+                    <div class="profile-post">
+                        ${imageUrl
+                            ? `<img src="${imageUrl}" alt="${post.title}" loading="lazy">`
+                            : '<div class="no-image">No Image</div>'
+                        }
+                    </div>
+                `;
+            }).join('');
+
+            if (append) {
+                postsGrid.insertAdjacentHTML('beforeend', postsHTML);
+            } else {
+                postsGrid.innerHTML = postsHTML;
+            }
+        }
+
+    } catch (error) {
+        console.error('Failed to load profile posts:', error);
+    } finally {
+        isLoadingProfile = false;
+        hideProfileLoadingIndicator();
+    }
+}
+
+function setupProfileInfiniteScroll(username) {
+    // Rimuovi eventuali handler precedenti
+    window.removeEventListener('scroll', window._profileScrollHandler);
+    
+    // Crea un nuovo handler e salvalo globalmente per poterlo rimuovere in seguito
+    window._profileScrollHandler = () => {
+        // Verifica che siamo ancora nella vista del profilo
+        const profileView = document.getElementById('profile-view');
+        if (!profileView || profileView.style.display === 'none') return;
+
+        // Verifica che siamo nel profilo corretto
+        const currentProfileUsername = profileView.querySelector('.profile-header h2')?.textContent?.slice(1);
+        if (currentProfileUsername !== username) return;
+
+        const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+        if (scrollHeight - scrollTop - clientHeight < 100) {
+            loadMoreProfilePosts(username, true);
+        }
+    };
+
+    // Aggiungi il nuovo handler
+    window.addEventListener('scroll', window._profileScrollHandler);
+}
+
+function showProfileLoadingIndicator() {
+    const indicator = document.querySelector('.profile-loading-indicator');
+    if (indicator) indicator.style.display = 'block';
+}
+
+function hideProfileLoadingIndicator() {
+    const indicator = document.querySelector('.profile-loading-indicator');
+    if (indicator) indicator.style.display = 'none';
 }
 
 export function setupInfiniteScroll() {
