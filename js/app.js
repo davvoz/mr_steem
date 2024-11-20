@@ -28,14 +28,38 @@ class App {
             this.router.handleRoute();
             initTheme();
             
+            // Add hamburger menu functionality
+            const hamburger = document.querySelector('.hamburger-menu');
+            const navMenu = document.querySelector('.nav-menu');
+            
+            hamburger.addEventListener('click', () => {
+                navMenu.classList.toggle('active');
+            });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.nav-menu') && !e.target.closest('.hamburger-menu')) {
+                    navMenu.classList.remove('active');
+                }
+            });
+
+            // Close menu when clicking a nav item
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) {
+                        navMenu.classList.remove('active');
+                    }
+                });
+            });
+
             // Add event listener for theme toggle
             document.getElementById('theme-toggle').addEventListener('click', (e) => {
                 e.preventDefault();
                 toggleTheme();
             });
 
-            // Add listeners for WIP features
-            const wipFeatures = document.querySelectorAll('[data-route="/notifications"], [data-route="/search"], [data-route="/new"]');
+            // Update WIP features to include suggestions
+            const wipFeatures = document.querySelectorAll('[data-route="/notifications"], [data-route="/search"], [data-route="/new"], [data-route="/suggested"]');
             wipFeatures.forEach(feature => {
                 feature.addEventListener('click', (e) => {
                     e.preventDefault();

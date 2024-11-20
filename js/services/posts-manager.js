@@ -10,17 +10,23 @@ function extractProfileImage(account) {
 }
 
 function extractImageFromContent(content) {
+    if (!content) return null;
+
     // 1. Cerca nelle immagini del metadata
     try {
         const metadata = typeof content.json_metadata === 'string'
             ? JSON.parse(content.json_metadata)
             : content.json_metadata;
 
-        if (metadata?.image?.[0]) {
-            return metadata.image[0];
+        if (metadata?.image?.length > 0) {
+            // Verifica che l'URL sia valido e completo
+            const imageUrl = metadata.image[0];
+            if (typeof imageUrl === 'string' && imageUrl.match(/^https?:\/\/.+/i)) {
+                return imageUrl;
+            }
         }
     } catch (e) {
-        console.warn('Failed to parse metadata');
+        console.warn('Failed to parse json_metadata:', e);
     }
 
     // 1bis. Cerca immagini nel content.posting_json_metadata
@@ -29,23 +35,36 @@ function extractImageFromContent(content) {
             ? JSON.parse(content.posting_json_metadata)
             : content.posting_json_metadata;
 
-        if (metadata?.image?.[0]) {
-            return metadata.image[0];
+        if (metadata?.image?.length > 0) {
+            const imageUrl = metadata.image[0];
+            if (typeof imageUrl === 'string' && imageUrl.match(/^https?:\/\/.+/i)) {
+                return imageUrl;
+            }
         }
     } catch (e) {
-        console.warn('Failed to parse metadata');
+        console.warn('Failed to parse posting_json_metadata:', e);
     }
 
     // 2. Cerca immagini nel corpo del post con markdown
-    const markdownImage = content.body?.match(/!\[.*?\]\((.*?)\)/);
-    if (markdownImage?.[1]) {
-        return markdownImage[1];
-    }
+    if (content.body) {
+        // Aggiungiamo più pattern per catturare diverse varianti di markdown
+        const markdownPatterns = [
+            /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g,     // Standard markdown ![alt](url)
+            /\[(.*?)\]\((https?:\/\/[^)\s]+)\)/g,         // Link markdown [text](url)
+            /<img[^>]+src=["']([^"']+)["'][^>]*>/g,       // HTML img tag
+            /(https?:\/\/[^\s<>"]+?\.(jpg|jpeg|png|gif|webp))(\?[^\s<>"]*)?/gi  // Direct URLs
+        ];
 
-    // 3. Cerca URL di immagini dirette nel corpo
-    const urlImage = content.body?.match(/https?:\/\/[^\s<>"]+?\.(jpg|jpeg|png|gif|webp)(\?[^\s<>"]*)?/i);
-    if (urlImage?.[0]) {
-        return urlImage[0];
+        for (const pattern of markdownPatterns) {
+            const matches = [...content.body.matchAll(pattern)];
+            for (const match of matches) {
+                const url = match[1] || match[0];
+                if (url.match(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)/i)) {
+                    console.log('Found image URL:', url); // Debug log
+                    return url;
+                }
+            }
+        }
     }
 
     return null;
