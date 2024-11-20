@@ -1,5 +1,5 @@
 import { handleLogin, showLoginModal } from '../auth/login-manager.js';
-import { loadStories, updateSidebar } from '../services/posts-manager.js';
+import { loadStories, updateSidebar, loadSuggestions } from '../services/posts-manager.js';
 
 export function setupUIEventListeners() {
     // Setup navigation event listeners
@@ -23,17 +23,31 @@ export function setupUIEventListeners() {
             const key = document.getElementById('steemKey').value;
             
             try {
-                const success = await handleLogin(username, key);
-                if (success) {
-                    console.log('Login successful');
-                    // Il resto viene gestito in handleLogin
-                }
+                await handleLogin(username, key).then(() => {
+                    //navigate to profile
+                    window.location.hash = 'profile';
+                }    
+                );  
+                
             } catch (error) {
                 console.error('Login error:', error);
                 alert('Login failed: ' + error.message);
             }
         });
     }
+
+    // Listen for successful login
+    window.addEventListener('loginSuccess', async () => {
+        try {
+            await Promise.all([
+                loadStories(),
+                updateSidebar(),
+                loadSuggestions()
+            ]);
+        } catch (error) {
+            console.error('Error loading post-login content:', error);
+        }
+    });
 
     // Connect to Steem button
     const connectButton = document.getElementById('connect-steem');

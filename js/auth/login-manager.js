@@ -1,4 +1,3 @@
-import { loadSuggestions, updateSidebar } from '../services/posts-manager.js';
 import { avatarCache } from '../utils/avatar-cache.js';
 
 export const steemConnection = {
@@ -66,33 +65,31 @@ export async function handleLogin(username, key) {
             steemConnection.isConnected = true;
             steemConnection.username = username;
             
-            // Salva i dati nel sessionStorage
+            // Save data to sessionStorage
             sessionStorage.setItem('steemUsername', username);
             if (key) {
                 sessionStorage.setItem('steemPostingKey', key);
             }
             
-            // Aggiorna l'UI
+            // Update UI
             document.getElementById('profile-link').style.display = '';
             document.getElementById('login-link').style.display = 'none';
             
             hideLoginModal();
             await updateProfileImage(accounts[0]);
             
-            // Carica i contenuti
-            await Promise.all([
-                loadStories(),
-                loadSuggestions(),
-                updateSidebar()
-            ]);
+            // Emit a custom event instead of directly calling functions
+            window.dispatchEvent(new CustomEvent('loginSuccess'));
+            
+            //andiamo sul profilo
+            window.location.hash = 'profile';
             
             return true;
         }
         throw new Error('Account not found');
     } catch (error) {
         console.error('Login failed:', error);
-        alert('Login failed: ' + error.message);
-        return false;
+        throw error;
     }
 }
 
@@ -109,15 +106,15 @@ export function checkExistingLogin() {
         profileLink.style.display = '';
         loginLink.style.display = 'none';
         
-        // Carica i dati dell'account per ottenere l'immagine del profilo
+        // Load account data for profile image
         steem.api.getAccountsAsync([username]).then(accounts => {
             if (accounts && accounts[0]) {
                 updateProfileImage(accounts[0]);
             }
         });
         
-        updateSidebar();
-        loadSuggestions();
+        // Dispatch event for successful login restoration
+        window.dispatchEvent(new CustomEvent('loginSuccess'));
         
         return true;
     }

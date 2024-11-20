@@ -12,14 +12,13 @@ function extractProfileImage(account) {
 function extractImageFromContent(content) {
     if (!content) return null;
 
-    // 1. Cerca nelle immagini del metadata
+    // 1. Check JSON metadata first
     try {
         const metadata = typeof content.json_metadata === 'string'
             ? JSON.parse(content.json_metadata)
             : content.json_metadata;
 
         if (metadata?.image?.length > 0) {
-            // Verifica che l'URL sia valido e completo
             const imageUrl = metadata.image[0];
             if (typeof imageUrl === 'string' && imageUrl.match(/^https?:\/\/.+/i)) {
                 return imageUrl;
@@ -29,7 +28,7 @@ function extractImageFromContent(content) {
         console.warn('Failed to parse json_metadata:', e);
     }
 
-    // 1bis. Cerca immagini nel content.posting_json_metadata
+    // 2. Check posting_json_metadata
     try {
         const metadata = typeof content.posting_json_metadata === 'string'
             ? JSON.parse(content.posting_json_metadata)
@@ -45,29 +44,44 @@ function extractImageFromContent(content) {
         console.warn('Failed to parse posting_json_metadata:', e);
     }
 
-    // 2. Cerca immagini nel corpo del post con markdown
+    // 3. Check post body for images and GIFs
     if (content.body) {
-        // Aggiungiamo più pattern per catturare diverse varianti di markdown
-        const markdownPatterns = [
-            /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g,     // Standard markdown ![alt](url)
-            /\[(.*?)\]\((https?:\/\/[^)\s]+)\)/g,         // Link markdown [text](url)
-            /<img[^>]+src=["']([^"']+)["'][^>]*>/g,       // HTML img tag
-            /(https?:\/\/[^\s<>"]+?\.(jpg|jpeg|png|gif|webp))(\?[^\s<>"]*)?/gi  // Direct URLs
+        // Array of patterns to match different image formats
+        const patterns = [
+            // Markdown image with any image extension
+            /!\[([^\]]*)\]\((https?:\/\/[^)\s]+\.(jpg|jpeg|png|gif|webp)(\?[^)\s]*)?)\)/i,
+            
+            // HTML img tag
+            /<img[^>]+src=["'](https?:\/\/[^"']+\.(jpg|jpeg|png|gif|webp)(\?[^"']*)?)/i,
+            
+            // Direct image URLs
+            /(https?:\/\/[^\s<>"]+?\.(jpg|jpeg|png|gif|webp)(\?[^\s<>"]*)?)/i,
+            
+            // Steemit.com image URLs
+            /(https?:\/\/[^\s<>"]+?steemitimages\.com\/[^\s<>"]+)/i,
+            
+            // IPFS gateway URLs
+            /(https?:\/\/[^\s<>"]+?ipfs\.io\/[^\s<>"]+)/i,
+            
+            // Additional common image hosting services
+            /(https?:\/\/[^\s<>"]+?imgur\.com\/[^\s<>"]+)/i,
+            /(https?:\/\/[^\s<>"]+?giphy\.com\/[^\s<>"]+)/i
         ];
 
-        for (const pattern of markdownPatterns) {
-            const matches = [...content.body.matchAll(pattern)];
-            for (const match of matches) {
-                const url = match[1] || match[0];
-                if (url.match(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)/i)) {
-                    console.log('Found image URL:', url); // Debug log
-                    return url;
-                }
+        for (const pattern of patterns) {
+            const matches = content.body.match(pattern);
+            if (matches) {
+                // Get the URL from the match
+                const url = matches[1] || matches[0];
+                // Clean up the URL (remove markdown or HTML artifacts)
+                const cleanUrl = url.replace(/['"()]|!?\[[^\]]*\]/g, '');
+                return cleanUrl;
             }
         }
     }
 
-    return null;
+    // 4. Fallback to author avatar
+    return `https://steemitimages.com/u/${content.author}/avatar`;
 }
 
 export async function loadSteemPosts(append = false) {
@@ -733,22 +747,27 @@ async function loadMoreProfilePosts(username, append = true) {
             const postsGrid = document.getElementById('profile-posts-grid');
             if (!postsGrid) return;
 
-            const postsHTML = posts.map(post => {
+            const postsHTML = await Promise.all(posts.map(async post => {
                 let imageUrl = extractImageFromContent(post);
+                // Se non troviamo un'immagine nel post, usiamo l'avatar dell'autore come fallback
+                if (!imageUrl) {
+                    const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
+                    imageUrl = authorAccount ? extractProfileImage(authorAccount) : null;
+                }
                 return `
                     <div class="profile-post" onclick="window.location.hash='#/post/${post.author}/${post.permlink}'">
                         ${imageUrl
-                            ? `<img src="${imageUrl}" alt="${post.title}" loading="lazy">`
+                            ? `<img src="${imageUrl}" alt="${post.title}" loading="lazy" onerror="this.src='https://steemitimages.com/u/${post.author}/avatar';">`
                             : '<div class="no-image">No Image</div>'
                         }
                     </div>
                 `;
-            }).join('');
+            }));
 
             if (append) {
-                postsGrid.insertAdjacentHTML('beforeend', postsHTML);
+                postsGrid.insertAdjacentHTML('beforeend', postsHTML.join(''));
             } else {
-                postsGrid.innerHTML = postsHTML;
+                postsGrid.innerHTML = postsHTML.join('');
             }
         }
 
