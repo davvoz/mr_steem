@@ -12,6 +12,25 @@ export function setupUIEventListeners() {
         });
     });
 
+    // Update WIP features to exclude suggestions
+    const wipFeatures = document.querySelectorAll('[data-route="/notifications"], [data-route="/search"], [data-route="/new"]');
+    
+    wipFeatures.forEach(feature => {
+        feature.addEventListener('click', (e) => {
+            e.preventDefault();
+            showWipNotification(e.currentTarget.querySelector('span').textContent);
+        });
+    });
+
+    // Add navigation handler for suggestions
+    const suggestionsLink = document.querySelector('[data-route="/suggested"]');
+    if (suggestionsLink) {
+        suggestionsLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.hash = '/suggestions';
+        });
+    }
+
     // Login form handlers
     const loginForm = document.querySelector('.login-form');
     const loginButton = document.getElementById('loginButton');

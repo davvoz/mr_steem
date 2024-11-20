@@ -59,7 +59,7 @@ class App {
             });
 
             // Update WIP features to include suggestions
-            const wipFeatures = document.querySelectorAll('[data-route="/notifications"], [data-route="/search"], [data-route="/new"], [data-route="/suggested"]');
+            const wipFeatures = document.querySelectorAll('[data-route="/notifications"], [data-route="/search"], [data-route="/new"]');
             wipFeatures.forEach(feature => {
                 feature.addEventListener('click', (e) => {
                     e.preventDefault();
