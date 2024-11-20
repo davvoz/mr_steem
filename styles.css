@@ -212,10 +212,22 @@ body {
 }
 
 .author-avatar {
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     object-fit: cover;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.author-avatar:hover {
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .author-avatar {
+    border-color: var(--dark-border);
 }
 
 .author-name {

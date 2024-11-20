@@ -7,9 +7,22 @@ let hasMorePosts = true;
 
 // Add this helper function at the top of the file
 function extractProfileImage(account) {
+    console.log('Account from extractProfileImage:', account);
     try {
+        let metadata;
+        // Fallback to json_metadata
+        metadata = account.json_metadata;
+        if (typeof metadata === 'string') {
+            console.log('metadata from json_metadata:', metadata);
+            metadata = JSON.parse(metadata);
+            if (metadata?.profile?.profile_image) {
+                return metadata.profile.profile_image;
+            }
+        }
+        console.log("la condizione non è stata soddisfatta per json_metadata");
         // Try posting_json_metadata first (newer version)
-        let metadata = account.posting_json_metadata;
+        metadata = account.posting_json_metadata;
+        console.log('metadata from posting_json_metadata:', metadata);
         if (typeof metadata === 'string') {
             metadata = JSON.parse(metadata);
             if (metadata?.profile?.profile_image) {
@@ -17,53 +30,89 @@ function extractProfileImage(account) {
             }
         }
 
-        // Fallback to json_metadata
-        metadata = account.json_metadata;
-        if (typeof metadata === 'string') {
-            metadata = JSON.parse(metadata);
-            if (metadata?.profile?.profile_image) {
-                return metadata.profile.profile_image;
-            }
-        }
+
     } catch (e) {
         console.warn(`Failed to parse metadata for ${account.name}:`, e);
     }
+    return  'https://steemitimages.com/u/' + account.name + '/avatar' 
+}
+
+// Nuova funzione dedicata per estrarre immagini da qualsiasi contenuto Steem
+function extractImageFromContent(content) {
+    // 1. Cerca nelle immagini del metadata
+    try {
+        const metadata = typeof content.json_metadata === 'string'
+            ? JSON.parse(content.json_metadata)
+            : content.json_metadata;
+
+        if (metadata?.image?.[0]) {
+            return metadata.image[0];
+        }
+    } catch (e) {
+        console.warn('Failed to parse metadata');
+    }
+
+    // 1bis. Cerca immagini nel content.posting_json_metadata
+    try {
+        const metadata = typeof content.posting_json_metadata === 'string'
+            ? JSON.parse(content.posting_json_metadata)
+            : content.posting_json_metadata;
+
+        if (metadata?.image?.[0]) {
+            return metadata.image[0];
+        }
+    } catch (e) {
+        console.warn('Failed to parse metadata');
+    }
+
+    // 2. Cerca immagini nel corpo del post con markdown
+    const markdownImage = content.body?.match(/!\[.*?\]\((.*?)\)/);
+    if (markdownImage?.[1]) {
+        return markdownImage[1];
+    }
+
+    // 3. Cerca URL di immagini dirette nel corpo
+    const urlImage = content.body?.match(/https?:\/\/[^\s<>"]+?\.(jpg|jpeg|png|gif|webp)(\?[^\s<>"]*)?/i);
+    if (urlImage?.[0]) {
+        return urlImage[0];
+    }
+
     return null;
 }
 
 export async function loadSteemPosts(append = false) {
     if (isLoading || !hasMorePosts) return;
-    
+
     try {
         isLoading = true;
         showLoadingIndicator();
-        
+
         const query = {
             limit: 20,
             tag: '',
             truncate_body: 1000 // Optional: limit post body size for better performance
         };
-        
+
         if (lastPost) {
             query.start_author = lastPost.author;
             query.start_permlink = lastPost.permlink;
         }
 
         const posts = await steem.api.getDiscussionsByCreatedAsync(query);
-        
+
         if (posts.length < query.limit) {
             hasMorePosts = false;
         }
-        
+
         if (posts.length > 0) {
             lastPost = posts[posts.length - 1];
         }
 
         displayPosts(posts, 'posts-container', append);
-        
+
     } catch (error) {
         console.error('Error loading posts:', error);
-        document.getElementById('posts-container').innerHTML += 
+        document.getElementById('posts-container').innerHTML +=
             '<div class="error-message">Failed to load more posts</div>';
     } finally {
         isLoading = false;
@@ -89,7 +138,7 @@ export async function loadExploreContent() {
         displayPosts(trending, 'explore-container');
     } catch (error) {
         console.error('Error loading explore content:', error);
-        document.getElementById('explore-container').innerHTML = 
+        document.getElementById('explore-container').innerHTML =
             '<div class="error-message">Failed to load explore content</div>';
     }
 }
@@ -102,18 +151,18 @@ export async function loadStories() {
 
     try {
         const following = await steem.api.getFollowingAsync(
-            steemConnection.username, 
-            '', 
-            'blog', 
+            steemConnection.username,
+            '',
+            'blog',
             10
         );
-        
+
         const followingAccounts = await steem.api.getAccountsAsync(
             following.map(f => f.following)
         );
-        
+
         await preloadAvatars(followingAccounts);
-        
+
         const storiesContainer = document.getElementById('stories-container');
         if (!storiesContainer) return;
 
@@ -152,17 +201,17 @@ export async function viewStory(username) {
         };
 
         const posts = await steem.api.getDiscussionsByBlogAsync(query);
-        
+
         if (posts && posts.length > 0) {
             const post = posts[0];
             let imageUrl = '';
 
             // Try to extract image from post
             try {
-                const metadata = typeof post.json_metadata === 'string' 
-                    ? JSON.parse(post.json_metadata) 
+                const metadata = typeof post.json_metadata === 'string'
+                    ? JSON.parse(post.json_metadata)
                     : post.json_metadata;
-                
+
                 imageUrl = metadata?.image?.[0] || '';
             } catch (e) {
                 console.warn('Failed to parse post metadata:', e);
@@ -194,9 +243,9 @@ export async function viewStory(username) {
                     </div>
                 </div>
             `;
-            
+
             document.body.appendChild(modal);
-            
+
             // Close on click outside or on close button
             modal.addEventListener('click', (e) => {
                 if (e.target === modal || e.target.classList.contains('close-story')) {
@@ -216,10 +265,10 @@ export async function viewStory(username) {
         }
     } catch (error) {
         console.error('Failed to load user story:', error);
-        const errorMessage = error.message === 'No recent posts found' 
+        const errorMessage = error.message === 'No recent posts found'
             ? 'This user has no recent posts to show.'
             : 'Failed to load story. Please try again later.';
-            
+
         const errorModal = document.createElement('div');
         errorModal.className = 'story-modal error';
         errorModal.innerHTML = `
@@ -242,7 +291,7 @@ export async function createNewPost() {
     const title = prompt('Enter post title:');
     const description = prompt('Enter your post description:');
     const imageUrl = prompt('Enter image URL:');
-    
+
     if (!title || !description) return;
 
     try {
@@ -287,11 +336,11 @@ export async function loadSuggestions() {
 
     try {
         // Get trending authors in the photography tag
-        const trending = await steem.api.getDiscussionsByTrendingAsync({ 
-            tag: 'photography', 
-            limit: 10 
+        const trending = await steem.api.getDiscussionsByTrendingAsync({
+            tag: 'photography',
+            limit: 10
         });
-        
+
         // Filter unique authors and remove current user
         const uniqueAuthors = [...new Set(trending.map(post => post.author))]
             .filter(author => author !== steemConnection.username)
@@ -299,7 +348,7 @@ export async function loadSuggestions() {
 
         // Get full account info for these authors
         const authorAccounts = await steem.api.getAccountsAsync(uniqueAuthors);
-        
+
         // Preload avatars for suggestions
         await preloadAvatars(authorAccounts);
 
@@ -340,7 +389,7 @@ export async function loadSuggestions() {
                 </div>
             `).join('')}
         `;
-        
+
     } catch (error) {
         console.error('Failed to load suggestions:', error);
         const suggestionsContainer = document.getElementById('suggestions-container');
@@ -359,9 +408,9 @@ export async function loadExtendedSuggestions() {
     try {
         // Prima otteniamo i following dell'utente
         const following = await steem.api.getFollowingAsync(
-            steemConnection.username, 
-            '', 
-            'blog', 
+            steemConnection.username,
+            '',
+            'blog',
             1000
         );
 
@@ -374,9 +423,9 @@ export async function loadExtendedSuggestions() {
                 'blog',
                 100
             );
-            
+
             friendFollowing.forEach(ff => {
-                if (ff.following !== steemConnection.username && 
+                if (ff.following !== steemConnection.username &&
                     !following.some(f => f.following === ff.following)) {
                     allSuggestions.add(ff.following);
                 }
@@ -385,7 +434,7 @@ export async function loadExtendedSuggestions() {
 
         // Converti il Set in array e limita a 50 suggerimenti
         const suggestedUsers = [...allSuggestions].slice(0, 50);
-        
+
         // Ottieni i dettagli degli account
         const accounts = await steem.api.getAccountsAsync(suggestedUsers);
         await preloadAvatars(accounts);
@@ -475,7 +524,7 @@ async function submitPost(operations) {
     if (!key) {
         throw new Error('Posting key required');
     }
-    
+
     await steem.broadcast.sendAsync(
         { operations: operations, extensions: [] },
         { posting: key }
@@ -483,55 +532,45 @@ async function submitPost(operations) {
 }
 
 // Update the displayPosts function post header section
-function displayPosts(posts, containerId = 'posts-container', append = false) {
+async function displayPosts(posts, containerId = 'posts-container', append = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    const postsHTML = posts.map(post => {
-        let imageUrl;
-        try {
-            const postMetadata = typeof post.json_metadata === 'string'     
-                ? JSON.parse(post.json_metadata)
-                : post.json_metadata;
-            imageUrl = postMetadata?.image?.[0] || '';
-        } catch (e) {
-            console.warn('Failed to parse post metadata:', e);
-        }
+    let postsHTML = '';
 
-        const truncatedBody = post.body.length > 150 
-            ? `${post.body.substring(0, 150)}...` 
-            : post.body;
+    for (const post of posts) {
+        // Recupera l'account dell'autore
+        const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
 
-        // Use a default avatar URL if none is cached
-        const defaultAvatarUrl = `https://images.hive.blog/u/${post.author}/avatar/small`;
-        const avatarUrl = avatarCache.has(post.author) 
-            ? avatarCache.get(post.author) 
-            : defaultAvatarUrl;
+        // Usa extractImageFromContent sia per il post che per l'autore
+        const postImage = extractImageFromContent(post);
+        const authorImage = authorAccount ? extractProfileImage(authorAccount) : null;
+        console.log('Post image:', postImage);
+        console.log('Author image:', authorImage);
 
-        return `
+        const avatarUrl = authorImage || `https://steemitimages.com/u/${post.author}/avatar/small`;
+
+        const postHTML = `
             <article class="post">
                 <header class="post-header">
                     <div class="author-avatar-container">
                         <img src="${avatarUrl}" 
                              alt="${post.author}" 
                              class="author-avatar"
-                             onerror="if (this.src !== '${defaultAvatarUrl}') this.src='${defaultAvatarUrl}';">
+                             onerror="this.src='https://steemitimages.com/u/${post.author}/avatar/small'">
                     </div>
                     <a href="#/profile/${post.author}" class="author-name">@${post.author}</a>
                 </header>
-                <div class="post-content">
-                    ${imageUrl ? `
+                ${postImage ? `
+                    <div class="post-content">
                         <div class="post-image-container">
-                            <img src="${imageUrl}" 
-                                 alt="Post content" 
-                                 onerror="this.parentElement.style.display='none';">
+                            <img src="${postImage}" 
+                                 alt="Post content"
+                                 onerror="this.parentElement.style.display='none'">
                         </div>
-                    ` : ''}
-                    ${post.title ? `<h3 class="post-title">${post.title}</h3>` : ''}
-                </div>
-                <div class="post-body">
-                    ${truncatedBody}
-                </div>
+                    </div>
+                ` : ''}
+                <div class="post-body">${post.body.substring(0, 150)}...</div>
                 <footer class="post-actions">
                     <i class="far fa-heart" data-post-id="${post.id}"></i>
                     <i class="far fa-comment"></i>
@@ -540,7 +579,9 @@ function displayPosts(posts, containerId = 'posts-container', append = false) {
                 </footer>
             </article>
         `;
-    }).join('');
+
+        postsHTML += postHTML;
+    }
 
     if (append) {
         container.insertAdjacentHTML('beforeend', postsHTML);
@@ -549,26 +590,12 @@ function displayPosts(posts, containerId = 'posts-container', append = false) {
     }
 }
 
-function displayStories(stories) {
-    const container = document.getElementById('stories-container');
-    if (!container) return;
-
-    container.innerHTML = stories.map(story => `
-        <div class="story">
-            <div class="story-avatar">
-                <img src="https://steemitimages.com/u/${story.author}/avatar" alt="${story.author}">
-            </div>
-            <span>${story.author}</span>
-        </div>
-    `).join('');
-}
-
 // Update the preloadAvatars function
 async function preloadAvatars(accounts) {
     for (const account of accounts) {
         if (!avatarCache.has(account.name)) {
-            const profileImage = extractProfileImage(account) || 
-                               `https://steemitimages.com/u/${account.name}/avatar/small`;
+            const profileImage = extractProfileImage(account) ||
+                `https://steemitimages.com/u/${account.name}/avatar/small`;
             avatarCache.set(account.name, profileImage);
         }
     }
@@ -589,27 +616,15 @@ export async function loadUserProfile(username) {
 
         // Parse metadata with error handling
         let metadata = account.json_metadata;
-       
+
         const profileView = document.getElementById('profile-view');
         if (!profileView) return;
-        try {
-            if (typeof metadata === 'string') {
-                metadata = JSON.parse(metadata);
-            }
-            if (!metadata.profile?.profile_image) {
-                metadata = JSON.parse(account.posting_json_metadata || '{}');
-            }
-        } catch (error) {
-            console.warn(`Failed to parse metadata for ${username}:`, error);
-            metadata = {};
-        }
-
-        avatarCache.set(username, metadata.profile?.profile_image || avatarCache.getDefaultAvatar());
+        const profileImage = extractProfileImage(account) ;
 
         profileView.innerHTML = `
             <div class="profile-header">
                 <div class="profile-avatar">
-                    <img src="${avatarCache.get(username) || 'https://steemitimages.com/u/' + username + '/avatar'}" alt="${username}">
+                    <img src="${profileImage}" alt="${username}">
                 </div>
                 <div class="profile-info">
                     <h2>@${username}</h2>
@@ -627,31 +642,31 @@ export async function loadUserProfile(username) {
                 <h3>Posts</h3>
                 <div class="posts-grid">
                     ${userPosts.map(post => {
-                        let imageUrl = '';
-                        try {
-                            const postMetadata = typeof post.json_metadata === 'string'
-                                ? JSON.parse(post.json_metadata)
-                                : post.json_metadata;
-                            imageUrl = postMetadata?.image?.[0] || '';
-                        } catch (e) {
-                            console.warn('Failed to parse post metadata:', e);
-                        }
-                        return `
+            let imageUrl = '';
+            try {
+                const postMetadata = typeof post.json_metadata === 'string'
+                    ? JSON.parse(post.json_metadata)
+                    : post.json_metadata;
+                imageUrl = postMetadata?.image?.[0] || '';
+            } catch (e) {
+                console.warn('Failed to parse post metadata:', e);
+            }
+            return `
                             <div class="profile-post">
-                                ${imageUrl 
-                                    ? `<img src="${imageUrl}" alt="${post.title}">`
-                                    : '<div class="no-image">No Image</div>'
-                                }
+                                ${imageUrl
+                    ? `<img src="${imageUrl}" alt="${post.title}">`
+                    : '<div class="no-image">No Image</div>'
+                }
                             </div>
                         `;
-                    }).join('')}
+        }).join('')}
                 </div>
             </div>
         `;
 
     } catch (error) {
         console.error('Failed to load profile:', error);
-        document.getElementById('profile-view').innerHTML = 
+        document.getElementById('profile-view').innerHTML =
             '<div class="error-message">Failed to load profile</div>';
     }
 }
@@ -659,7 +674,7 @@ export async function loadUserProfile(username) {
 export function setupInfiniteScroll() {
     const handleScroll = () => {
         const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-        
+
         // If we're near bottom (100px threshold)
         if (scrollHeight - scrollTop - clientHeight < 100) {
             loadSteemPosts(true); // true for append mode
@@ -679,22 +694,31 @@ export function setupInfiniteScroll() {
 
 export function updateSidebar() {
     const userProfile = document.getElementById('user-profile');
+    const loginSection = document.getElementById('login-section');
+
     if (!userProfile) return;
 
-    if (steemConnection.isConnected) {
-        const profileImage = avatarCache.get(steemConnection.username) || 
-                           `https://steemitimages.com/u/${steemConnection.username}/avatar`;
-        
+    if (steemConnection.isConnected && steemConnection.username) {
+        // Nascondi sezione login
+        if (loginSection) {
+            loginSection.style.display = 'none';
+        }
+
+        const profileImage = avatarCache.get(steemConnection.username) ||
+            `https://steemitimages.com/u/${steemConnection.username}/avatar`;
+
         userProfile.innerHTML = `
             <div class="sidebar-profile">
-                <img src="${profileImage}" alt="${steemConnection.username}" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover;">
+                <img src="${profileImage}" alt="${steemConnection.username}" 
+                     style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover;">
                 <div class="sidebar-profile-info">
                     <h4>@${steemConnection.username}</h4>
                 </div>
             </div>
         `;
+        userProfile.style.display = 'block';
     } else {
-        // Show login section
+        // Mostra sezione login
         userProfile.innerHTML = `
             <div class="login-section" id="login-section">
                 <h4>Connect to Steem</h4>
@@ -702,11 +726,13 @@ export function updateSidebar() {
                 <button id="connect-steem" class="connect-button">Connect to Steem</button>
             </div>
         `;
-        
-        // Riattacca l'event listener per il login
+
         const connectButton = document.getElementById('connect-steem');
         if (connectButton) {
-            connectButton.addEventListener('click', () => showLoginModal());
+            connectButton.addEventListener('click', () => {
+                const { showLoginModal } = require('../auth/login-manager.js');
+                showLoginModal();
+            });
         }
     }
 }

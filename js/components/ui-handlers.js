@@ -21,11 +21,16 @@ export function setupUIEventListeners() {
             e.preventDefault();
             const username = document.getElementById('steemUsername').value;
             const key = document.getElementById('steemKey').value;
-            const success = await handleLogin(username, key);
             
-            if (success) {
-                updateSidebar(); // Aggiorna la sidebar dopo il login
-                await loadStories();
+            try {
+                const success = await handleLogin(username, key);
+                if (success) {
+                    console.log('Login successful');
+                    // Il resto viene gestito in handleLogin
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('Login failed: ' + error.message);
             }
         });
     }

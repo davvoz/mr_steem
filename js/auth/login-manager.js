@@ -57,7 +57,6 @@ export async function handleLogin(username, key) {
         if (!key) {
             steem.api.setOptions({ url: 'https://api.steemit.com' });
         } else {
-            // Configure steem-js with the provided private posting key
             steem.api.setOptions({ url: 'https://api.steemit.com', useTestNet: false });
         }
 
@@ -67,35 +66,33 @@ export async function handleLogin(username, key) {
             steemConnection.isConnected = true;
             steemConnection.username = username;
             
-            // Update visibility of profile/login buttons
-            document.getElementById('profile-link').style.display = '';
-            document.getElementById('login-link').style.display = 'none';
-            
             // Salva i dati nel sessionStorage
             sessionStorage.setItem('steemUsername', username);
             if (key) {
                 sessionStorage.setItem('steemPostingKey', key);
             }
             
+            // Aggiorna l'UI
+            document.getElementById('profile-link').style.display = '';
+            document.getElementById('login-link').style.display = 'none';
+            
             hideLoginModal();
             await updateProfileImage(accounts[0]);
             
-            // Update UI to show connected state
-                
-            try {
-                await loadSuggestions();
-            } catch (suggestionError) {
-                console.warn('Failed to load suggestions:', suggestionError);
-                // Continue anyway as this is not critical
-            }
+            // Carica i contenuti
+            await Promise.all([
+                loadStories(),
+                loadSuggestions(),
+                updateSidebar()
+            ]);
             
             return true;
-        } else {
-            throw new Error('Account not found');
         }
+        throw new Error('Account not found');
     } catch (error) {
         console.error('Login failed:', error);
-            return false;
+        alert('Login failed: ' + error.message);
+        return false;
     }
 }
 
