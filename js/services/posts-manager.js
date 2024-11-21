@@ -5,6 +5,11 @@ let lastPost = null;
 let isLoading = false;
 let hasMorePosts = true;
 
+// Add scroll management variables
+let scrollTimeout = null;
+let isScrolling = false;
+let loadingLock = false;
+
 function extractProfileImage(account) {
     return  'https://steemitimages.com/u/' + account.name + '/avatar' 
 }
@@ -84,43 +89,46 @@ function extractImageFromContent(content) {
     return `https://steemitimages.com/u/${content.author}/avatar`;
 }
 
-export async function loadSteemPosts(append = false) {
-    if (isLoading || !hasMorePosts) return;
+let lastPostPermlink = null;
+let lastPostAuthor = null;
 
+export async function loadSteemPosts() {
     try {
+        if (isLoading) return; // Previene richieste multiple mentre sta caricando
         isLoading = true;
-        showLoadingIndicator();
 
         const query = {
-            limit: 20,
-            tag: '',
-            truncate_body: 1000 // Optional: limit post body size for better performance
+            tag: 'photography',
+            limit: 10, // Reduced batch size for smoother loading
+            start_author: lastPostAuthor || undefined,
+            start_permlink: lastPostPermlink || undefined
         };
 
-        if (lastPost) {
-            query.start_author = lastPost.author;
-            query.start_permlink = lastPost.permlink;
-        }
-
-        const posts = await steem.api.getDiscussionsByCreatedAsync(query);
-
-        if (posts.length < query.limit) {
-            hasMorePosts = false;
+        const posts = await steem.api.getDiscussionsByTrendingAsync(query);
+        
+        // Salta il primo post se non è la prima chiamata
+        // perché Steem API include l'ultimo post della chiamata precedente
+        if (lastPostPermlink && posts.length > 0) {
+            posts.shift();
         }
 
         if (posts.length > 0) {
-            lastPost = posts[posts.length - 1];
+            // Aggiorna i riferimenti all'ultimo post
+            const lastPost = posts[posts.length - 1];
+            lastPostAuthor = lastPost.author;
+            lastPostPermlink = lastPost.permlink;
+
+            // Use batch rendering for better performance
+            await displayPosts(posts, 'posts-container', true);
+        } else {
+            // No more posts to load
+            window.removeEventListener('scroll', window._scrollHandler);
         }
 
-        displayPosts(posts, 'posts-container', append);
-
+        isLoading = false;
     } catch (error) {
         console.error('Error loading posts:', error);
-        document.getElementById('posts-container').innerHTML +=
-            '<div class="error-message">Failed to load more posts</div>';
-    } finally {
         isLoading = false;
-        hideLoadingIndicator();
     }
 }
 
@@ -882,24 +890,63 @@ function hideProfileLoadingIndicator() {
 }
 
 export function setupInfiniteScroll() {
-    const handleScroll = () => {
-        const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+    // Remove existing scroll listener if any
+    window.removeEventListener('scroll', window._scrollHandler);
+    
+    // Create new optimized scroll handler
+    window._scrollHandler = throttle(() => {
+        if (loadingLock) return;
+        
+        const scrollPosition = window.innerHeight + window.pageYOffset;
+        const threshold = document.documentElement.scrollHeight - 1000;
+        
+        if (scrollPosition >= threshold) {
+            requestAnimationFrame(async () => {
+                try {
+                    loadingLock = true;
+                    showLoadingIndicator();
+                    await loadSteemPosts();
+                } catch (error) {
+                    console.error('Error loading more posts:', error);
+                } finally {
+                    loadingLock = false;
+                    hideLoadingIndicator();
+                }
+            });
+        }
+    }, 150);
 
-        // If we're near bottom (100px threshold)
-        if (scrollHeight - scrollTop - clientHeight < 100) {
-            loadSteemPosts(true); // true for append mode
+    window.addEventListener('scroll', window._scrollHandler, { passive: true });
+}
+
+// Replace debounce with more efficient throttle for scroll events
+function throttle(func, limit) {
+    let inThrottle = false;
+    return function(...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            requestAnimationFrame(() => {
+                inThrottle = false;
+            });
         }
     };
+}
 
-    // Throttle scroll events
-    let timeout;
-    window.addEventListener('scroll', () => {
-        if (timeout) return;
-        timeout = setTimeout(() => {
-            handleScroll();
-            timeout = null;
-        }, 100);
-    });
+// Cleanup function to prevent memory leaks
+export function cleanupInfiniteScroll() {
+    if (window._scrollHandler) {
+        window.removeEventListener('scroll', window._scrollHandler);
+        window._scrollHandler = null;
+    }
+    resetPostsState();
+}
+
+// Reset dello stato quando si cambia vista o si torna alla home
+export function resetPostsState() {
+    lastPostPermlink = null;
+    lastPostAuthor = null;
+    isLoading = false;
 }
 
 export function updateSidebar() {

@@ -1,13 +1,19 @@
 import { hideAllViews, showView } from '../utils/view-manager.js';
 import { steemConnection, showLoginModal } from '../auth/login-manager.js';
-import { loadSteemPosts, loadStories, loadExploreContent, setupInfiniteScroll, loadUserProfile, loadExtendedSuggestions, updateSidebar, loadSinglePost } from '../services/posts-manager.js';
+import { loadSteemPosts, loadStories, loadExploreContent, setupInfiniteScroll, loadUserProfile, loadExtendedSuggestions, updateSidebar, loadSinglePost, resetPostsState, cleanupInfiniteScroll } from '../services/posts-manager.js';
 
 export const routes = {
     '/': { 
         viewId: 'home-view',
         handler: async () => {
+            // Cleanup before setting up new scroll
+            cleanupInfiniteScroll();
+            
             hideAllViews();
             showView('home-view');
+            
+            // Reset posts state
+            resetPostsState();
             
             // Reset pagination state
             window.lastPost = null;

@@ -34,7 +34,24 @@ async function createPostElement(post) {
             </div>
             <div>${post.author}</div>
         </div>
-        <!-- ...rest of post HTML... -->
+        <div class="post-image">
+            <img src="${imageUrl}" alt="Post image">
+        </div>
+        <div class="post-body">
+            <h3>${post.title}</h3>
+            <p>${post.body}</p>
+        </div>
+        <div class="post-footer">
+            <div class="votes-count">
+                <i class="${heartClass}"></i>
+                <span>${post.active_votes.length}</span>
+            </div>
+            <div class="comments-count">
+                <i class="far fa-comment"></i>
+                <span>${post.children}</span>
+            </div>
+        </div>
+        
     `;
 
     // Add event listeners and initialize tooltips
