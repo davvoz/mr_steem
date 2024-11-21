@@ -197,6 +197,7 @@ body {
     box-sizing: border-box;
     box-shadow: var(--shadow-sm);
     transition: var(--transition);
+    overflow-x: none;
 }
 
 .post:hover {
