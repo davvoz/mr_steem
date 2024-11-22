@@ -212,11 +212,7 @@ export async function loadCommunity(name, searchData = null) {
                             <span><strong>${community.subscribers}</strong> subscribers</span>
                         </div>
                         <p class="community-description">${community.about || 'No description available'}</p>
-                        <div class="community-actions">
-                            <button class="join-button ${community.is_subscribed ? 'joined' : ''}" onclick="joinCommunity('${community.name}')">
-                                ${community.is_subscribed ? 'Joined' : 'Join'}
-                            </button>
-                        </div>
+                      
                     </div>
                 </div>
             </div>

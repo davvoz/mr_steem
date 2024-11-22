@@ -9,30 +9,22 @@ class SearchService {
             if (query === this.lastQuery) return null;
             this.lastQuery = query;
 
-            // Cerca account che iniziano con la query
-            const accounts = await steem.api.lookupAccountsAsync(query, 10);
-            
-            // Cerca communities dall'API esterna
+            // Aumentiamo il limite e cerchiamo senza fermarci al primo match
+            const accounts = await steem.api.lookupAccountsAsync(query.toLowerCase(), 20);
+            const profiles = await Promise.all(accounts.map(username => this.enrichUserData(username)));
+
+            // Manteniamo invariata la logica per le communities
             const communitiesResponse = await fetch('https://develop-imridd.eu.pythonanywhere.com/api/steem/communities');
             const allCommunities = await communitiesResponse.json();
             
-            // Filtra le communities in base alla query
             const communities = allCommunities.filter(community => 
                 community.name.toLowerCase().includes(query.toLowerCase()) ||
                 (community.title && community.title.toLowerCase().includes(query.toLowerCase()))
-            ).slice(0, 10);  // Limita a 10 risultati
-
-            // Cerca corrispondenza esatta per profili
-            const exactProfileMatch = accounts.find(username => username.toLowerCase() === query.toLowerCase());
-            const profiles = exactProfileMatch ? [await this.enrichUserData(exactProfileMatch)] : await Promise.all(accounts.map(username => this.enrichUserData(username)));
-
-            // Cerca corrispondenza esatta per communities
-            const exactCommunityMatch = communities.find(community => community.name.toLowerCase() === query.toLowerCase() || (community.title && community.title.toLowerCase() === query.toLowerCase()));
-            const filteredCommunities = exactCommunityMatch ? [exactCommunityMatch] : communities;
+            ).slice(0, 10);
 
             return {
                 profiles,
-                communities: filteredCommunities.map(community => ({
+                communities: communities.map(community => ({
                     name: community.name,
                     title: community.title || community.name,
                     about: community.about || '',
