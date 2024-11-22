@@ -10,6 +10,9 @@ let scrollTimeout = null;
 let isScrolling = false;
 let loadingLock = false;
 
+// Add this at the top with other state variables
+const processedPostIds = new Set();
+
 function extractProfileImage(account) {
     return  'https://steemitimages.com/u/' + account.name + '/avatar' 
 }
@@ -103,17 +106,17 @@ const seenPosts = new Set(); // Cache globale per tutti i post visti
 
 export async function loadSteemPosts() {
     try {
-        if (isLoading) return; // Previene richieste multiple mentre sta caricando
+        if (isLoading) return;
         isLoading = true;
 
         const query = {
             tag: 'photography',
-            limit: 20,  // Aumentato per avere più post da filtrare
+            limit: 20,
             start_author: lastPostAuthor || undefined,
             start_permlink: lastPostPermlink || undefined
         };
 
-        const posts = await steem.api.getDiscussionsByTrendingAsync(query);
+        const posts = await steem.api.getDiscussionsByCreatedAsync(query);
         
         // Filtra i duplicati usando il nuovo sistema di cache
         const uniquePosts = posts.filter(post => {
@@ -136,16 +139,17 @@ export async function loadSteemPosts() {
             lastPostAuthor = lastPost.author;
             lastPostPermlink = lastPost.permlink;
 
-            // Use batch rendering for better performance
             await displayPosts(uniquePosts, 'posts-container', true);
         } else {
             // No more posts to load
+            hasMorePosts = false;
             window.removeEventListener('scroll', window._scrollHandler);
         }
 
-        isLoading = false;
     } catch (error) {
         console.error('Error loading posts:', error);
+        hasMorePosts = false;
+    } finally {
         isLoading = false;
     }
 }
@@ -1027,6 +1031,8 @@ export function resetPostsState() {
     lastPostAuthor = null;
     isLoading = false;
     seenPosts.clear(); // Pulisci la cache quando si resetta lo stato
+    hasMorePosts = true;
+    processedPostIds.clear(); // Clear the processed posts cache
 }
 
 export function updateSidebar() {
