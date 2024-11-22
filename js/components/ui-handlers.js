@@ -13,8 +13,8 @@ export function setupUIEventListeners() {
         });
     });
 
-    // Update WIP features - solo search e new
-    const wipFeatures = document.querySelectorAll('a[data-route="/search"], a[data-route="/new"]');
+    // Update WIP features - solo new
+    const wipFeatures = document.querySelectorAll('a[data-route="/new"]');
     
     wipFeatures.forEach(feature => {
         feature.addEventListener('click', (e) => {
@@ -38,6 +38,15 @@ export function setupUIEventListeners() {
         suggestionsLink.addEventListener('click', (e) => {
             e.preventDefault();
             window.location.hash = '/suggestions';
+        });
+    }
+
+    // Rimuovi il codice WIP per la ricerca e aggiorna con la nuova implementazione
+    const searchLink = document.querySelector('[data-route="/search"]');
+    if (searchLink) {
+        searchLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.hash = '/search';
         });
     }
 

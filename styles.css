@@ -2594,7 +2594,7 @@ body {
         height: calc(100vh - var(--header-height));
         background: var(--background);
         transition: 0.3s ease-in-out;
-        display: flex !important;
+        display: block !important;
         flex-direction: column;
         padding: var(--spacing-md);
         z-index: 999;
@@ -3146,3 +3146,510 @@ body {
     width: 100%;
 
 }
+
+.loading-indicator {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+}
+
+.error-message {
+    text-align: center;
+    padding: 20px;
+    color: #dc3545;
+    background: rgba(220, 53, 69, 0.1);
+    border-radius: 8px;
+    margin: 20px;
+}
+
+.notifications-container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: var(--background);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.notification-item {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+.notification-item:hover {
+    background-color: var(--secondary-color);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .notification-item:hover {
+    background-color: var(--dark-surface);
+}
+
+.notifications-list {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.notification-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #dbdbdb;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+    background-color: #fafafa;
+}
+
+.notification-item.read {
+    opacity: 0.7;
+}
+
+.notification-item img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    margin-right: 15px;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-content p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.notification-content small {
+    color: #8e8e8e;
+}
+
+.loading-indicator {
+    text-align: center;
+    padding: 20px;
+}
+
+.no-notifications {
+    text-align: center;
+    padding: 40px;
+    color: #8e8e8e;
+}
+
+/* ... existing code ... */
+
+#notifications-view {
+    height: calc(100vh - var(--header-height));
+    overflow-y: auto;
+    padding: 20px;
+    scroll-behavior: smooth;
+}
+
+.notifications-list {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.loading-indicator {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+}
+
+/* ... existing code ... */
+
+/* ...existing code... */
+
+/* Aggiorna stili delle notifiche per desktop */
+#notifications-view {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    height: auto; /* Rimuovi l'altezza fissa */
+    overflow: visible; /* Rimuovi overflow */
+}
+
+.notifications-header {
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 20px;
+}
+
+.notifications-header h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.notification-item {
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.notification-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .notification-item {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+/* ...existing code... */
+
+/* ...existing code... */
+
+/* Search View Styles */
+.search-container {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 0 15px;
+}
+
+.search-bar {
+    position: relative;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 15px;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 8px 35px;
+    border: none;
+    font-size: 16px;
+    background: transparent;
+    color: var(--text-primary);
+}
+
+.search-bar input:focus {
+    outline: none;
+}
+
+.search-bar .fa-search {
+    position: absolute;
+    left: 15px;
+    color: var(--text-secondary);
+}
+
+.search-bar .fa-times {
+    position: absolute;
+    right: 15px;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.search-results {
+    margin-top: 20px;
+}
+
+.users-results, .posts-results {
+    margin-bottom: 30px;
+}
+
+.users-results h3, .posts-results h3 {
+    margin-bottom: 15px;
+    color: var(--text-primary);
+    font-size: 18px;
+}
+
+.user-result {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.user-result:hover {
+    background: var(--secondary-color);
+}
+
+.user-result img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 15px;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-info .username {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.user-info .reputation {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.post-result {
+    padding: 15px;
+    margin-bottom: 10px;
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.post-result:hover {
+    background: var(--secondary-color);
+}
+
+.post-result h4 {
+    margin: 0 0 5px;
+    color: var(--text-primary);
+}
+
+.post-result p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .search-bar {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .search-bar input {
+    color: var(--dark-text);
+}
+
+[data-theme="dark"] .user-result,
+[data-theme="dark"] .post-result {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .user-result:hover,
+[data-theme="dark"] .post-result:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ...existing code... */
+
+/* ...existing code... */
+
+/* Search View Styles Update */
+.search-section {
+    margin-bottom: 30px;
+}
+
+.search-section h3 {
+    margin-bottom: 15px;
+    color: var(--text-primary);
+    font-size: 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.community-result {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.community-result:hover {
+    background: var(--secondary-color);
+}
+
+.community-result img {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    margin-right: 15px;
+}
+
+.community-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.community-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.community-stats {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .community-result {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .community-result:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ...existing code... */
+
+/* ...existing code... */
+
+.community-result {
+    display: flex;
+    align-items: flex-start;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.community-result:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.community-result img {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    margin-right: 15px;
+    object-fit: cover;
+}
+
+.community-info {
+    flex: 1;
+}
+
+.community-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.community-stats {
+    font-size: 14px;
+    color: var(--text-secondary);
+    display: block;
+    margin-bottom: 8px;
+}
+
+.community-about {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .community-result {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .community-result:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* ...existing code... */
+
+/* ...existing code... */
+
+.search-container {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 0 15px;
+}
+
+.search-section {
+    margin-bottom: 40px;
+}
+
+.search-bar {
+    position: relative;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 15px;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 8px 35px;
+    border: none;
+    font-size: 16px;
+    background: transparent;
+    color: var(--text-primary);
+}
+
+.search-bar input:focus {
+    outline: none;
+}
+
+.search-bar .fa-user,
+.search-bar .fa-users {
+    position: absolute;
+    left: 15px;
+    color: var(--text-secondary);
+}
+
+.search-bar .fa-times {
+    position: absolute;
+    right: 15px;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.profiles-results,
+.communities-results {
+    margin-top: 20px;
+}
+
+.profiles-results h3,
+.communities-results h3 {
+    margin-bottom: 15px;
+    color: var(--text-primary);
+    font-size: 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* ...existing code... */

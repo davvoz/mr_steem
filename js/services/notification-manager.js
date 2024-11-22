@@ -1,9 +1,13 @@
-
 import { steemConnection } from '../auth/login-manager.js';
+import { avatarCache } from '../utils/avatar-cache.js'; // Aggiungi questa importazione
 
 let notifications = [];
 let lastCheck = 0;
 let isPolling = false;
+let isLoading = false;
+let lastId = -1;
+let hasMore = true;
+let lastProcessedId = null;
 
 export async function startNotificationPolling() {
     if (!steemConnection.isConnected || isPolling) return;
@@ -16,64 +20,138 @@ export async function startNotificationPolling() {
 }
 
 export async function checkNotifications() {
-    if (!steemConnection.username) return;
+    if (!steemConnection.username) {
+        console.log('No user logged in');
+        return;
+    }
 
     try {
-        const notifications = await fetchNotifications();
-        updateNotificationBadge(notifications.filter(n => !n.read).length);
-        return notifications;
+        const newNotifications = await fetchNotifications();
+        console.log('Fetched notifications:', newNotifications); // Debug log
+        updateNotificationBadge(newNotifications.filter(n => !n.read).length);
+        return newNotifications;
     } catch (error) {
         console.error('Error checking notifications:', error);
     }
 }
 
-async function fetchNotifications() {
+async function fetchNotifications(fromId = -1, limit = 10) {
     const account = steemConnection.username;
+    if (!account) {
+        console.error('No account found for notification fetching');
+        return [];
+    }
+    
+    console.log(`Fetching notifications for ${account} with limit ${limit}`);
     const newNotifications = [];
-
+    
     try {
-        // Ottieni voti recenti
-        const votes = await steem.api.getAccountVotesAsync(account);
-        const recentVotes = votes.filter(vote => new Date(vote.timestamp).getTime() > lastCheck);
+        // Usa getDiscussionsByBlog invece di getDiscussionsByAuthorBeforeDate
+        const query = {
+            tag: account,
+            limit: limit,
+            start_author: fromId === -1 ? undefined : account,
+            start_permlink: fromId === -1 ? undefined : fromId
+        };
+
+        const posts = await steem.api.getDiscussionsByBlogAsync(query);
         
-        newNotifications.push(...recentVotes.map(vote => ({
-            type: 'vote',
-            from: vote.voter,
-            permlink: vote.permlink,
-            timestamp: vote.timestamp,
-            read: false
-        })));
+        if (!posts || !Array.isArray(posts)) {
+            console.error('Invalid posts response:', posts);
+            hasMore = false;
+            return [];
+        }
 
-        // Ottieni menzioni e commenti
-        const mentions = await steem.api.getDiscussionsByBlogAsync({ 
-            tag: account, 
-            limit: 100 
-        });
+        console.log(`Retrieved ${posts.length} posts for ${account}`);
 
-        const recentMentions = mentions.filter(post => {
-            const timestamp = new Date(post.created).getTime();
-            return timestamp > lastCheck && (
-                post.parent_author === account || // commenti ai tuoi post
-                post.body.includes(`@${account}`) // menzioni
-            );
-        });
+        // Per ogni post, prendi i voti
+        for (const post of posts) {
+            if (post.author !== account) continue; // Salta i post non dell'utente
 
-        newNotifications.push(...recentMentions.map(mention => ({
-            type: mention.parent_author ? 'comment' : 'mention',
-            from: mention.author,
-            permlink: mention.permlink,
-            title: mention.title,
-            timestamp: mention.created,
-            read: false
-        })));
+            try {
+                const votes = await steem.api.getActiveVotesAsync(post.author, post.permlink);
+                console.log(`Found ${votes.length} votes for post ${post.permlink}`);
+                
+                // Filtra solo i voti di altri utenti (no self-votes)
+                const relevantVotes = votes.filter(vote => vote.voter !== account);
+                
+                for (const vote of relevantVotes) {
+                    newNotifications.push({
+                        id: `vote-${vote.time}-${post.permlink}-${vote.voter}`,
+                        type: 'vote',
+                        from: vote.voter,
+                        permlink: post.permlink,
+                        weight: vote.percent / 100,
+                        timestamp: vote.time,
+                        title: post.title || post.permlink,
+                        read: false
+                    });
+                }
+            } catch (voteError) {
+                console.error(`Error fetching votes for post ${post.permlink}:`, voteError);
+                continue; // Continua con il prossimo post se c'è un errore
+            }
+        }
 
-        lastCheck = Date.now();
-        notifications = [...newNotifications, ...notifications];
-        return notifications;
+        // Aggiorna lo stato per infinite scroll
+        if (posts.length > 0) {
+            const lastPost = posts[posts.length - 1];
+            lastId = lastPost.permlink;
+            hasMore = posts.length === limit;
+        } else {
+            hasMore = false;
+        }
+
+        // Ordina le notifiche per timestamp decrescente
+        return newNotifications.sort((a, b) => 
+            new Date(b.timestamp) - new Date(a.timestamp)
+        );
 
     } catch (error) {
         console.error('Error fetching notifications:', error);
+        console.error('Query parameters:', {
+            account,
+            fromId,
+            limit
+        });
+        hasMore = false;
         return [];
+    }
+}
+
+function getNotificationText(notification) {
+    switch (notification.type) {
+        case 'vote':
+            return `gave you a ${notification.weight}% upvote on "${notification.title}"`;
+        case 'comment':
+            return `commented on your post "${notification.title}": "${notification.comment}"`;
+        default:
+            return 'interacted with your content';
+    }
+}
+
+// Helper function to get post title
+async function getPostTitle(author, permlink) {
+    try {
+        console.log(`Fetching title for @${author}/${permlink}`); // Debug log
+        const content = await steem.api.getContentAsync(author, permlink);
+        
+        if (!content) {
+            console.warn(`No content found for @${author}/${permlink}`);
+            return 'Untitled post';
+        }
+
+        console.log('Content retrieved:', { 
+            title: content.title,
+            hasBody: !!content.body,
+            author: content.author
+        }); // Debug log
+        
+        return content.title || (content.body ? content.body.substring(0, 60) + '...' : 'Untitled post');
+    } catch (error) {
+        console.error('Error fetching post title:', error);
+        console.error('Parameters:', { author, permlink });
+        return 'Untitled post';
     }
 }
 
@@ -119,48 +197,95 @@ export async function renderNotifications() {
     const container = document.getElementById('notifications-view');
     if (!container) return;
 
-    const notificationsList = await fetchNotifications();
-    
+    // Reset states on new render
+    isLoading = false;
+    hasMore = true;
+    lastId = -1;
+
+    // Semplifichiamo il container per desktop
     container.innerHTML = `
-        <div class="notifications-container">
-            ${notificationsList.length ? notificationsList.map(notification => `
-                <div class="notification-item ${notification.read ? 'read' : ''}" 
-                     data-id="${notification.permlink}">
-                    <div class="notification-avatar">
-                        <img src="https://steemitimages.com/u/${notification.from}/avatar/small" 
-                             alt="${notification.from}">
-                    </div>
-                    <div class="notification-content">
-                        <p>
-                            <strong>@${notification.from}</strong> 
-                            ${getNotificationText(notification)}
-                        </p>
-                        <small>${new Date(notification.timestamp).toLocaleString()}</small>
-                    </div>
-                </div>
-            `).join('') : '<div class="no-notifications">No notifications yet</div>'}
+        <div class="notifications-header">
+            <h2>Notifications</h2>
         </div>
+        <div class="notifications-list"></div>
+        <div class="loading-indicator" style="display: none;">Loading more notifications...</div>
     `;
 
-    // Aggiungi event listeners per il click sulle notifiche
-    container.querySelectorAll('.notification-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const id = item.dataset.id;
-            markAsRead(id);
-            item.classList.add('read');
-        });
+    // Usiamo il window scroll invece dello scroll del container
+    window.addEventListener('scroll', () => {
+        if (isLoading || !hasMore) return;
+
+        const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+        if (scrollTop + clientHeight >= scrollHeight - 100) {
+            loadMoreNotifications();
+        }
     });
+
+    await loadMoreNotifications();
 }
 
-function getNotificationText(notification) {
-    switch (notification.type) {
-        case 'vote':
-            return `liked your post ${notification.permlink}`;
-        case 'comment':
-            return `commented on your post "${notification.title}"`;
-        case 'mention':
-            return `mentioned you in "${notification.title}"`;
-        default:
-            return 'interacted with your content';
+async function loadMoreNotifications() {
+    if (isLoading) {
+        console.log('Already loading notifications');
+        return;
+    }
+
+    const container = document.getElementById('notifications-view');
+    if (!container) return;
+
+    const listContainer = container.querySelector('.notifications-list');
+    const loadingIndicator = document.querySelector('.loading-indicator');
+
+    try {
+        isLoading = true;
+        loadingIndicator.style.display = 'block';
+
+        const newNotifications = await fetchNotifications(lastId);
+        
+        if (!newNotifications || newNotifications.length === 0) {
+            hasMore = false;
+            if (listContainer.children.length === 0) {
+                listContainer.innerHTML = '<div class="no-notifications">No notifications yet</div>';
+            }
+            return;
+        }
+
+        // Precarica gli avatar degli utenti
+        const uniqueUsers = [...new Set(newNotifications.map(n => n.from))];
+        for (const username of uniqueUsers) {
+            if (!avatarCache.has(username)) {
+                const avatarUrl = `https://steemitimages.com/u/${username}/avatar/small`;
+                avatarCache.set(username, avatarUrl);
+            }
+        }
+
+        const notificationsHTML = newNotifications.map(n => `
+            <div class="notification-item ${n.read ? 'read' : ''}" data-id="${n.id}">
+                <div class="notification-avatar">
+                    <img src="${avatarCache.get(n.from)}" 
+                         alt="${n.from}"
+                         onerror="this.src='https://steemitimages.com/u/${n.from}/avatar/small'">
+                </div>
+                <div class="notification-content">
+                    <p><strong>@${n.from}</strong> ${getNotificationText(n)}</p>
+                    <small>${new Date(n.timestamp).toLocaleString()}</small>
+                </div>
+            </div>
+        `).join('');
+
+        listContainer.insertAdjacentHTML('beforeend', notificationsHTML);
+
+        // Add click handlers for new items
+        const newItems = Array.from(listContainer.children).slice(-newNotifications.length);
+        newItems.forEach(item => {
+            item.onclick = () => markAsRead(item.dataset.id);
+        });
+
+    } catch (error) {
+        console.error('Error loading more notifications:', error);
+        hasMore = false;
+    } finally {
+        isLoading = false;
+        loadingIndicator.style.display = 'none';
     }
 }

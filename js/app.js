@@ -65,8 +65,8 @@ class App {
                 toggleTheme();
             });
 
-            // Update WIP features list - rimuoviamo notifications
-            const wipFeatures = document.querySelectorAll('[data-route="/search"], [data-route="/new"]');
+            // Update WIP features - rimuoviamo search e lasciamo solo new
+            const wipFeatures = document.querySelectorAll('[data-route="/new"]');
             wipFeatures.forEach(feature => {
                 feature.addEventListener('click', (e) => {
                     e.preventDefault();
