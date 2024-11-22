@@ -92,6 +92,15 @@ function extractImageFromContent(content) {
 let lastPostPermlink = null;
 let lastPostAuthor = null;
 
+// Aggiungiamo una cache globale per tutti i post
+const globalPostsCache = {
+    home: new Set(),
+    profile: new Map() // username -> Set di post keys
+};
+
+// Modifica la struttura della cache per renderla più affidabile
+const seenPosts = new Set(); // Cache globale per tutti i post visti
+
 export async function loadSteemPosts() {
     try {
         if (isLoading) return; // Previene richieste multiple mentre sta caricando
@@ -99,27 +108,36 @@ export async function loadSteemPosts() {
 
         const query = {
             tag: 'photography',
-            limit: 10, // Reduced batch size for smoother loading
+            limit: 20,  // Aumentato per avere più post da filtrare
             start_author: lastPostAuthor || undefined,
             start_permlink: lastPostPermlink || undefined
         };
 
         const posts = await steem.api.getDiscussionsByTrendingAsync(query);
         
-        // Salta il primo post se non è la prima chiamata
-        // perché Steem API include l'ultimo post della chiamata precedente
-        if (lastPostPermlink && posts.length > 0) {
-            posts.shift();
+        // Filtra i duplicati usando il nuovo sistema di cache
+        const uniquePosts = posts.filter(post => {
+            const postKey = `${post.author}-${post.permlink}`;
+            if (seenPosts.has(postKey)) {
+                return false;
+            }
+            seenPosts.add(postKey);
+            return true;
+        });
+
+        // Se abbiamo un lastPost, rimuovi il primo elemento perché è duplicato
+        if (lastPostPermlink && uniquePosts.length > 0) {
+            uniquePosts.shift();
         }
 
-        if (posts.length > 0) {
+        if (uniquePosts.length > 0) {
             // Aggiorna i riferimenti all'ultimo post
-            const lastPost = posts[posts.length - 1];
+            const lastPost = uniquePosts[uniquePosts.length - 1];
             lastPostAuthor = lastPost.author;
             lastPostPermlink = lastPost.permlink;
 
             // Use batch rendering for better performance
-            await displayPosts(posts, 'posts-container', true);
+            await displayPosts(uniquePosts, 'posts-container', true);
         } else {
             // No more posts to load
             window.removeEventListener('scroll', window._scrollHandler);
@@ -403,60 +421,41 @@ export async function loadSuggestions() {
     }
 
     try {
-        // Get trending authors in the photography tag
         const trending = await steem.api.getDiscussionsByTrendingAsync({
             tag: 'photography',
-            limit: 10
+            limit: 5 // Ridotto a 5 per la sidebar
         });
 
-        // Filter unique authors and remove current user
         const uniqueAuthors = [...new Set(trending.map(post => post.author))]
             .filter(author => author !== steemConnection.username)
             .slice(0, 5);
 
-        // Get full account info for these authors
         const authorAccounts = await steem.api.getAccountsAsync(uniqueAuthors);
-
-        // Preload avatars for suggestions
         await preloadAvatars(authorAccounts);
 
         const suggestionsContainer = document.getElementById('suggestions-container');
-        if (!suggestionsContainer) {
-            console.error('Suggestions container not found');
-            return;
-        }
+        if (!suggestionsContainer) return;
 
-        suggestionsContainer.innerHTML = `
-            <div class="suggestions-header">
-                <h4>Suggestions For You</h4>
-                <a href="#/suggestions" class="see-all">See All</a>
-            </div>
-            ${authorAccounts.map(account => `
-                <div class="suggestion-item">
-                    <div class="suggestion-user">
-                        <div class="suggestion-avatar">
-                            <img src="${avatarCache.get(account.name)}" 
-                                 alt="${account.name}">
-                        </div>
-                        <div class="suggestion-info">
-                            <div class="suggestion-username">@${account.name}</div>
-                            <div class="suggestion-meta">
-                                <span class="reputation">
-                                    Rep: ${Math.floor(steem.formatter.reputation(account.reputation))}
-                                </span>
-                                <span class="dot">•</span>
-                                <span class="posts-count">
-                                    ${account.post_count} posts
-                                </span>
-                            </div>
+        suggestionsContainer.innerHTML = authorAccounts.map(account => `
+            <div class="suggestion-item">
+                <div class="suggestion-user">
+                    <div class="suggestion-avatar">
+                        <img src="${avatarCache.get(account.name)}" alt="${account.name}">
+                    </div>
+                    <div class="suggestion-info">
+                        <div class="suggestion-username">@${account.name}</div>
+                        <div class="suggestion-meta">
+                            <span class="reputation">
+                                Rep: ${Math.floor(steem.formatter.reputation(account.reputation))}
+                            </span>
                         </div>
                     </div>
-                    <button onclick="followUser('${account.name}')" class="follow-btn">
-                        Follow
-                    </button>
                 </div>
-            `).join('')}
-        `;
+                <button onclick="followUser('${account.name}')" class="follow-btn">
+                    Follow
+                </button>
+            </div>
+        `).join('');
 
     } catch (error) {
         console.error('Failed to load suggestions:', error);
@@ -672,11 +671,11 @@ let profileLastPost = null;
 let isLoadingProfile = false;
 let hasMoreProfilePosts = true;
 
+// Aggiungiamo una cache per tenere traccia dei post già caricati
+const loadedPostsCache = new Map();
+
 export async function loadUserProfile(username) {
-    // Reset dello stato per il nuovo profilo
-    profileLastPost = null;
-    isLoadingProfile = false;
-    hasMoreProfilePosts = true;
+    resetProfileState(username);
 
     try {
         const [account] = await steem.api.getAccountsAsync([username]);
@@ -737,55 +736,83 @@ async function loadMoreProfilePosts(username, append = true) {
 
         const query = {
             tag: username,
-            limit: 12
+            limit: 20,
+            start_author: profileLastPost?.author || undefined,
+            start_permlink: profileLastPost?.permlink || undefined
         };
 
-        if (profileLastPost) {
-            query.start_author = profileLastPost.author;
-            query.start_permlink = profileLastPost.permlink;
-        }
-
         const posts = await steem.api.getDiscussionsByBlogAsync(query);
-
-        if (posts.length < query.limit) {
+        
+        // Verifica che abbiamo effettivamente dei post
+        if (!posts || posts.length === 0) {
             hasMoreProfilePosts = false;
+            return;
         }
 
-        if (posts.length > 0) {
-            profileLastPost = posts[posts.length - 1];
-            
-            const postsGrid = document.getElementById('profile-posts-grid');
-            if (!postsGrid) return;
+        // IMPORTANTE: Rimuovi SEMPRE il primo post se non è il primo caricamento
+        const postsToProcess = profileLastPost ? posts.slice(1) : posts;
+        
+        // Se non abbiamo più post dopo la rimozione del primo, fermiamoci
+        if (postsToProcess.length === 0) {
+            hasMoreProfilePosts = false;
+            return;
+        }
 
-            const postsHTML = await Promise.all(posts.map(async post => {
-                let imageUrl = extractImageFromContent(post);
-                // Se non troviamo un'immagine nel post, usiamo l'avatar dell'autore come fallback
-                if (!imageUrl) {
-                    const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
-                    imageUrl = authorAccount ? extractProfileImage(authorAccount) : null;
-                }
-                return `
-                    <div class="profile-post" onclick="window.location.hash='#/post/${post.author}/${post.permlink}'">
-                        ${imageUrl
-                            ? `<img src="${imageUrl}" alt="${post.title}" loading="lazy" onerror="this.src='https://steemitimages.com/u/${post.author}/avatar';">`
-                            : '<div class="no-image">No Image</div>'
-                        }
-                    </div>
-                `;
-            }));
+        // Aggiorna il riferimento all'ultimo post usando l'ultimo della lista originale
+        profileLastPost = posts[posts.length - 1];
 
-            if (append) {
-                postsGrid.insertAdjacentHTML('beforeend', postsHTML.join(''));
-            } else {
-                postsGrid.innerHTML = postsHTML.join('');
+        const postsGrid = document.getElementById('profile-posts-grid');
+        if (!postsGrid) return;
+
+        const postsHTML = await Promise.all(postsToProcess.map(async post => {
+            let imageUrl = extractImageFromContent(post);
+            if (!imageUrl) {
+                const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
+                imageUrl = authorAccount ? extractProfileImage(authorAccount) : null;
             }
+            return `
+                <div class="profile-post" 
+                     data-permlink="${post.permlink}" 
+                     data-author="${post.author}"
+                     onclick="window.location.hash='#/post/${post.author}/${post.permlink}'">
+                    ${imageUrl
+                        ? `<img src="${imageUrl}" alt="${post.title}" loading="lazy" onerror="this.src='https://steemitimages.com/u/${post.author}/avatar';">`
+                        : '<div class="no-image">No Image</div>'
+                    }
+                </div>
+            `;
+        }));
+
+        if (append) {
+            postsGrid.insertAdjacentHTML('beforeend', postsHTML.join(''));
+        } else {
+            postsGrid.innerHTML = postsHTML.join('');
         }
 
     } catch (error) {
         console.error('Failed to load profile posts:', error);
+        hasMoreProfilePosts = false;
     } finally {
         isLoadingProfile = false;
         hideProfileLoadingIndicator();
+    }
+}
+
+// Aggiungiamo una funzione di reset più completa
+function resetProfileState(username) {
+    profileLastPost = null;
+    isLoadingProfile = false;
+    hasMoreProfilePosts = true;
+    
+    // Pulisci la cache per questo utente
+    if (globalPostsCache.profile.has(username)) {
+        globalPostsCache.profile.set(username, new Set());
+    }
+    
+    // Rimuoviamo l'eventuale scroll handler precedente
+    if (window._profileScrollHandler) {
+        window.removeEventListener('scroll', window._profileScrollHandler);
+        window._profileScrollHandler = null;
     }
 }
 
@@ -855,40 +882,6 @@ export async function loadSinglePost(author, permlink) {
     }
 }
 
-function setupProfileInfiniteScroll(username) {
-    // Rimuovi eventuali handler precedenti
-    window.removeEventListener('scroll', window._profileScrollHandler);
-    
-    // Crea un nuovo handler e salvalo globalmente per poterlo rimuovere in seguito
-    window._profileScrollHandler = () => {
-        // Verifica che siamo ancora nella vista del profilo
-        const profileView = document.getElementById('profile-view');
-        if (!profileView || profileView.style.display === 'none') return;
-
-        // Verifica che siamo nel profilo corretto
-        const currentProfileUsername = profileView.querySelector('.profile-header h2')?.textContent?.slice(1);
-        if (currentProfileUsername !== username) return;
-
-        const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-        if (scrollHeight - scrollTop - clientHeight < 100) {
-            loadMoreProfilePosts(username, true);
-        }
-    };
-
-    // Aggiungi il nuovo handler
-    window.addEventListener('scroll', window._profileScrollHandler);
-}
-
-function showProfileLoadingIndicator() {
-    const indicator = document.querySelector('.profile-loading-indicator');
-    if (indicator) indicator.style.display = 'block';
-}
-
-function hideProfileLoadingIndicator() {
-    const indicator = document.querySelector('.profile-loading-indicator');
-    if (indicator) indicator.style.display = 'none';
-}
-
 export function setupInfiniteScroll() {
     // Remove existing scroll listener if any
     window.removeEventListener('scroll', window._scrollHandler);
@@ -919,6 +912,66 @@ export function setupInfiniteScroll() {
     window.addEventListener('scroll', window._scrollHandler, { passive: true });
 }
 
+function setupProfileInfiniteScroll(username) {
+    window.removeEventListener('scroll', window._profileScrollHandler);
+    
+    let isLoadingMore = false;
+    let lastScrollPos = 0;
+    const scrollThreshold = 1000;
+    
+    window._profileScrollHandler = () => {
+        // Verifica che siamo ancora nella vista del profilo
+        const profileView = document.getElementById('profile-view');
+        if (!profileView || profileView.style.display === 'none') return;
+
+        // Verifica che siamo nel profilo corretto
+        const currentProfileUsername = profileView.querySelector('.profile-header h2')?.textContent?.slice(1);
+        if (currentProfileUsername !== username) return;
+
+        // Previeni multiple chiamate durante lo scroll
+        if (isLoadingMore) return;
+        
+        const currentScrollPos = window.scrollY;
+        const scrollingDown = currentScrollPos > lastScrollPos;
+        lastScrollPos = currentScrollPos;
+        
+        // Procedi solo se stiamo scrollando verso il basso
+        if (!scrollingDown) return;
+
+        const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+        if (scrollHeight - scrollTop - clientHeight < scrollThreshold) {
+            isLoadingMore = true;
+            
+            Promise.resolve().then(async () => {
+                try {
+                    showProfileLoadingIndicator();
+                    await loadMoreProfilePosts(username, true);
+                } catch (error) {
+                    console.error('Error loading more profile posts:', error);
+                } finally {
+                    hideProfileLoadingIndicator();
+                    // Aggiungi un piccolo delay prima di permettere altro caricamento
+                    setTimeout(() => {
+                        isLoadingMore = false;
+                    }, 1000);
+                }
+            });
+        }
+    };
+
+    window.addEventListener('scroll', window._profileScrollHandler, { passive: true });
+}
+
+function showProfileLoadingIndicator() {
+    const indicator = document.querySelector('.profile-loading-indicator');
+    if (indicator) indicator.style.display = 'block';
+}
+
+function hideProfileLoadingIndicator() {
+    const indicator = document.querySelector('.profile-loading-indicator');
+    if (indicator) indicator.style.display = 'none';
+}
+
 // Replace debounce with more efficient throttle for scroll events
 function throttle(func, limit) {
     let inThrottle = false;
@@ -942,11 +995,38 @@ export function cleanupInfiniteScroll() {
     resetPostsState();
 }
 
-// Reset dello stato quando si cambia vista o si torna alla home
+// Aggiungi una funzione di pulizia della cache
+function cleanupCache() {
+    const MAX_CACHE_AGE = 30 * 60 * 1000; // 30 minuti
+    const now = Date.now();
+
+    // Pulisci la cache home
+    for (const [key, value] of globalPostsCache.home.entries()) {
+        if (now - value.timestamp > MAX_CACHE_AGE) {
+            globalPostsCache.home.delete(key);
+        }
+    }
+
+    // Pulisci le cache dei profili
+    for (const [username, profileCache] of globalPostsCache.profile.entries()) {
+        for (const [key, value] of profileCache.entries()) {
+            if (now - value.timestamp > MAX_CACHE_AGE) {
+                profileCache.delete(key);
+            }
+        }
+        // Rimuovi la cache del profilo se è vuota
+        if (profileCache.size === 0) {
+            globalPostsCache.profile.delete(username);
+        }
+    }
+}
+
+// Modifica la funzione resetPostsState per includere la pulizia della cache
 export function resetPostsState() {
     lastPostPermlink = null;
     lastPostAuthor = null;
     isLoading = false;
+    seenPosts.clear(); // Pulisci la cache quando si resetta lo stato
 }
 
 export function updateSidebar() {
