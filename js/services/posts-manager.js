@@ -88,6 +88,11 @@ export async function loadSteemPosts() {
         if (isLoading) return;
         isLoading = true;
 
+        // Show loading indicator if this is the first load
+        if (!lastPostPermlink) {
+            showLoadingIndicator();
+        }
+
         const query = {
             tag: 'photography',
             limit: 20,
@@ -127,17 +132,39 @@ export async function loadSteemPosts() {
 
     } catch (error) {
         console.error('Error loading posts:', error);
+        // Show error message if this is the first load
+        if (!lastPostPermlink) {
+            const container = document.getElementById('posts-container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="error-container">
+                        <p>Failed to load posts. Please try again later.</p>
+                        <button onclick="window.location.reload()">Retry</button>
+                    </div>
+                `;
+            }
+        }
         hasMorePosts = false;
     } finally {
         isLoading = false;
+        hideLoadingIndicator();
     }
 }
 
 function showLoadingIndicator() {
-    const loader = document.createElement('div');
-    loader.className = 'loading-indicator';
-    loader.innerHTML = '<div class="spinner"></div>';
-    document.getElementById('posts-container').appendChild(loader);
+    let loader = document.querySelector('.loading-indicator');
+    if (!loader) {
+        loader = document.createElement('div');
+        loader.className = 'loading-indicator';
+        loader.innerHTML = `
+            <div class="loading-spinner"></div>
+            <p>Loading posts...</p>
+        `;
+        const container = document.getElementById('posts-container');
+        if (container) {
+            container.appendChild(loader);
+        }
+    }
 }
 
 function hideLoadingIndicator() {

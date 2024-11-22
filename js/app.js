@@ -23,6 +23,9 @@ class App {
         await this.setupEventListeners();
         this.checkSteemAvailability();
 
+        // Show loading state when app starts
+        this.showInitialLoading();
+
         // Start notification polling if user is logged in
         if (checkExistingLogin()) {
             await startNotificationPolling();
@@ -90,6 +93,18 @@ class App {
             console.error('All Steem CDN sources failed');
                    };
         document.head.appendChild(fallbackScript);
+    }
+
+    showInitialLoading() {
+        const mainContent = document.querySelector('main');
+        if (mainContent) {
+            mainContent.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <p>Loading posts...</p>
+                </div>
+            `;
+        }
     }
 }
 

@@ -105,7 +105,9 @@ export const routes = {
         handler: async (params) => {
             hideAllViews();
             showView('community-view');
-            await loadCommunity(params.name);
+            // Get community data from the search results if available
+            const communityData = window.searchResults?.communities?.find(c => c.name === params.name);
+            await loadCommunity(params.name, communityData);
         }
     }
 };

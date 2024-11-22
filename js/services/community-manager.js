@@ -78,6 +78,34 @@ function processCommunityContent(content = {}) {
         .sort((a, b) => new Date(b.created) - new Date(a.created));
 }
 
+function transformCommunityData(communityData, name) {
+    // First try to find the community info in the state data
+    const communityKey = `hive-${name}`;
+    console.log('Looking for community key:', communityKey, 'in:', communityData);
+    
+    // Try to find community info in different possible locations
+    const communityInfo = {
+        ...communityData[communityKey],           // Try direct access
+        ...communityData.content[communityKey],   // Try in content
+        ...(communityData.community || {})        // Try in community field
+    };
+
+    console.log('Found community info:', communityInfo);
+
+    // Extract community info from the API response with better fallbacks
+    return {
+        name: name,
+        title: communityInfo.title || communityInfo.community_title || name,
+        icon: communityInfo.avatar || communityInfo.community_avatar || communityInfo.icon || 'default-community-avatar.png',
+        about: communityInfo.about || communityInfo.description || communityInfo.community_description || 'No description available',
+        subscribers: parseInt(communityInfo.subscribers || communityInfo.member_count || 0),
+        num_pending: parseInt(communityInfo.num_pending || communityInfo.pending_posts || 0),
+        num_authors: parseInt(communityInfo.num_authors || communityInfo.active_authors || 0),
+        is_subscribed: !!communityInfo.is_subscribed,
+        cover_image: communityInfo.cover_image || communityInfo.banner_image || communityInfo.community_banner
+    };
+}
+
 let currentObserver = null; // Store the current observer
 
 function cleanupInfiniteScroll() {
@@ -124,7 +152,7 @@ function setupInfiniteScroll(name, lastPost) {
     currentObserver.observe(sentinel);
 }
 
-export async function loadCommunity(name) {
+export async function loadCommunity(name, searchData = null) {
     try {
         cleanupInfiniteScroll();
 
@@ -135,34 +163,39 @@ export async function loadCommunity(name) {
 
         container.innerHTML = '<div class="loading-indicator"><div class="spinner"></div></div>';
 
-        // Use retry wrapper for API calls
-        const [communityData, communityPosts] = await Promise.all([
-            retryWithFallback(() => steem.api.getStateAsync(`/trending/${name}`)),
-            retryWithFallback(() => steem.api.getDiscussionsByCreatedAsync({ tag: name, limit: 20 }))
-        ]);
-
-        // Validate response data
-        if (!communityData || !communityPosts) {
-            throw new Error('Invalid response from Steem API');
-        }
-
-        // Process and validate community data
-        const { sections, validation } = processCommunityData(communityData, name);
+        // If we have searchData, use it directly without transforming
+        let community = searchData;
         
-        // Add additional validation
-        if (!validation.hasContent) {
-            throw new Error('Community has no content');
-        }
-
-        const community = communityData;
         if (!community) {
-            throw new Error('Community not found');
+            // Only fetch community data if we don't have search data
+            const communitiesResponse = await fetch('https://develop-imridd.eu.pythonanywhere.com/api/steem/communities');
+            const allCommunities = await communitiesResponse.json();
+            community = allCommunities.find(c => c.name === name);
+            
+            if (community) {
+                // Transform to match search format
+                community = {
+                    name: community.name,
+                    title: community.title || community.name,
+                    about: community.about || '',
+                    subscribers: community.subscribers || 0,
+                    icon: community.avatar_url || `https://steemitimages.com/u/${community.name}/avatar/small`
+                };
+            }
         }
 
-        // Enhance community object with processed data
-        community.posts = sections.content;
-        community.discussionIndex = sections.discussion;
-console.log(community);
+        // Fetch posts separately
+        const communityPosts = await retryWithFallback(() => 
+            steem.api.getDiscussionsByCreatedAsync({ tag: name, limit: 20 })
+        );
+
+        if (!community || !communityPosts) {
+            throw new Error('Failed to load community data');
+        }
+
+        // Add posts to community object
+        community.posts = communityPosts;
+
         // Renderizza la pagina della community
         container.innerHTML = `
             <div class="community-header">
@@ -170,19 +203,17 @@ console.log(community);
                     <div class="community-banner" style="background-image: url('${community.cover_image}')"></div>
                 ` : ''}
                 <div class="community-info">
-                    <img src="${community.avatar_url || 'default-community-avatar.png'}" 
+                    <img src="${community.icon}" 
                          alt="${community.title}" 
                          class="community-avatar">
                     <div class="community-details">
-                        <h1 class="community-title">${name}</h1>
+                        <h1 class="community-title">${community.title}</h1>
                         <div class="community-stats">
-                            <span><strong>${community.subscribers}</strong> Members</span>
-                            <span><strong>${community.num_pending}</strong> Posts</span>
-                            <span><strong>${community.num_authors}</strong> Authors</span>
+                            <span><strong>${community.subscribers}</strong> subscribers</span>
                         </div>
-                        <p class="community-description">${community.description || 'No description available'}</p>
+                        <p class="community-description">${community.about || 'No description available'}</p>
                         <div class="community-actions">
-                            <button class="join-button" onclick="joinCommunity('${name}')">
+                            <button class="join-button ${community.is_subscribed ? 'joined' : ''}" onclick="joinCommunity('${community.name}')">
                                 ${community.is_subscribed ? 'Joined' : 'Join'}
                             </button>
                         </div>
@@ -195,8 +226,13 @@ console.log(community);
             </div>
         `;
 
-        // Renderizza i post
+        // Make sure posts grid exists before continuing
         const postsGrid = container.querySelector('.posts-grid');
+        if (!postsGrid) {
+            throw new Error('Posts grid container not found after creation');
+        }
+
+        // Renderizza i post
         const postsHTML = await Promise.all(communityPosts.map(async post => {
             const imageUrl = extractImageFromContent(post);
             return `
@@ -231,36 +267,6 @@ console.log(community);
                 </div>`;
         }
     }
-}
-
-function renderCommunityHeader(community) {
-    const header = document.querySelector('.community-header');
-
-    header.innerHTML = `
-        ${community.banner_image ? `
-            <div class="community-banner" 
-                 style="background-image: url('${community.banner_image}')">
-            </div>
-        ` : ''}
-        <div class="community-info">
-            <img src="${community.avatar_url || 'default-community-avatar.png'}" 
-                 alt="${community.title}" 
-                 class="community-avatar">
-            <div class="community-details">
-                <h1 class="community-title">${community.title}</h1>
-                <div class="community-stats">
-                    <span>${community.subscribers} members</span>
-                    <span>${community.num_pending} posts</span>
-                </div>
-                <p class="community-description">${community.description}</p>
-                <div class="community-actions">
-                    <button class="join-button" onclick="joinCommunity('${community.name}')">
-                        ${community.is_subscribed ? 'Joined' : 'Join'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
 }
 
 async function loadCommunityPosts(name, last_author = '', last_permlink = '') {

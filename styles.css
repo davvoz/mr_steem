@@ -3731,7 +3731,7 @@ body {
     opacity: 0.9;
 }
 
-.joined-button {
+.join-button.joined {
     background: var(--secondary-color);
     color: var(--text-primary);
 }

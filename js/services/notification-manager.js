@@ -27,8 +27,8 @@ export async function checkNotifications() {
 
     try {
         const newNotifications = await fetchNotifications();
-        console.log('Fetched notifications:', newNotifications); // Debug log
-        updateNotificationBadge(newNotifications.filter(n => !n.read).length);
+        //console.log('Fetched notifications:', newNotifications); // Debug log
+       // updateNotificationBadge(newNotifications.filter(n => !n.read).length);
         return newNotifications;
     } catch (error) {
         console.error('Error checking notifications:', error);
@@ -173,25 +173,25 @@ export async function handleVoteNotification(voter, author, permlink, weight) {
     };
 
     notifications.unshift(notification);
-    updateNotificationBadge(notifications.filter(n => !n.read).length);
+    //updateNotificationBadge(notifications.filter(n => !n.read).length);
 }
 
-function updateNotificationBadge(count) {
-    const badge = document.querySelector('.nav-item[data-route="/notifications"] .notification-badge');
-    if (count > 0) {
-        if (!badge) {
-            const notificationIcon = document.querySelector('.nav-item[data-route="/notifications"]');
-            const badgeEl = document.createElement('span');
-            badgeEl.className = 'notification-badge';
-            badgeEl.textContent = count;
-            notificationIcon.appendChild(badgeEl);
-        } else {
-            badge.textContent = count;
-        }
-    } else if (badge) {
-        badge.remove();
-    }
-}
+// function updateNotificationBadge(count) {
+//     const badge = document.querySelector('.nav-item[data-route="/notifications"] .notification-badge');
+//     if (count > 0) {
+//         if (!badge) {
+//             const notificationIcon = document.querySelector('.nav-item[data-route="/notifications"]');
+//             const badgeEl = document.createElement('span');
+//             badgeEl.className = 'notification-badge';
+//             badgeEl.textContent = count;
+//             notificationIcon.appendChild(badgeEl);
+//         } else {
+//             badge.textContent = count;
+//         }
+//     } else if (badge) {
+//         badge.remove();
+//     }
+// }
 
 export async function renderNotifications() {
     const container = document.getElementById('notifications-view');
