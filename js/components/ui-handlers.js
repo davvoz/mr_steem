@@ -1,5 +1,6 @@
 import { handleLogin, showLoginModal, handleLogout } from '../auth/login-manager.js';
 import { loadStories, updateSidebar, loadSuggestions } from '../services/posts-manager.js';
+import { showWipNotification } from '../utils/notifications.js';  // Aggiungi questa importazione
 
 export function setupUIEventListeners() {
     // Setup navigation event listeners
@@ -12,8 +13,8 @@ export function setupUIEventListeners() {
         });
     });
 
-    // Update WIP features to exclude suggestions
-    const wipFeatures = document.querySelectorAll('[data-route="/notifications"], [data-route="/search"], [data-route="/new"]');
+    // Update WIP features - solo search e new
+    const wipFeatures = document.querySelectorAll('a[data-route="/search"], a[data-route="/new"]');
     
     wipFeatures.forEach(feature => {
         feature.addEventListener('click', (e) => {
@@ -21,6 +22,15 @@ export function setupUIEventListeners() {
             showWipNotification(e.currentTarget.querySelector('span').textContent);
         });
     });
+
+    // Add click handler for notifications - aggiorniamo il selettore
+    const notificationsLink = document.querySelector('a[data-route="/notifications"]');
+    if (notificationsLink) {
+        notificationsLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.hash = '/notifications';
+        });
+    }
 
     // Add navigation handler for suggestions
     const suggestionsLink = document.querySelector('[data-route="/suggested"]');

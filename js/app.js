@@ -3,6 +3,8 @@ import { Router } from './routes/router.js';
 import { setupUIEventListeners } from './components/ui-handlers.js';
 import { routes } from './routes/routes.js';
 import { checkExistingLogin } from './auth/login-manager.js';
+import { startNotificationPolling } from './services/notification-manager.js';
+import { showWipNotification } from './utils/notifications.js';
 
 class App {
     constructor() {
@@ -20,6 +22,11 @@ class App {
         
         await this.setupEventListeners();
         this.checkSteemAvailability();
+
+        // Start notification polling if user is logged in
+        if (checkExistingLogin()) {
+            await startNotificationPolling();
+        }
     }
 
     async setupEventListeners() {
@@ -58,8 +65,8 @@ class App {
                 toggleTheme();
             });
 
-            // Update WIP features to include suggestions
-            const wipFeatures = document.querySelectorAll('[data-route="/notifications"], [data-route="/search"], [data-route="/new"]');
+            // Update WIP features list - rimuoviamo notifications
+            const wipFeatures = document.querySelectorAll('[data-route="/search"], [data-route="/new"]');
             wipFeatures.forEach(feature => {
                 feature.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -109,7 +116,7 @@ function updateThemeIcon(theme) {
     }
 }
 
-function showWipNotification(feature) {
+/* function showWipNotification(feature) {
     const notification = document.createElement('div');
     notification.className = 'wip-notification';
     notification.textContent = `${feature} feature is coming soon!`;
@@ -119,7 +126,7 @@ function showWipNotification(feature) {
         notification.classList.add('fade-out');
         setTimeout(() => notification.remove(), 500);
     }, 2000);
-}
+} */
 
 const app = new App();
 app.init();

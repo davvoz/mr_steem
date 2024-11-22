@@ -1,6 +1,7 @@
 import { hideAllViews, showView } from '../utils/view-manager.js';
 import { steemConnection, showLoginModal } from '../auth/login-manager.js';
 import { loadSteemPosts, loadStories, loadExploreContent, setupInfiniteScroll, loadUserProfile, loadExtendedSuggestions, updateSidebar, loadSinglePost, resetPostsState, cleanupInfiniteScroll } from '../services/posts-manager.js';
+import { renderNotifications } from '../services/notification-manager.js';
 
 export const routes = {
     '/': { 
@@ -79,6 +80,14 @@ export const routes = {
             hideAllViews();
             showView('post-view');
             await loadSinglePost(params.author, params.permlink);
+        }
+    },
+    '/notifications': {
+        viewId: 'notifications-view',
+        handler: async () => {
+            hideAllViews();
+            showView('notifications-view');
+            await renderNotifications();
         }
     }
 };

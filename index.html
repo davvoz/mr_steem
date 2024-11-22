@@ -17,7 +17,9 @@
     
     <nav class="navbar">
         <div class="nav-content">
-            <div class="logo">SteemGram</div>
+            <div class="logo">
+                <img src="./imageedit_4_9355326386.png" alt="SteemGram Logo">
+            </div>
             <button class="hamburger-menu" 
                     aria-label="Toggle menu" 
                     aria-expanded="false" 
@@ -29,12 +31,15 @@
                  aria-hidden="true" 
                  role="navigation">
                 <a href="#/" class="nav-item" data-route="/">
+                    <div class="nav-contento">
                     <i class="fas fa-home"></i>
                     <span>Home</span>
+                </div>
                 </a>
                 <a href="#/search" class="nav-item" data-route="/search">
+                    <div class="nav-contento">
                     <i class="fas fa-search"></i>
-                    <span>Search</span>
+                    <span>Search</span></div>
                 </a>
                 <!-- <a href="/explore" class="nav-item" data-route="/explore">
                     <i class="far fa-compass"></i>
@@ -49,36 +54,41 @@
                     <span>Messages</span>
                 </a> -->
                 <a href="#/notifications" class="nav-item" data-route="/notifications">
+                    <div class="nav-contento">
                     <i class="far fa-heart"></i>
-                    <span>Notifications</span>
+                    <span>Notifications</span></div>
                 </a>
                 <!-- Add new suggestions navigation item -->
                 <a href="#/suggested" class="nav-item" data-route="/suggested">
+                    <div class="nav-contento">
                     <i class="fas fa-user-friends"></i>
-                    <span>Suggested</span>
+                    <span>Suggested</span></div>
                 </a>
                 <a href="#/new" class="nav-item" data-route="/new">
+                    <div class="nav-contento">
                     <i class="far fa-plus-square"></i>
-                    <span>Create</span>
+                    <span>Create</span></div>
                 </a>
                 <a href="#/profile" class="nav-item nav-profile" data-route="/profile" id="profile-link">
-                    <div class="nav-profile-image">
-                        <img src="https://material.io/resources/icons/static/icons/baseline-account_circle-24px.svg" alt="profile">
-                    </div>
-                    <span>Profile</span>
+                    <div class="nav-contento">
+                    <i class="far fa-user"></i>
+                    <span>Profile</span></div>
                 </a>
                 <!-- Add logout button -->
                 <a href="#" class="nav-item" id="logout-link" style="display: none;">
+                    <div class="nav-contento">
                     <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
+                    <span>Logout</span></div>
                 </a>
                 <a href="#" class="nav-item login-link" id="login-link" style="display: none;">
+                    <div class="nav-contento">
                     <i class="fas fa-sign-in-alt"></i>
-                    <span>Login</span>
+                    <span>Login</span></div>
                 </a>
                 <a href="#" class="nav-item" id="theme-toggle">
+                    <div class="nav-contento">
                     <i class="fas fa-moon"></i>
-                    <span>Dark Mode</span>
+                    <span>Dark Mode</span></div>
                 </a>
             </div>
         </div>
@@ -160,6 +170,9 @@
             </div>
             <div id="post-view" class="view" style="display: none;">
                 <!-- Single post content will be loaded here -->
+            </div>
+            <div id="notifications-view" class="view" style="display: none;">
+                <!-- Notifications will be loaded here -->
             </div>
         </div>
 
