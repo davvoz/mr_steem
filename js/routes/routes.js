@@ -3,6 +3,7 @@ import { steemConnection, showLoginModal } from '../auth/login-manager.js';
 import { loadSteemPosts, loadStories, loadExploreContent, setupInfiniteScroll, loadUserProfile, loadExtendedSuggestions, updateSidebar, loadSinglePost, resetPostsState, cleanupInfiniteScroll } from '../services/posts-manager.js';
 import { renderNotifications } from '../services/notification-manager.js';
 import { searchService } from '../services/search-service.js';
+import { loadCommunity } from '../services/community-manager.js';
 
 export const routes = {
     '/': { 
@@ -98,6 +99,14 @@ export const routes = {
             showView('search-view');
             setupSearchView();
         }
+    },
+    '/community/:name': {
+        viewId: 'community-view',
+        handler: async (params) => {
+            hideAllViews();
+            showView('community-view');
+            await loadCommunity(params.name);
+        }
     }
 };
 
@@ -179,7 +188,7 @@ function setupSearchHandlers(inputId, type) {
                     resultsContainer.innerHTML = `
                         <h3>Communities</h3>
                         ${results.communities.length ? results.communities.map(community => `
-                            <div class="community-result">
+                            <div class="community-result" onclick="window.location.hash='/community/${community.name}'">
                                 <img src="${community.icon}" alt="${community.name}">
                                 <div class="community-info">
                                     <span class="community-name">${community.title}</span>

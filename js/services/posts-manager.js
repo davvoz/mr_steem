@@ -17,7 +17,7 @@ function extractProfileImage(account) {
     return  'https://steemitimages.com/u/' + account.name + '/avatar' 
 }
 
-function extractImageFromContent(content) {
+export function extractImageFromContent(content) {
     if (!content) return null;
 
     // 1. Check JSON metadata first
@@ -27,10 +27,7 @@ function extractImageFromContent(content) {
             : content.json_metadata;
 
         if (metadata?.image?.length > 0) {
-            const imageUrl = metadata.image[0];
-            if (typeof imageUrl === 'string' && imageUrl.match(/^https?:\/\/.+/i)) {
-                return imageUrl;
-            }
+            return metadata.image[0];
         }
     } catch (e) {
         console.warn('Failed to parse json_metadata:', e);
@@ -43,10 +40,7 @@ function extractImageFromContent(content) {
             : content.posting_json_metadata;
 
         if (metadata?.image?.length > 0) {
-            const imageUrl = metadata.image[0];
-            if (typeof imageUrl === 'string' && imageUrl.match(/^https?:\/\/.+/i)) {
-                return imageUrl;
-            }
+            return metadata.image[0];
         }
     } catch (e) {
         console.warn('Failed to parse posting_json_metadata:', e);
@@ -56,34 +50,19 @@ function extractImageFromContent(content) {
     if (content.body) {
         // Array of patterns to match different image formats
         const patterns = [
-            // Markdown image with any image extension
             /!\[([^\]]*)\]\((https?:\/\/[^)\s]+\.(jpg|jpeg|png|gif|webp)(\?[^)\s]*)?)\)/i,
-            
-            // HTML img tag
             /<img[^>]+src=["'](https?:\/\/[^"']+\.(jpg|jpeg|png|gif|webp)(\?[^"']*)?)/i,
-            
-            // Direct image URLs
             /(https?:\/\/[^\s<>"]+?\.(jpg|jpeg|png|gif|webp)(\?[^\s<>"]*)?)/i,
-            
-            // Steemit.com image URLs
             /(https?:\/\/[^\s<>"]+?steemitimages\.com\/[^\s<>"]+)/i,
-            
-            // IPFS gateway URLs
             /(https?:\/\/[^\s<>"]+?ipfs\.io\/[^\s<>"]+)/i,
-            
-            // Additional common image hosting services
             /(https?:\/\/[^\s<>"]+?imgur\.com\/[^\s<>"]+)/i,
             /(https?:\/\/[^\s<>"]+?giphy\.com\/[^\s<>"]+)/i
         ];
 
         for (const pattern of patterns) {
-            const matches = content.body.match(pattern);
-            if (matches) {
-                // Get the URL from the match
-                const url = matches[1] || matches[0];
-                // Clean up the URL (remove markdown or HTML artifacts)
-                const cleanUrl = url.replace(/['"()]|!?\[[^\]]*\]/g, '');
-                return cleanUrl;
+            const match = content.body.match(pattern);
+            if (match) {
+                return match[1] || match[2];
             }
         }
     }
