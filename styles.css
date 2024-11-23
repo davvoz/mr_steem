@@ -2197,7 +2197,7 @@ body {
     color: black;
 }
 
-/* ...existing code... */
+
 
 .login-link {
     color: var(--primary-color);
@@ -2255,7 +2255,7 @@ body {
     object-fit: cover;
 }
 
-/* ...existing code... */
+
 
 .full-post {
     background: var(--background);
@@ -2765,7 +2765,7 @@ body {
     }
 }
 
-/* ...existing code... */
+
 
 /* Mobile Theme Fixes */
 @media (max-width: 768px) {
@@ -2778,7 +2778,7 @@ body {
         background: var(--dark-bg);
     }
 
-    /* ...existing code... */
+    
 
     [data-theme="dark"] .main-container {
         background: var(--dark-bg);
@@ -3265,7 +3265,7 @@ body {
 
 /* ... existing code ... */
 
-/* ...existing code... */
+
 
 /* Aggiorna stili delle notifiche per desktop */
 #notifications-view {
@@ -3312,9 +3312,9 @@ body {
     border-color: var(--dark-border);
 }
 
-/* ...existing code... */
 
-/* ...existing code... */
+
+
 
 /* Search View Styles */
 .search-container {
@@ -3458,9 +3458,9 @@ body {
     background: rgba(255, 255, 255, 0.1);
 }
 
-/* ...existing code... */
 
-/* ...existing code... */
+
+
 
 /* Search View Styles Update */
 .search-section {
@@ -3522,9 +3522,9 @@ body {
     background: rgba(255, 255, 255, 0.1);
 }
 
-/* ...existing code... */
 
-/* ...existing code... */
+
+
 
 .community-result {
     display: flex;
@@ -3586,9 +3586,9 @@ body {
     background: rgba(255, 255, 255, 0.05);
 }
 
-/* ...existing code... */
 
-/* ...existing code... */
+
+
 
 .search-container {
     max-width: 600px;
@@ -3652,11 +3652,11 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
-/* ...existing code... */
 
-/* ...existing code... */
 
-/* ...existing code... */
+
+
+
 
 .community-header {
     background: var(--background);
@@ -3711,7 +3711,7 @@ body {
 }
 
 .community-actions {
-    margin-top: var(--spacing-md);
+    margin-top: var (--spacing-md);
     display: flex;
     gap: var(--spacing-md);
 }
@@ -3748,7 +3748,7 @@ body {
     border: 1px solid var(--dark-border);
 }
 
-/* ...existing code... */
+
 
 .community-posts {
     margin-top: var(--spacing-xl);
@@ -3762,16 +3762,18 @@ body {
 
 /* Dark mode support */
 [data-theme="dark"] .community-header,
-[data-theme="dark"] .community-posts {
+[data-theme="dark"] .community-posts ,
+[data-theme="dark"] body {
     background: var(--dark-surface);
     border-color: var(--dark-border);
+    color: var(--dark-text) ;
 }
 
 [data-theme="dark"] .community-posts h3 {
     color: var(--dark-text);
 }
 
-/* ...existing code... */
+
 
 .retry-button {
     background: var(--primary-color);
@@ -3793,4 +3795,95 @@ body {
     background: var(--dark-surface);
     border: 1px solid var(--dark-border);
     color: var(--dark-text);
+}
+
+
+.voters-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--background);
+    color: var(--text-primary)  ;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.voters-content {
+    background: var(--background);
+    color: var(--text-primary);
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.voters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: var(--border-color);
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.voters-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.voter-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.voter-name {
+    color: var(--text-primary)  ;
+    text-decoration: none;
+}
+
+.voter-name:hover {
+    text-decoration: underline;
+}
+
+.vote-weight {
+    color: var(--text-secondary);
+}
+
+.no-votes {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 20px;
+}
+
+.net_votes.clickable {
+    cursor: pointer;
+}
+
+.net_votes.clickable:hover {
+    text-decoration: underline;
+}
+
+.voter-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 10px;
+    overflow: hidden;
 }

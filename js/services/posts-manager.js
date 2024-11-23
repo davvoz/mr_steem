@@ -871,7 +871,12 @@ export async function loadSinglePost(author, permlink) {
                 </div>
                 <footer class="post-footer">
                     <div class="post-stats">
-                        <span><i class="far fa-heart"></i> ${post.net_votes} votes</span>
+                        <span class="votes-container">
+                            <i class="far fa-heart"></i> 
+                            <span class="net_votes clickable" data-post-author="${post.author}" data-post-permlink="${post.permlink}">
+                                ${post.net_votes} likes
+                            </span>
+                        </span>
                         <span><i class="far fa-comment"></i> ${post.children} comments</span>
                         <span><i class="fas fa-dollar-sign"></i> ${parseFloat(post.pending_payout_value).toFixed(2)} payout</span>
                     </div>
@@ -883,6 +888,21 @@ export async function loadSinglePost(author, permlink) {
                 </footer>
             </article>
         `;
+        // Add event listener after the content is in the DOM
+        const votesElement = postView.querySelector('.net_votes');
+        if (votesElement) {
+            votesElement.addEventListener('click', async () => {
+                const author = votesElement.getAttribute('data-post-author');
+                const permlink = votesElement.getAttribute('data-post-permlink');
+                try {
+                    const votes = await steem.api.getActiveVotesAsync(author, permlink);
+                    showVotersModal(votes);
+                } catch (error) {
+                    console.error('Failed to load voters:', error);
+                    alert('Failed to load voters: ' + error.message);
+                }
+            });
+        }
 
     } catch (error) {
         console.error('Failed to load post:', error);
@@ -890,6 +910,59 @@ export async function loadSinglePost(author, permlink) {
             <div class="error-message">Failed to load post</div>
         `;
     }
+}
+
+function showVotersModal(votes) {
+    // Remove any existing modal first
+    const existingModal = document.querySelector('.voters-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'voters-modal';
+    modal.innerHTML = `
+        <div class="voters-content">
+            <div class="voters-header">
+                <h3>Voters (${votes.length})</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="voters-list">
+                ${votes.length > 0 
+                    ? votes.map(vote => `
+                        <div class="voter-item">
+                            <div class="voter-info">
+                                <img src="https://steemitimages.com/u/${vote.voter}/avatar" 
+                                     alt="@${vote.voter}"
+                                     class="voter-avatar"
+                                     onerror="this.src='https://steemitimages.com/u/${vote.voter}/avatar/small'">
+                                <a href="#/profile/${vote.voter}" class="voter-name">@${vote.voter}</a>
+                            </div>
+                            <span class="vote-weight">${(vote.percent / 100).toFixed(0)}%</span>
+                        </div>
+                    `).join('')
+                    : '<div class="no-votes">No votes yet</div>'
+                }
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close modal handlers
+    const closeBtn = modal.querySelector('.close-modal');
+    const closeModal = () => modal.remove();
+
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', function escapeHandler(e) {
+        if (e.key === 'Escape') {
+            closeModal();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    });
 }
 
 export function setupInfiniteScroll() {
