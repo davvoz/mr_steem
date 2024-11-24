@@ -1,9 +1,17 @@
 import { steemConnection } from '../auth/login-manager.js';
 import { avatarCache } from '../utils/avatar-cache.js';
 
+// Initialize global state and caches
 let lastPost = null;
 let isLoading = false;
 let hasMorePosts = true;
+const seenPosts = new Set(); // Add this line
+
+// Add global posts cache
+const globalPostsCache = {
+    home: new Map(),
+    profile: new Map()
+};
 
 // Add scroll management variables
 let scrollTimeout = null;
@@ -27,28 +35,17 @@ export function extractImageFromContent(content) {
             : content.json_metadata;
 
         if (metadata?.image?.length > 0) {
-            return metadata.image[0];
+            // Clean and validate the image URL
+            const imageUrl = cleanImageUrl(metadata.image[0]);
+            if (imageUrl) return imageUrl;
         }
     } catch (e) {
         console.warn('Failed to parse json_metadata:', e);
     }
 
-    // 2. Check posting_json_metadata
-    try {
-        const metadata = typeof content.posting_json_metadata === 'string'
-            ? JSON.parse(content.posting_json_metadata)
-            : content.posting_json_metadata;
-
-        if (metadata?.image?.length > 0) {
-            return metadata.image[0];
-        }
-    } catch (e) {
-        console.warn('Failed to parse posting_json_metadata:', e);
-    }
-
-    // 3. Check post body for images and GIFs
+    // 2. Check post body for images with improved regex patterns
     if (content.body) {
-        // Array of patterns to match different image formats
+        // Array of patterns to match different markdown and HTML image formats
         const patterns = [
             /!\[([^\]]*)\]\((https?:\/\/[^)\s]+\.(jpg|jpeg|png|gif|webp)(\?[^)\s]*)?)\)/i,
             /<img[^>]+src=["'](https?:\/\/[^"']+\.(jpg|jpeg|png|gif|webp)(\?[^"']*)?)/i,
@@ -59,39 +56,54 @@ export function extractImageFromContent(content) {
             /(https?:\/\/[^\s<>"]+?giphy\.com\/[^\s<>"]+)/i
         ];
 
+
+        // Steemit image with size prefix
+
         for (const pattern of patterns) {
             const match = content.body.match(pattern);
             if (match) {
-                return match[1] || match[2];
+                // The actual URL will be in capturing group 1 or 2
+                const imageUrl = cleanImageUrl(match[1] || match[2]);
+                if (imageUrl) return imageUrl;
             }
         }
     }
 
-    // 4. Fallback to author avatar
+    // 3. Fallback to author avatar
     return `https://steemitimages.com/u/${content.author}/avatar`;
+}
+
+function cleanImageUrl(url) {
+    if (!url) return null;
+    
+    try {
+        // Remove any markdown escaping
+        url = url.replace(/\\+/g, '');
+        
+        // Ensure URL is properly encoded
+        const parsed = new URL(url);
+        
+        // Add proxy for Steemit images if needed
+        if (parsed.hostname.includes('steemitimages.com') && !url.includes('/0x0/')) {
+            return `https://steemitimages.com/0x0/${url}`;
+        }
+        
+        return url;
+    } catch (e) {
+        console.warn('Invalid image URL:', url);
+        return null;
+    }
 }
 
 let lastPostPermlink = null;
 let lastPostAuthor = null;
 
-// Aggiungiamo una cache globale per tutti i post
-const globalPostsCache = {
-    home: new Set(),
-    profile: new Map() // username -> Set di post keys
-};
+export async function loadSteemPosts() {  // Add this missing function declaration
+    if (isLoading || !hasMorePosts) return;
 
-// Modifica la struttura della cache per renderla più affidabile
-const seenPosts = new Set(); // Cache globale per tutti i post visti
-
-export async function loadSteemPosts() {
     try {
-        if (isLoading) return;
         isLoading = true;
-
-        // Show loading indicator if this is the first load
-        if (!lastPostPermlink) {
-            showLoadingIndicator();
-        }
+        showLoadingIndicator();
 
         const query = {
             tag: 'photography',
@@ -877,7 +889,12 @@ export async function loadSinglePost(author, permlink) {
                                 ${post.net_votes} likes
                             </span>
                         </span>
-                        <span><i class="far fa-comment"></i> ${post.children} comments</span>
+                        <span class="comments-container">
+                            <i class="far fa-comment"></i> 
+                            <span class="comments-count clickable" data-post-author="${post.author}" data-post-permlink="${post.permlink}">
+                                ${post.children} comments
+                            </span>
+                        </span>
                         <span><i class="fas fa-dollar-sign"></i> ${parseFloat(post.pending_payout_value).toFixed(2)} payout</span>
                     </div>
                     <div class="post-tags">
@@ -890,6 +907,8 @@ export async function loadSinglePost(author, permlink) {
         `;
         // Add event listener after the content is in the DOM
         const votesElement = postView.querySelector('.net_votes');
+        const commentsElement = postView.querySelector('.comments-count');
+        
         if (votesElement) {
             votesElement.addEventListener('click', async () => {
                 const author = votesElement.getAttribute('data-post-author');
@@ -904,6 +923,20 @@ export async function loadSinglePost(author, permlink) {
             });
         }
 
+        if (commentsElement) {
+            commentsElement.addEventListener('click', async () => {
+                const author = commentsElement.getAttribute('data-post-author');
+                const permlink = commentsElement.getAttribute('data-post-permlink');
+                try {
+                    const replies = await steem.api.getContentRepliesAsync(author, permlink);
+                    showCommentsModal(replies);
+                } catch (error) {
+                    console.error('Failed to load comments:', error);
+                    alert('Failed to load comments: ' + error.message);
+                }
+            });
+        }
+
     } catch (error) {
         console.error('Failed to load post:', error);
         document.getElementById('post-view').innerHTML = `
@@ -913,23 +946,17 @@ export async function loadSinglePost(author, permlink) {
 }
 
 function showVotersModal(votes) {
-    // Remove any existing modal first
-    const existingModal = document.querySelector('.voters-modal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-
     const modal = document.createElement('div');
-    modal.className = 'voters-modal';
+    modal.className = 'modal-base voters-modal';
     modal.innerHTML = `
-        <div class="voters-content">
-            <div class="voters-header">
-                <h3>Voters (${votes.length})</h3>
-                <button class="close-modal">&times;</button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Likes ${votes.length > 0 ? `(${votes.length})` : ''}</h3>
+                <button class="modal-close">&times;</button>
             </div>
-            <div class="voters-list">
-                ${votes.length > 0 
-                    ? votes.map(vote => `
+            <div class="modal-body">
+                ${votes.length > 0 ? 
+                    votes.map(vote => `
                         <div class="voter-item">
                             <div class="voter-info">
                                 <img src="https://steemitimages.com/u/${vote.voter}/avatar" 
@@ -940,26 +967,159 @@ function showVotersModal(votes) {
                             </div>
                             <span class="vote-weight">${(vote.percent / 100).toFixed(0)}%</span>
                         </div>
-                    `).join('')
-                    : '<div class="no-votes">No votes yet</div>'
+                    `).join('') :
+                    '<div class="no-items">No likes yet</div>'
                 }
             </div>
         </div>
     `;
 
     document.body.appendChild(modal);
+    requestAnimationFrame(() => modal.classList.add('active'));
 
-    // Close modal handlers
-    const closeBtn = modal.querySelector('.close-modal');
-    const closeModal = () => modal.remove();
+    setupModalClosing(modal);
+}
 
-    closeBtn.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
+function showCommentsModal(comments) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-base comments-modal';
+    
+    const setupImageExpansion = (container, img, imageUrl) => {
+        let overlay = null;
+        
+        const expandImage = (event) => {
+            event.preventDefault();
+            
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.className = 'comment-image-overlay';
+                document.body.appendChild(overlay);
+            }
+            
+            const expandedImg = img.cloneNode(true);
+            expandedImg.classList.add('expanded');
+            expandedImg.classList.remove('comment-image-thumbnail');
+            
+            overlay.innerHTML = '';
+            overlay.appendChild(expandedImg);
+            overlay.classList.add('active');
+            
+            const closeOverlay = () => {
+                overlay.classList.remove('active');
+                setTimeout(() => overlay.innerHTML = '', 200);
+            };
+            
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay || e.target === expandedImg) {
+                    closeOverlay();
+                }
+            });
+            
+            document.addEventListener('keydown', function closeOnEsc(e) {
+                if (e.key === 'Escape') {
+                    closeOverlay();
+                    document.removeEventListener('keydown', closeOnEsc);
+                }
+            });
+        };
+
+        // Create title bar with the expand button
+        const titleBar = document.createElement('div');
+        titleBar.className = 'comment-image-title';
+        titleBar.innerHTML = `
+            <span>Image</span>
+            <button class="comment-image-expand" title="Expand image">
+                <i class="fas fa-expand"></i>
+            </button>
+        `;
+        
+        container.appendChild(titleBar);
+        
+        // Add click handlers
+        img.addEventListener('click', expandImage);
+        titleBar.querySelector('.comment-image-expand').addEventListener('click', expandImage);
+    };
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Comments ${comments.length > 0 ? `(${comments.length})` : ''}</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                ${comments.length > 0 ? 
+                    comments.map(comment => {
+                        const imageUrl = extractImageFromContent(comment);
+                        const parsedBody = marked.parse(comment.body, {
+                            breaks: true,
+                            sanitize: false,
+                            gfm: true,
+                            // Add these options to better handle long URLs
+                            smartypants: true,
+                            breaks: true
+                        }).replace(
+                            // Replace long image URLs with a more compact display
+                            /!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g, 
+                            '<div class="comment-image-container">$&</div>'
+                        );
+
+                        return `
+                            <div class="comment-item">
+                                <img src="https://steemitimages.com/u/${comment.author}/avatar" 
+                                     alt="@${comment.author}"
+                                     class="comment-avatar"
+                                     onerror="this.src='https://steemitimages.com/u/${comment.author}/avatar/small'">
+                                <div class="comment-content">
+                                    <a href="#/profile/${comment.author}" class="comment-author">@${comment.author}</a>
+                                    ${imageUrl ? `
+                                        <div class="comment-image-container">
+                                            <img src="${imageUrl}" 
+                                                 alt="Comment image" 
+                                                 class="comment-image comment-image-thumbnail">
+                                        </div>
+                                    ` : ''}
+                                    <div class="comment-text">${parsedBody}</div>
+                                    <div class="comment-meta">
+                                        ${new Date(comment.created).toLocaleString()}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('') :
+                    '<div class="no-items">No comments yet</div>'
+                }
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    requestAnimationFrame(() => {
+        modal.classList.add('active');
+        // Setup image expansion for all comment images
+        modal.querySelectorAll('.comment-image-container').forEach(container => {
+            const img = container.querySelector('.comment-image');
+            const imageUrl = img.getAttribute('src');
+            setupImageExpansion(container, img, imageUrl);
+        });
     });
+
+    setupModalClosing(modal);
+}
+
+function setupModalClosing(modal) {
+    const close = () => {
+        modal.classList.remove('active');
+        setTimeout(() => modal.remove(), 200);
+    };
+
+    modal.querySelector('.modal-close').addEventListener('click', close);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+    
     document.addEventListener('keydown', function escapeHandler(e) {
         if (e.key === 'Escape') {
-            closeModal();
+            close();
             document.removeEventListener('keydown', escapeHandler);
         }
     });

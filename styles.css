@@ -222,7 +222,7 @@ body {
     padding: var(--spacing-md);
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
+    gap: var (--spacing-md);
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -2614,6 +2614,8 @@ body {
     }
 
     .nav-menu {
+        overflow: auto  ;
+        overflow-y: hidden;
         margin: 82px 0 0 0;
         display: flex;
         position: static;
@@ -3779,7 +3781,7 @@ body {
     background: var(--primary-color);
     color: white;
     border: none;
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-sm) var (--spacing-md);
     border-radius: var(--radius-sm);
     margin-top: var(--spacing-md);
     cursor: pointer;
@@ -3885,5 +3887,515 @@ body {
     height: 32px;
     border-radius: 50%;
     margin-right: 10px;
+}
+
+/* ...existing code... */
+
+.comments-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.comments-content {
+    background: var(--background);
+    color: var(--text-primary);
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.comments-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.comment-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var (--border-color);
+}
+
+.comment-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     overflow: hidden;
 }
+
+.comment-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.comment-content {
+    flex: 1;
+}
+
+.comment-author {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.comment-text {
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.comment-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.no-comments {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .comments-content {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+/* ...existing code... */
+
+.comments-count.clickable,
+.net_votes.clickable {
+    cursor: pointer;
+}
+
+.comments-count.clickable:hover,
+.net_votes.clickable:hover {
+    text-decoration: underline;
+}
+
+/* ...existing code... */
+
+.comments-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* ...existing code... */
+
+/* ...existing code... */
+
+.comment-text img,
+.comment-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-sm) 0;
+}
+
+.markdown-content img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: var(--spacing-md) auto;
+    border-radius: var(--radius-sm);
+}
+
+/* ...existing code... */
+
+.comments-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* ...existing code... */
+
+/* Modal Base Styles */
+.modal-base {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background: var(--background);
+    color: var(--text-primary);
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+    box-shadow: var(--shadow-md);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: var(--spacing-sm);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+    background: var(--secondary-color);
+}
+
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Voters Modal Specific Styles */
+.voters-modal {
+    composes: modal-base;
+}
+
+.voters-modal .modal-content {
+    max-width: 400px;
+}
+
+.voter-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+}
+
+.voter-item:hover {
+    background: var(--secondary-color);
+}
+
+.voter-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.voter-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.voter-name {
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+/* Comments Modal Specific Styles */
+.comments-modal {
+    composes: modal-base;
+}
+
+.comment-item {
+    display: flex;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.comment-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.comment-content {
+    flex: 1;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: var(--text-primary);
+    text-decoration: none;
+    margin-bottom: var(--spacing-xs);
+    display: inline-block;
+}
+
+.comment-text {
+    margin: var(--spacing-xs) 0;
+    line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    width: 100%;
+}
+
+.comment-text p {
+    max-width: 100%;
+    white-space: normal;
+}
+
+/* Improve image links display */
+.comment-text img,
+.comment-text a {
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-all;
+    display: inline-block;
+}
+
+/* Handle markdown image syntax better */
+.comment-text p:has(img) {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.modal-content {
+    max-width: min(500px, 90vw);
+    overflow-x: hidden;
+}
+
+.modal-body {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Modal Active States */
+.modal-base.active {
+    opacity: 1;
+}
+
+.modal-base.active .modal-content {
+    transform: translateY(0);
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+        border-radius: var(--radius-md);
+        margin: var(--spacing-sm);
+    }
+
+    .modal-header {
+        padding: var(--spacing-md);
+    }
+
+    .modal-body {
+        padding: var(--spacing-sm);
+    }
+}
+
+/* Dark Mode Support */
+[data-theme="dark"] .modal-base {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .modal-content {
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+}
+
+[data-theme="dark"] .modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .voter-item:hover,
+[data-theme="dark"] .comment-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* ...existing code... */
+
+/* Comments Image Styles */
+.comment-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-sm) 0;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.comment-image.expanded {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    z-index: 1010;
+    background: var(--background);
+    box-shadow: var(--shadow-md);
+    margin: 0;
+}
+
+.comment-image-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1005;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    backdrop-filter: blur(5px);
+}
+
+.comment-image-overlay.active {
+    display: flex;
+    opacity: 1;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Thumbnail preview */
+.comment-image-thumbnail {
+    max-height: 200px;
+    width: auto;
+    object-fit: contain;
+}
+
+/* Enhanced Comment Image Styles */
+.comment-image-container {
+    position: relative;
+    max-height: 200px;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-sm) 0;
+}
+
+.comment-image-container:before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.3));
+    z-index: 1;
+    pointer-events: none;
+}
+
+.comment-image {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    cursor: zoom-in;
+}
+
+.comment-image-title {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    font-size: var(--font-size-sm);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.comment-image-title span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.comment-image-expand {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 4px;
+    font-size: var(--font-size-lg);
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.comment-image-expand:hover {
+    opacity: 1;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .comment-image-container {
+    background: var(--dark-surface);
+}
+
+[data-theme="dark"] .comment-image-title {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* ...existing code... */
