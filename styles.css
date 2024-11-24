@@ -2532,8 +2532,8 @@ body {
         top: var(--header-height);
         left: -100%;
         width: 100%;
-        height: calc(100vh - var(--header-height));
-        background: var(--background);
+        height: calc(100vh - var (--header-height));
+        background: var (--background);
         transition: 0.3s ease-in-out;
         display: block; /* Cambiato da none a block */
         padding: var(--spacing-md);
@@ -4396,6 +4396,152 @@ body {
 
 [data-theme="dark"] .comment-image-title {
     background: rgba(0, 0, 0, 0.8);
+}
+
+/* ...existing code... */
+
+.profile-header-top {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.follow-button {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 24px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.follow-button:hover {
+    opacity: 0.9;
+}
+
+.follow-button.following {
+    background: var(--secondary-color);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.follow-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .follow-button {
+    background: #0095f6; /* Usiamo sempre il blu di Instagram per il bottone principale */
+    color: white;
+}
+
+[data-theme="dark"] .follow-button.following {
+    background: #404040; /* Grigio scuro per lo stato "following" */
+    color: #ffffff;
+    border-color: #404040;
+}
+
+[data-theme="dark"] .follow-button:hover {
+    opacity: 0.8;
+}
+
+/* ...existing code... */
+
+/* Profile Tabs Styling */
+.profile-tabs {
+    display: flex;
+    justify-content: center;
+    border-top: 1px solid var(--border-color);
+    margin-top: var(--spacing-lg);
+}
+
+.profile-tab {
+    padding: var(--spacing-md) var(--spacing-xl);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.profile-tab:hover {
+    color: var(--text-primary);
+}
+
+.profile-tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--primary-color);
+}
+
+.profile-content {
+    margin-top: var(--spacing-md);
+}
+
+.profile-content > div {
+    display: none;
+}
+
+.profile-content > div.active {
+    display: block;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .profile-tabs {
+    border-color: var(--dark-border);
+}
+
+/* ...existing code... */
+
+.follow-popup {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    background: var(--background);
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.follow-popup.active {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+.follow-popup-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-primary);
+}
+
+.follow-popup-content i {
+    color: #4BB543;
+    font-size: 20px;
+}
+
+.follow-popup-content p {
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .follow-popup {
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+}
+
+[data-theme="dark"] .follow-popup-content {
+    color: var(--dark-text);
 }
 
 /* ...existing code... */

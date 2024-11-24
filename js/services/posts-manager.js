@@ -218,15 +218,14 @@ export async function loadStories() {
         const storiesContainer = document.getElementById('stories-container');
         if (!storiesContainer) return;
 
-        // Wrap the stories content
-        storiesContainer.className = 'stories-container';
-        storiesContainer.innerHTML = `
+        // Prima creiamo il contenuto
+        const storiesHtml = `
             <button class="story-scroll-button left">
                 <i class="fas fa-chevron-left"></i>
             </button>
             <div class="stories">
                 ${followingAccounts.map(account => `
-                    <div class="story">
+                    <div class="story" data-username="${account.name}">
                         <div class="story-avatar">
                             <div class="story-avatar-inner">
                                 <img src="${avatarCache.get(account.name)}" 
@@ -243,12 +242,20 @@ export async function loadStories() {
             </button>
         `;
 
-        // Set up scroll buttons
+        // Aggiorna il contenitore e set class
+        storiesContainer.className = 'stories-container';
+        storiesContainer.innerHTML = storiesHtml;
+
+        // Setup scroll buttons
         setupStoryScroll(storiesContainer);
 
-        // Add click handlers for stories
-        storiesContainer.querySelectorAll('.story').forEach((storyElement, index) => {
-            storyElement.addEventListener('click', () => viewStory(followingAccounts[index].name));
+        // Add click handlers for stories dopo che il contenuto è stato aggiunto
+        const storyElements = storiesContainer.querySelectorAll('.story');
+        storyElements.forEach(storyElement => {
+            const username = storyElement.dataset.username;
+            if (username) {
+                storyElement.addEventListener('click', () => viewStory(username));
+            }
         });
 
     } catch (error) {
@@ -601,10 +608,35 @@ export async function followUser(username) {
             followBtn.disabled = true;
         }
 
+        // Show success popup
+        showFollowPopup(username);
+
     } catch (error) {
         console.error('Failed to follow user:', error);
         alert('Failed to follow user: ' + error.message);
     }
+}
+
+function showFollowPopup(username) {
+    const popup = document.createElement('div');
+    popup.className = 'follow-popup';
+    popup.innerHTML = `
+        <div class="follow-popup-content">
+            <i class="fas fa-check-circle"></i>
+            <p>You are now following @${username}</p>
+        </div>
+    `;
+
+    document.body.appendChild(popup);
+
+    // Add active class after a small delay for animation
+    requestAnimationFrame(() => popup.classList.add('active'));
+
+    // Remove popup after 2 seconds
+    setTimeout(() => {
+        popup.classList.remove('active');
+        setTimeout(() => popup.remove(), 300); // Remove after fade out animation
+    }, 2000);
 }
 
 async function submitPost(operations) {
@@ -626,19 +658,14 @@ async function displayPosts(posts, containerId = 'posts-container', append = fal
     let postsHTML = '';
 
     for (const post of posts) {
-        // Recupera l'account dell'autore
         const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
-
-        // Usa extractImageFromContent sia per il post che per l'autore
         const postImage = extractImageFromContent(post);
         const authorImage = authorAccount ? extractProfileImage(authorAccount) : null;
-      
-
         const avatarUrl = authorImage || `https://steemitimages.com/u/${post.author}/avatar/small`;
 
         const postHTML = `
-            <article class="post">
-                <header class="post-header">
+            <article class="post" onclick="location.hash='#/post/${post.author}/${post.permlink}'">
+                <header class="post-header" onclick="event.stopPropagation()">
                     <div class="author-avatar-container">
                         <img src="${avatarUrl}" 
                              alt="${post.author}" 
@@ -647,20 +674,20 @@ async function displayPosts(posts, containerId = 'posts-container', append = fal
                     </div>
                     <a href="#/profile/${post.author}" class="author-name">@${post.author}</a>
                 </header>
-                ${postImage ? `
-                    <div class="post-content">
+                <div class="post-content">
+                    ${postImage ? `
                         <div class="post-image-container">
                             <img src="${postImage}" 
                                  alt="Post content"
                                  onerror="this.parentElement.style.display='none'">
                         </div>
+                    ` : ''}
+                    <div class="post-body">
+                        <h3>${post.title}</h3>
+                        <p>${post.body.substring(0, 100)}...</p>
                     </div>
-                ` : ''}
-                <div class="post-body">
-                    <h3>${post.title}</h3>
-                    <p>${post.body.substring(0, 100)}...</p> <!-- Show snippet of text -->
                 </div>
-                <footer class="post-actions">
+                <footer class="post-actions" onclick="event.stopPropagation()">
                     <i class="far fa-heart" data-post-id="${post.id}"></i>
                     <i class="far fa-comment"></i>
                     <i class="far fa-paper-plane"></i>
@@ -696,6 +723,30 @@ let hasMoreProfilePosts = true;
 // Aggiungiamo una cache per tenere traccia dei post già caricati
 const loadedPostsCache = new Map();
 
+// Add this before loadUserProfile
+function resetProfileState(username) {
+    profileLastPost = null;
+    isLoadingProfile = false;
+    hasMoreProfilePosts = true;
+
+    // Reset post caches for the profile
+    if (globalPostsCache.profile.has(username)) {
+        globalPostsCache.profile.set(username, new Set());
+    }
+
+    // Remove any existing profile scroll handler
+    if (window._profileScrollHandler) {
+        window.removeEventListener('scroll', window._profileScrollHandler);
+        window._profileScrollHandler = null;
+    }
+
+    // Clear existing content
+    const postsGrid = document.getElementById('profile-posts-grid');
+    const blogPosts = document.getElementById('profile-blog-posts');
+    if (postsGrid) postsGrid.innerHTML = '';
+    if (blogPosts) blogPosts.innerHTML = '';
+}
+
 export async function loadUserProfile(username) {
     resetProfileState(username);
 
@@ -706,42 +757,72 @@ export async function loadUserProfile(username) {
         const followCount = await steem.api.getFollowCountAsync(username);
         const profileImage = extractProfileImage(account);
 
+        let isFollowing = false;
+        if (steemConnection.isConnected && steemConnection.username) {
+            const following = await steem.api.getFollowingAsync(
+                steemConnection.username, 
+                username, 
+                'blog', 
+                1
+            );
+            isFollowing = following.some(f => f.following === username);
+        }
+
+        const isOwnProfile = steemConnection.username === username;
+
         const profileView = document.getElementById('profile-view');
         if (!profileView) return;
 
-        // Prima costruiamo e inseriamo la struttura base del profilo
         profileView.innerHTML = `
             <div class="profile-header">
                 <div class="profile-avatar">
                     <img src="${profileImage}" alt="${username}">
                 </div>
                 <div class="profile-info">
-                    <h2>@${username}</h2>
+                    <div class="profile-header-top">
+                        <h2>@${username}</h2>
+                        ${!isOwnProfile ? `
+                            <button class="follow-button ${isFollowing ? 'following' : ''}" 
+                                    onclick="window.followUser('${username}')"
+                                    ${!steemConnection.isConnected ? 'disabled' : ''}>
+                                ${isFollowing ? 'Following' : 'Follow'}
+                            </button>
+                        ` : ''}
+                    </div>
                     <div class="profile-stats">
                         <span><strong>${account.post_count}</strong> posts</span>
                         <span><strong>${followCount.follower_count}</strong> followers</span>
                         <span><strong>${followCount.following_count}</strong> following</span>
                     </div>
                     <div class="profile-bio">
-                        ${account.json_metadata?.profile?.about || ''}
+                        ${account.json_metadata ? JSON.parse(account.json_metadata)?.profile?.about || '' : ''}
                     </div>
                 </div>
             </div>
-            <div class="profile-posts">
-                <h3>Posts</h3>
-                <div class="posts-grid" id="profile-posts-grid"></div>
+            <div class="profile-tabs">
+                <div class="profile-tab active" data-tab="posts">POSTS</div>
+                <div class="profile-tab" data-tab="blog">BLOG</div>
+            </div>
+            <div class="profile-content">
+                <div id="profile-posts" class="active">
+                    <div class="posts-grid" id="profile-posts-grid"></div>
+                </div>
+                <div id="profile-blog">
+                    <div class="posts" id="profile-blog-posts"></div>
+                </div>
                 <div class="profile-loading-indicator" style="display: none;">
                     <div class="spinner"></div>
                 </div>
             </div>
         `;
 
-        // Configura l'infinite scroll prima di caricare i post
-        setupProfileInfiniteScroll(username);
-        
-        // Poi carichiamo i post in modo asincrono
+        // Setup tab switching
+        setupProfileTabs(username);
+
+        // Setup initial tab content
         await loadMoreProfilePosts(username, false);
 
+        window.followUser = followUser;
     } catch (error) {
         console.error('Failed to load profile:', error);
         document.getElementById('profile-view').innerHTML =
@@ -749,92 +830,111 @@ export async function loadUserProfile(username) {
     }
 }
 
-async function loadMoreProfilePosts(username, append = true) {
-    if (isLoadingProfile || !hasMoreProfilePosts) return;
+function setupProfileTabs(username) {
+    const tabs = document.querySelectorAll('.profile-tab');
+    const contents = document.querySelectorAll('.profile-content > div');
 
-    try {
-        isLoadingProfile = true;
-        showProfileLoadingIndicator();
+    tabs.forEach(tab => {
+        tab.addEventListener('click', async () => {
+            // Remove active class from all tabs and contents
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
 
-        const query = {
-            tag: username,
-            limit: 20,
-            start_author: profileLastPost?.author || undefined,
-            start_permlink: profileLastPost?.permlink || undefined
-        };
+            // Add active class to clicked tab
+            tab.classList.add('active');
 
-        const posts = await steem.api.getDiscussionsByBlogAsync(query);
-        
-        // Verifica che abbiamo effettivamente dei post
-        if (!posts || posts.length === 0) {
-            hasMoreProfilePosts = false;
-            return;
-        }
-
-        // IMPORTANTE: Rimuovi SEMPRE il primo post se non è il primo caricamento
-        const postsToProcess = profileLastPost ? posts.slice(1) : posts;
-        
-        // Se non abbiamo più post dopo la rimozione del primo, fermiamoci
-        if (postsToProcess.length === 0) {
-            hasMoreProfilePosts = false;
-            return;
-        }
-
-        // Aggiorna il riferimento all'ultimo post usando l'ultimo della lista originale
-        profileLastPost = posts[posts.length - 1];
-
-        const postsGrid = document.getElementById('profile-posts-grid');
-        if (!postsGrid) return;
-
-        const postsHTML = await Promise.all(postsToProcess.map(async post => {
-            let imageUrl = extractImageFromContent(post);
-            if (!imageUrl) {
-                const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
-                imageUrl = authorAccount ? extractProfileImage(authorAccount) : null;
+            // Show corresponding content
+            const contentId = `profile-${tab.dataset.tab}`;
+            const content = document.getElementById(contentId);
+            if (content) {
+                content.classList.add('active');
             }
-            return `
-                <div class="profile-post" 
-                     data-permlink="${post.permlink}" 
-                     data-author="${post.author}"
-                     onclick="window.location.hash='#/post/${post.author}/${post.permlink}'">
-                    ${imageUrl
-                        ? `<img src="${imageUrl}" alt="${post.title}" loading="lazy" onerror="this.src='https://steemitimages.com/u/${post.author}/avatar';">`
-                        : '<div class="no-image">No Image</div>'
-                    }
-                </div>
-            `;
-        }));
 
-        if (append) {
-            postsGrid.insertAdjacentHTML('beforeend', postsHTML.join(''));
-        } else {
-            postsGrid.innerHTML = postsHTML.join('');
-        }
-
-    } catch (error) {
-        console.error('Failed to load profile posts:', error);
-        hasMoreProfilePosts = false;
-    } finally {
-        isLoadingProfile = false;
-        hideProfileLoadingIndicator();
-    }
+            // Load content if needed
+            if (tab.dataset.tab === 'blog' && !content.hasChildNodes()) {
+                await loadBlogPosts(username);
+            }
+        });
+    });
 }
 
-// Aggiungiamo una funzione di reset più completa
-function resetProfileState(username) {
-    profileLastPost = null;
-    isLoadingProfile = false;
-    hasMoreProfilePosts = true;
-    
-    // Pulisci la cache per questo utente
-    if (globalPostsCache.profile.has(username)) {
-        globalPostsCache.profile.set(username, new Set());
-    }
-    
-    // Rimuoviamo l'eventuale scroll handler precedente
-    if (window._profileScrollHandler) {
-        window.removeEventListener('scroll', window._profileScrollHandler);
-        window._profileScrollHandler = null;
+async function loadBlogPosts(username) {
+    const container = document.getElementById('profile-blog-posts');
+    if (!container) return;
+
+    try {
+        showProfileLoadingIndicator();
+
+        const posts = await steem.api.getDiscussionsByBlogAsync({
+            tag: username,
+            limit: 10
+        });
+
+        const postsHTML = await Promise.all(posts.map(async post => {
+            const imageUrl = extractImageFromContent(post);
+            const postDate = new Date(post.created).toLocaleString();
+            const excerpt = post.body.replace(/!\[.*?\]\(.*?\)/g, '') // Remove image markdown
+                                   .replace(/\[.*?\]\(.*?\)/g, '') // Remove links
+                                   .replace(/[#*`]/g, '') // Remove markdown symbols
+                                   .substring(0, 250);
+
+            try {
+                const metadata = JSON.parse(typeof post.json_metadata === 'string' ? 
+                    post.json_metadata : '{}');
+                const tags = metadata.tags || [];
+
+                return `
+                    <article class="blog-post">
+                        <div class="blog-post-header">
+                            ${imageUrl ? `
+                                <div class="blog-post-image">
+                                    <img src="${imageUrl}" alt="${post.title}" loading="lazy">
+                                </div>
+                            ` : ''}
+                            <h2 class="blog-post-title">${post.title}</h2>
+                        </div>
+                        <div class="blog-post-content">
+                            <div class="blog-post-meta">
+                                <span class="blog-post-date">
+                                    <i class="far fa-calendar"></i> ${postDate}
+                                </span>
+                                <span class="blog-post-stats">
+                                    <span><i class="far fa-heart"></i> ${post.net_votes}</span>
+                                    <span><i class="far fa-comment"></i> ${post.children}</span>
+                                    <span><i class="fas fa-dollar-sign"></i> ${parseFloat(post.pending_payout_value).toFixed(2)}</span>
+                                </span>
+                            </div>
+                            <p class="blog-post-excerpt">${excerpt}...</p>
+                            <div class="blog-post-footer">
+                                <div class="blog-post-tags">
+                                    ${tags.slice(0, 5).map(tag => 
+                                        `<span class="blog-tag">#${tag}</span>`
+                                    ).join('')}
+                                </div>
+                                <a href="#/post/${post.author}/${post.permlink}" 
+                                   class="read-more-btn">Read More</a>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            } catch (error) {
+                console.warn('Failed to parse post metadata:', error);
+                return '';
+            }
+        }));
+
+        container.innerHTML = postsHTML.join('') || '<div class="no-posts">No blog posts found</div>';
+
+        // Add CSS class for fade-in animation
+        container.querySelectorAll('.blog-post').forEach((post, index) => {
+            setTimeout(() => post.classList.add('visible'), index * 100);
+        });
+
+    } catch (error) {
+        console.error('Failed to load blog posts:', error);
+        container.innerHTML = '<div class="error-message">Failed to load blog posts</div>';
+    } finally {
+        hideProfileLoadingIndicator();
     }
 }
 
@@ -858,7 +958,6 @@ export async function loadSinglePost(author, permlink) {
         });
         
         const postDate = new Date(post.created).toLocaleString();
-        const postImage = extractImageFromContent(post);
 
         const postView = document.getElementById('post-view');
         if (!postView) return;
@@ -963,7 +1062,7 @@ function showVotersModal(votes) {
                                      alt="@${vote.voter}"
                                      class="voter-avatar"
                                      onerror="this.src='https://steemitimages.com/u/${vote.voter}/avatar/small'">
-                                <a href="#/profile/${vote.voter}" class="voter-name">@${vote.voter}</a>
+                                <a href="#/profile/${vote.voter}" class="voter-name" onclick="this.closest('.modal-base').remove()">@${vote.voter}</a>
                             </div>
                             <span class="vote-weight">${(vote.percent / 100).toFixed(0)}%</span>
                         </div>
@@ -1070,7 +1169,7 @@ function showCommentsModal(comments) {
                                      class="comment-avatar"
                                      onerror="this.src='https://steemitimages.com/u/${comment.author}/avatar/small'">
                                 <div class="comment-content">
-                                    <a href="#/profile/${comment.author}" class="comment-author">@${comment.author}</a>
+                                    <a href="#/profile/${comment.author}" class="comment-author" onclick="this.closest('.modal-base').remove()">@${comment.author}</a>
                                     ${imageUrl ? `
                                         <div class="comment-image-container">
                                             <img src="${imageUrl}" 
@@ -1238,31 +1337,6 @@ export function cleanupInfiniteScroll() {
     resetPostsState();
 }
 
-// Aggiungi una funzione di pulizia della cache
-function cleanupCache() {
-    const MAX_CACHE_AGE = 30 * 60 * 1000; // 30 minuti
-    const now = Date.now();
-
-    // Pulisci la cache home
-    for (const [key, value] of globalPostsCache.home.entries()) {
-        if (now - value.timestamp > MAX_CACHE_AGE) {
-            globalPostsCache.home.delete(key);
-        }
-    }
-
-    // Pulisci le cache dei profili
-    for (const [username, profileCache] of globalPostsCache.profile.entries()) {
-        for (const [key, value] of profileCache.entries()) {
-            if (now - value.timestamp > MAX_CACHE_AGE) {
-                profileCache.delete(key);
-            }
-        }
-        // Rimuovi la cache del profilo se è vuota
-        if (profileCache.size === 0) {
-            globalPostsCache.profile.delete(username);
-        }
-    }
-}
 
 // Modifica la funzione resetPostsState per includere la pulizia della cache
 export function resetPostsState() {
@@ -1316,5 +1390,76 @@ export function updateSidebar() {
                 showLoginModal();
             });
         }
+    }
+}
+
+async function loadMoreProfilePosts(username, append = true) {
+    if (isLoadingProfile || !hasMoreProfilePosts) return;
+
+    try {
+        isLoadingProfile = true;
+        showProfileLoadingIndicator();
+
+        const query = {
+            tag: username,
+            limit: 20,
+            start_author: profileLastPost?.author || undefined,
+            start_permlink: profileLastPost?.permlink || undefined
+        };
+
+        const posts = await steem.api.getDiscussionsByBlogAsync(query);
+
+        // Verify we have posts
+        if (!posts || posts.length === 0) {
+            hasMoreProfilePosts = false;
+            return;
+        }
+
+        // Remove the first post if this is not the first load
+        const postsToProcess = profileLastPost ? posts.slice(1) : posts;
+
+        // If no posts after removing the first one, stop
+        if (postsToProcess.length === 0) {
+            hasMoreProfilePosts = false;
+            return;
+        }
+
+        // Update the reference to the last post
+        profileLastPost = posts[posts.length - 1];
+
+        const postsGrid = document.getElementById('profile-posts-grid');
+        if (!postsGrid) return;
+
+        const postsHTML = await Promise.all(postsToProcess.map(async post => {
+            let imageUrl = extractImageFromContent(post);
+            if (!imageUrl) {
+                const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
+                imageUrl = authorAccount ? extractProfileImage(authorAccount) : null;
+            }
+            return `
+                <div class="profile-post" 
+                     data-permlink="${post.permlink}" 
+                     data-author="${post.author}"
+                     onclick="window.location.hash='#/post/${post.author}/${post.permlink}'">
+                    ${imageUrl
+                        ? `<img src="${imageUrl}" alt="${post.title}" loading="lazy" onerror="this.src='https://steemitimages.com/u/${post.author}/avatar';">`
+                        : '<div class="no-image">No Image</div>'
+                    }
+                </div>
+            `;
+        }));
+
+        if (append) {
+            postsGrid.insertAdjacentHTML('beforeend', postsHTML.join(''));
+        } else {
+            postsGrid.innerHTML = postsHTML.join('');
+        }
+
+    } catch (error) {
+        console.error('Failed to load profile posts:', error);
+        hasMoreProfilePosts = false;
+    } finally {
+        isLoadingProfile = false;
+        hideProfileLoadingIndicator();
     }
 }
