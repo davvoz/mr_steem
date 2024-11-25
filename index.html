@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <base href="." />
     <meta charset="UTF-8">
@@ -28,8 +28,8 @@
             </button>
             <div class="nav-menu" 
                  id="nav-menu" 
-                 aria-hidden="true" 
-                 role="navigation">
+                 role="menu"
+                 aria-label="Main navigation">
                 <a href="#/" class="nav-item" data-route="/">
                     <div class="nav-contento">
                     <i class="fas fa-home"></i>
@@ -96,14 +96,22 @@
     
 
     
-    <div class="login-modal" id="loginModal">
+    <!-- Update login modal for better security -->
+    <div class="login-modal" id="loginModal" role="dialog" aria-labelledby="loginTitle">
         <div class="login-form">
-            <h2>Connect to Steem Blockchain</h2>
-            <input type="text" id="steemUsername" placeholder="Steem Username" required>
-            <input type="password" id="steemKey" placeholder="Private Posting Key (optional)">
-            <button id="loginButton">Connect to Steem</button>
+            <h2 id="loginTitle">Connect to Steem Blockchain</h2>
+            <input type="text" 
+                   id="steemUsername" 
+                   placeholder="Steem Username" 
+                   autocomplete="username"
+                   required>
+            <input type="password" 
+                   id="steemKey" 
+                   placeholder="Private Posting Key (optional)"
+                   autocomplete="current-password">
+            <button id="loginButton" type="submit">Connect to Steem</button>
             <div class="steem-info">
-                <small>Your private key is stored securely in session storage and is only used for posting.</small>
+                <small>Your private key is stored securely and never leaves your browser.</small>
             </div>
         </div>
     </div>

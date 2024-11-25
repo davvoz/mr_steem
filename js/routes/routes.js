@@ -1,44 +1,38 @@
 import { hideAllViews, showView } from '../utils/view-manager.js';
-import { steemConnection, showLoginModal } from '../auth/login-manager.js';
-import { loadSteemPosts, loadStories, loadExploreContent, setupInfiniteScroll, loadUserProfile, loadExtendedSuggestions, updateSidebar, loadSinglePost, resetPostsState, cleanupInfiniteScroll } from '../services/posts-manager.js';
 import { renderNotifications } from '../services/notification-manager.js';
 import { searchService } from '../services/search-service.js';
 import { loadCommunity } from '../services/community-manager.js';
 
 export const routes = {
-    '/': { 
-        viewId: 'home-view',
-        handler: async () => {
-            // Cleanup before setting up new scroll
-            cleanupInfiniteScroll();
-            
-            hideAllViews();
-            showView('home-view');
-            
-            // Reset posts state
-            resetPostsState();
-            
-            // Reset pagination state
-            window.lastPost = null;
-            window.hasMorePosts = true;
-            
-            await loadSteemPosts();
-            if (steemConnection.isConnected) {
-                await loadStories();
-                updateSidebar();
-            }
-            setupInfiniteScroll();
-        }
+    home: {
+        path: '/',
+        template: 'home-view',
+        title: 'Home',
+        load: () => import('../services/post/post-service.js').then(m => m.loadSteemPosts())
     },
-    '/explore': { 
-        viewId: 'explore-view',
-        handler: async () => {
-            hideAllViews();
-            showView('explore-view');
-            if (steemConnection) {
-                await loadExploreContent();
-            }
-        }
+    profile: {
+        path: '/profile/:username',
+        template: 'profile-view',
+        title: 'Profile',
+        load: (params) => import('../services/profile/profile-service.js').then(m => m.loadUserProfile(params.username))
+    },
+    post: {
+        path: '/post/:author/:permlink',
+        template: 'post-view',
+        title: 'Post',
+        load: (params) => import('../services/post/post-service.js').then(m => m.loadSinglePost(params.author, params.permlink))
+    },
+    explore: {
+        path: '/explore',
+        template: 'explore-view',
+        title: 'Explore',
+        load: () => import('../services/explore/explore-service.js').then(m => m.loadExplorePosts())
+    },
+    suggestions: {
+        path: '/suggestions',
+        template: 'suggestions-view',
+        title: 'Suggestions',
+        load: () => import('../services/suggestions/suggestions-service.js').then(m => m.loadExtendedSuggestions())
     },
     '/activity': { 
         viewId: 'activity-view',
@@ -46,42 +40,6 @@ export const routes = {
             hideAllViews();
             showView('activity-view');
             showLikedPosts();
-        }
-    },
-    '/profile': { 
-        viewId: 'profile-view',
-        handler: async () => {
-            hideAllViews();
-            showView('profile-view');
-            if (!steemConnection.isConnected) {
-                showLoginModal();
-                return;
-            }
-            await loadUserProfile(steemConnection.username);
-        }
-    },
-    '/profile/:username': {
-        viewId: 'profile-view',
-        handler: async (params) => {
-            hideAllViews();
-            showView('profile-view');
-            await loadUserProfile(params.username);
-        }
-    },
-    '/suggestions': {
-        viewId: 'suggestions-view',
-        handler: async () => {
-            hideAllViews();
-            showView('suggestions-view');
-            await loadExtendedSuggestions();
-        }
-    },
-    '/post/:author/:permlink': {
-        viewId: 'post-view',
-        handler: async (params) => {
-            hideAllViews();
-            showView('post-view');
-            await loadSinglePost(params.author, params.permlink);
         }
     },
     '/notifications': {

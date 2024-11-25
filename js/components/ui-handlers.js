@@ -1,6 +1,8 @@
 import { handleLogin, showLoginModal, handleLogout } from '../auth/login-manager.js';
-import { loadStories, updateSidebar, loadSuggestions } from '../services/posts-manager.js';
-import { showWipNotification } from '../utils/notifications.js';  // Aggiungi questa importazione
+import { showWipNotification } from '../utils/notifications.js';  
+import { loadStories } from '../services/stories/stories-service.js';
+import { updateSidebar } from '../services/sidebar/sidebar-service.js';
+import { loadSuggestions } from '../services/suggestions/suggestions-service.js';
 
 export function setupUIEventListeners() {
     // Setup navigation event listeners
