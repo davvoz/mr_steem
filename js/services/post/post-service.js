@@ -1,32 +1,48 @@
 import { steemConnection } from '../../auth/login-manager.js';
 import { SteemAPI } from '../common/api-wrapper.js';
-import { showLoadingIndicator, hideLoadingIndicator } from '../ui/loading-indicators.js';
+import { AppState } from '../../state/app-state.js';
 
-let isLoading = false;
-let hasMorePosts = true;
+
 let lastPostPermlink = null;
 let lastPostAuthor = null;
 const seenPosts = new Set();
+let isLoading = false;
+let hasMorePosts = true;
 
-export async function loadSteemPosts() {
-    if (isLoading || !hasMorePosts) return;
 
+// Add error handling utility
+function handleLoadError(error, context = '') {
+    console.error(`Error loading ${context}:`, error);
+    AppState.update({
+        isLoading: false,
+        errors: [...AppState.getState().errors, {
+            message: `Failed to load ${context}`,
+            error: error.message,
+            timestamp: new Date()
+        }]
+    });
+    throw error;
+}
+
+export async function loadSteemPosts(limit = 20) {
     try {
-        isLoading = true;
-        showLoadingIndicator();
+        AppState.update({ isLoading: true });
 
-        const posts = await fetchPosts();
-        if (posts.length > 0) {
-            await displayPosts(posts, 'posts-container', true);
-        } else {
-            hasMorePosts = false;
+        const posts = await steem.api.getDiscussionsByTrendingAsync({ limit });
+
+        if (!posts || !Array.isArray(posts)) {
+            throw new Error('Invalid response from Steem API');
         }
 
+        // Process posts and update state
+        AppState.update({
+            posts: new Map(posts.map(post => [post.id, post])),
+            isLoading: false
+        });
+
+        return posts;
     } catch (error) {
-        handleLoadError(error);
-    } finally {
-        isLoading = false;
-        hideLoadingIndicator();
+        handleLoadError(error, 'posts');
     }
 }
 
@@ -74,7 +90,7 @@ export async function loadSinglePost(author, permlink) {
 
     } catch (error) {
         console.error('Failed to load post:', error);
-        document.getElementById('post-view').innerHTML = 
+        document.getElementById('post-view').innerHTML =
             '<div class="error-message">Failed to load post</div>';
     }
 }
@@ -103,7 +119,7 @@ export async function createNewPost(title, description, imageUrl) {
     try {
         const permlink = 'instaclone-' + Date.now();
         const operations = generatePostOperations(title, description, imageUrl, permlink);
-        
+
         await submitPost(operations);
         alert('Posted successfully to Steem!');
         await loadSteemPosts();

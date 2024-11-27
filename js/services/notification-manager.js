@@ -1,40 +1,14 @@
 import { steemConnection } from '../auth/login-manager.js';
-import { avatarCache } from '../utils/avatar-cache.js'; // Aggiungi questa importazione
+import { avatarCache } from '../utils/avatar-cache.js';
 
 let notifications = [];
-let lastCheck = 0;
 let isPolling = false;
 let isLoading = false;
 let lastId = -1;
 let hasMore = true;
-let lastProcessedId = null;
+let pollingIntervalId = null;
 
-export async function startNotificationPolling() {
-    if (!steemConnection.isConnected || isPolling) return;
-    
-    isPolling = true;
-    await checkNotifications();
-    
-    // Controlla ogni 30 secondi per nuove notifiche
-    setInterval(checkNotifications, 30000);
-}
-
-export async function checkNotifications() {
-    if (!steemConnection.username) {
-        console.log('No user logged in');
-        return;
-    }
-
-    try {
-        const newNotifications = await fetchNotifications();
-        //console.log('Fetched notifications:', newNotifications); // Debug log
-       // updateNotificationBadge(newNotifications.filter(n => !n.read).length);
-        return newNotifications;
-    } catch (error) {
-        console.error('Error checking notifications:', error);
-    }
-}
-
+// Private functions
 async function fetchNotifications(fromId = -1, limit = 10) {
     const account = steemConnection.username;
     if (!account) {
@@ -130,100 +104,6 @@ function getNotificationText(notification) {
     }
 }
 
-// Helper function to get post title
-async function getPostTitle(author, permlink) {
-    try {
-        console.log(`Fetching title for @${author}/${permlink}`); // Debug log
-        const content = await steem.api.getContentAsync(author, permlink);
-        
-        if (!content) {
-            console.warn(`No content found for @${author}/${permlink}`);
-            return 'Untitled post';
-        }
-
-        console.log('Content retrieved:', { 
-            title: content.title,
-            hasBody: !!content.body,
-            author: content.author
-        }); // Debug log
-        
-        return content.title || (content.body ? content.body.substring(0, 60) + '...' : 'Untitled post');
-    } catch (error) {
-        console.error('Error fetching post title:', error);
-        console.error('Parameters:', { author, permlink });
-        return 'Untitled post';
-    }
-}
-
-export async function markAsRead(notificationId) {
-    notifications = notifications.map(n => 
-        n.id === notificationId ? {...n, read: true} : n
-    );
-    updateNotificationBadge(notifications.filter(n => !n.read).length);
-}
-
-export async function handleVoteNotification(voter, author, permlink, weight) {
-    const notification = {
-        type: 'vote',
-        from: voter,
-        permlink: permlink,
-        weight: weight,
-        timestamp: new Date().toISOString(),
-        read: false
-    };
-
-    notifications.unshift(notification);
-    //updateNotificationBadge(notifications.filter(n => !n.read).length);
-}
-
-// function updateNotificationBadge(count) {
-//     const badge = document.querySelector('.nav-item[data-route="/notifications"] .notification-badge');
-//     if (count > 0) {
-//         if (!badge) {
-//             const notificationIcon = document.querySelector('.nav-item[data-route="/notifications"]');
-//             const badgeEl = document.createElement('span');
-//             badgeEl.className = 'notification-badge';
-//             badgeEl.textContent = count;
-//             notificationIcon.appendChild(badgeEl);
-//         } else {
-//             badge.textContent = count;
-//         }
-//     } else if (badge) {
-//         badge.remove();
-//     }
-// }
-
-export async function renderNotifications() {
-    const container = document.getElementById('notifications-view');
-    if (!container) return;
-
-    // Reset states on new render
-    isLoading = false;
-    hasMore = true;
-    lastId = -1;
-
-    // Semplifichiamo il container per desktop
-    container.innerHTML = `
-        <div class="notifications-header">
-            <h2>Notifications</h2>
-        </div>
-        <div class="notifications-list"></div>
-        <div class="loading-indicator" style="display: none;">Loading more notifications...</div>
-    `;
-
-    // Usiamo il window scroll invece dello scroll del container
-    window.addEventListener('scroll', () => {
-        if (isLoading || !hasMore) return;
-
-        const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-        if (scrollTop + clientHeight >= scrollHeight - 100) {
-            loadMoreNotifications();
-        }
-    });
-
-    await loadMoreNotifications();
-}
-
 async function loadMoreNotifications() {
     if (isLoading) {
         console.log('Already loading notifications');
@@ -289,3 +169,113 @@ async function loadMoreNotifications() {
         loadingIndicator.style.display = 'none';
     }
 }
+
+// Function implementations
+async function startNotificationPolling() {
+    if (!steemConnection.username || isPolling) return;
+
+    isPolling = true;
+    console.log('Starting notification polling');
+
+    // Forza il primo controllo immediatamente
+    await checkNotifications();
+    
+    // Riavvia il polling solo se non è già attivo
+    if (!pollingIntervalId) {
+        pollingIntervalId = setInterval(checkNotifications, 30000);
+    }
+}
+
+function stopNotificationPolling() {
+    if (pollingIntervalId) {
+        clearInterval(pollingIntervalId);
+        pollingIntervalId = null;
+    }
+
+    isPolling = false;
+    notifications = [];
+    isLoading = false;
+    lastId = -1;
+    hasMore = true;
+
+    // Clear notifications view if it's currently displayed
+    const notificationsView = document.getElementById('notifications-view');
+    if (notificationsView) {
+        notificationsView.innerHTML = '';
+    }
+}
+
+async function checkNotifications() {
+    if (!steemConnection.username) {
+        console.log('No user logged in');
+        return;
+    }
+
+    try {
+        const newNotifications = await fetchNotifications();
+        console.log('Fetched notifications:', newNotifications); // Debug log
+        return newNotifications;
+    } catch (error) {
+        console.error('Error checking notifications:', error);
+    }
+}
+
+async function renderNotifications() {
+    const container = document.getElementById('notifications-view');
+    if (!container) {
+        console.error('Notifications container not found');
+        return;
+    }
+
+    // Make sure container is visible
+    container.style.display = 'block';
+
+    // Reset container
+    container.innerHTML = `
+        <div class="notifications-header">
+            <h2>Notifications</h2>
+        </div>
+        <div class="notifications-list"></div>
+        <div class="loading-indicator" style="display: none;">Loading more notifications...</div>
+    `;
+
+    // Reset loading state
+    isLoading = false;
+    hasMore = true;
+    lastId = -1;
+
+    // Load notifications immediately
+    await loadMoreNotifications();
+
+    // Log for debugging
+    console.log('Notifications rendered');
+}
+
+async function markAsRead(notificationId) {
+    notifications = notifications.map(n => 
+        n.id === notificationId ? {...n, read: true} : n
+    );
+}
+
+async function handleVoteNotification(voter, author, permlink, weight) {
+    const notification = {
+        type: 'vote',
+        from: voter,
+        permlink: permlink,
+        weight: weight,
+        timestamp: new Date().toISOString(),
+        read: false
+    };
+
+    notifications.unshift(notification);
+}
+
+// Public functions - single export block
+export {
+    startNotificationPolling,
+    stopNotificationPolling,
+    checkNotifications,
+    markAsRead,
+    handleVoteNotification,
+    renderNotifications
+};

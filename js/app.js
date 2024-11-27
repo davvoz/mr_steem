@@ -3,16 +3,18 @@ import { setupUIEventListeners } from './components/ui-handlers.js';
 import { routes } from './routes/routes.js';
 import { checkExistingLogin } from './auth/login-manager.js';
 import { startNotificationPolling } from './services/notification-manager.js';
+import { showWipNotification } from './utils/notifications.js';
 
 class App {
     constructor() {
         this.router = null;
-        // Fix GitHub Pages base path
-        this.basePath = location.hostname.includes('github.io') ? '/insta_clone' : '';
+        // Aggiungi configurazione per GitHub Pages
+        this.basePath = location.hostname === 'yourusername.github.io' ? '/your-repo-name' : '';
     }
 
     async init() {
-        this.router = Router; // Update this line to use the Router class directly
+        // Initialize router as singleton
+        this.router = new Router(routes, this.basePath);
         
         // Controlla il login esistente prima di tutto
         const isLoggedIn = checkExistingLogin();
@@ -31,39 +33,57 @@ class App {
     }
 
     async setupEventListeners() {
-        // Move this to DOMContentLoaded
-        setupUIEventListeners();
-        Router.handleRoute(); // Update this line to call handleRoute on the Router class
-        initTheme();
-        
-        // Remove duplicate event listeners since they're now in ui-handlers.js
-        const navMenu = document.querySelector('.nav-menu');
-        
-        // Add accessibility improvements
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.setAttribute('role', 'menuitem');
-            if (item.getAttribute('data-route')) {
-                item.setAttribute('aria-current', 'false');
-            }
+        document.addEventListener('DOMContentLoaded', () => {
+            setupUIEventListeners();
+            this.router.handleRoute();
+            initTheme();
+            
+            // Add hamburger menu functionality
+            const hamburger = document.querySelector('.hamburger-menu');
+            const navMenu = document.querySelector('.nav-menu');
+            
+            hamburger.addEventListener('click', () => {
+                navMenu.classList.toggle('active');
+            });
+
+            // Close menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.nav-menu') && !e.target.closest('.hamburger-menu')) {
+                    navMenu.classList.remove('active');
+                }
+            });
+
+            // Close menu when clicking a nav item
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) {
+                        navMenu.classList.remove('active');
+                    }
+                });
+            });
+
+            // Add event listener for theme toggle
+            document.getElementById('theme-toggle').addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleTheme();
+            });
+
+            // Update WIP features - rimuoviamo search e lasciamo solo new
+            const wipFeatures = document.querySelectorAll('[data-route="/new"]');
+            wipFeatures.forEach(feature => {
+                feature.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showWipNotification(e.currentTarget.querySelector('span').textContent);
+                });
+            });
         });
     }
 
     checkSteemAvailability() {
-        // Improve Steem availability check
-        return new Promise((resolve) => {
-            if (typeof steem !== 'undefined') {
-                resolve(true);
-                return;
-            }
-            
+        if (typeof steem === 'undefined') {
             console.warn('Primary Steem CDN failed, trying fallback...');
-            this.loadFallbackSteem()
-                .then(() => resolve(true))
-                .catch(() => {
-                    console.error('All Steem CDN sources failed');
-                    resolve(false);
-                });
-        });
+            this.loadFallbackSteem();
+        }
     }
 
     loadFallbackSteem() {
@@ -126,8 +146,7 @@ function updateThemeIcon(theme) {
 const app = new App();
 app.init();
 
-// Remove duplicate event listener at the bottom
-// Remove this:
-// document.addEventListener('DOMContentLoaded', () => {
-//     setupUIEventListeners();
-// });
+document.addEventListener('DOMContentLoaded', () => {
+    setupUIEventListeners();
+    // Rimuovi la gestione del menu da qui poiché ora è in ui-handlers.js
+});

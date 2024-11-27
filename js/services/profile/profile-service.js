@@ -1,11 +1,21 @@
 import { steemConnection } from '../../auth/login-manager.js';
 import { showProfileLoadingIndicator, hideProfileLoadingIndicator } from '../ui/loading-indicators.js';
-
+import { SteemAPI } from '../common/api-wrapper.js';
+import { extractProfileImage, extractImageFromContent } from '../post/post-utils.js';
+import { setupInfiniteScroll } from '../ui/infinite-scroll.js';
 let profileLastPost = null;
 let isLoadingProfile = false;
 let hasMoreProfilePosts = true;
 
 export async function loadUserProfile(username) {
+    // Ensure view is visible
+    const profileView = document.getElementById('profile-view');
+    if (!profileView) {
+        console.error('Profile view not found');
+        return;
+    }
+    profileView.style.display = 'block';
+
     resetProfileState(username);
 
     try {
@@ -27,6 +37,34 @@ export async function loadUserProfile(username) {
             '<div class="error-message">Failed to load profile</div>';
     }
 }
+
+async function setupProfileTabs(username) {
+    const tabs = document.querySelectorAll('.profile-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', async () => {
+            const activeTab = document.querySelector('.profile-tab.active');
+            if (activeTab) activeTab.classList.remove('active');
+            tab.classList.add('active');
+
+            const tabName = tab.getAttribute('data-tab');
+            const tabContent = document.getElementById(`profile-${tabName}`);
+            if (!tabContent) return;
+
+            if (tabName === 'posts') {
+                await loadMoreProfilePosts(username, false);
+                setupInfiniteScroll('profile');
+            } else {
+                await loadMoreProfileBlog(username, false);
+                setupInfiniteScroll('profile-blog');
+            }
+
+            const activeContent = document.querySelector('.profile-content .active');
+            if (activeContent) activeContent.classList.remove('active');
+            tabContent.classList.add('active');
+        });
+    });
+}
+
 
 export async function loadMoreProfilePosts(username, append = true) {
     if (isLoadingProfile || !hasMoreProfilePosts) return;
@@ -78,15 +116,11 @@ function renderProfile(account, followCount, profileImage, isFollowing) {
     
     profileView.innerHTML = `
         <div class="profile-header">
-            <div class="profile-avatar">
-                <img src="${profileImage}" alt="${account.name}">
-            </div>
+            <img src="${profileImage}" alt="${account.name}" class="profile-avatar">
             <div class="profile-info">
-                <div class="profile-header-top">
-                    <h2>@${account.name}</h2>
-                    ${renderFollowButton(account.name, isFollowing, isOwnProfile)}
-                </div>
-                <div class="profile-stats">
+                <h2>@${account.name}</h2>
+                ${renderFollowButton(account.name, isFollowing, isOwnProfile)}
+                <div class="stats">
                     <span><strong>${account.post_count}</strong> posts</span>
                     <span><strong>${followCount.follower_count}</strong> followers</span>
                     <span><strong>${followCount.following_count}</strong> following</span>
@@ -131,12 +165,12 @@ function renderProfileTabs() {
         </div>
         <div class="profile-content">
             <div id="profile-posts" class="active">
-                <div class="posts-grid" id="profile-posts-grid"></div>
+                <div class="user-posts-grid" id="profile-posts-grid"></div>
             </div>
             <div id="profile-blog">
                 <div class="posts" id="profile-blog-posts"></div>
             </div>
-            <div class="profile-loading-indicator" style="display: none;">
+            <div class="loading-indicator" style="display: none;">
                 <div class="spinner"></div>
             </div>
         </div>
@@ -167,34 +201,12 @@ async function generatePostsHTML(posts, username) {
         const isOwnPost = steemConnection.username === post.author;
 
         return `
-            <div class="post" data-author="${post.author}" data-permlink="${post.permlink}">
-                <div class="post-header">
-                    <div class="post-author">
-                        <img src="${profileImage}" alt="${post.author}">
-                        <span>@${post.author}</span>
-                    </div>
-                    <div class="post-timestamp">
-                        ${new Date(post.created).toLocaleString()}
-                    </div>
-                </div>
-                <div class="post-body">
-                    ${imageUrl ? `
-                        <div class="post-image">
-                            <img src="${imageUrl}" alt="Post image">
-                        </div>
-                    ` : ''} 
-                    <h3>${post.title}</h3>
-                    <p>${post.body.substring(0, 280)}${post.body.length > 280 ? '...' : ''}</p>
-                </div>
-                <div class="post-footer">
-                    <button class="post-action" onclick="window.viewPost('${post.author}', '${post.permlink}')">
-                        View Post
-                    </button>
-                    ${isOwnPost ? `
-                        <button class="post-action" onclick="window.editPost('${post.author}', '${post.permlink}')">
-                            Edit Post
-                        </button>
-                    ` : ''}
+            <div class="user-post-item" data-author="${post.author}" data-permlink="${post.permlink}">
+                ${imageUrl ? `<img src="${imageUrl}" alt="Post image">` : 
+                          '<div class="no-image">No Image</div>'}
+                <div class="post-overlay">
+                    <span><i class="fas fa-heart"></i> ${post.net_votes}</span>
+                    <span><i class="fas fa-comment"></i> ${post.children}</span>
                 </div>
             </div>
         `;

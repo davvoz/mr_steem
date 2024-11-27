@@ -41,54 +41,36 @@
                     <i class="fas fa-search"></i>
                     <span>Search</span></div>
                 </a>
-                <!-- <a href="/explore" class="nav-item" data-route="/explore">
-                    <i class="far fa-compass"></i>
-                    <span>Explore</span>
-                </a> -->
-                <!-- <a href="/reels" class="nav-item" data-route="/reels">
-                    <i class="fas fa-film"></i>
-                    <span>Reels</span>
-                </a>
-                <a href="/messages" class="nav-item" data-route="/messages">
-                    <i class="far fa-paper-plane"></i>
-                    <span>Messages</span>
-                </a> -->
-                <a href="#/notifications" class="nav-item" data-route="/notifications">
+                
+                <!-- Auth-required items -->
+                <a href="#/notifications" class="nav-item auth-required" data-route="/notifications" id="notifications-link">
                     <div class="nav-contento">
                     <i class="far fa-heart"></i>
                     <span>Notifications</span></div>
                 </a>
-                <!-- Add new suggestions navigation item -->
-                <a href="#/suggested" class="nav-item" data-route="/suggested">
-                    <div class="nav-contento">
-                    <i class="fas fa-user-friends"></i>
-                    <span>Suggested</span></div>
-                </a>
-                <a href="#/new" class="nav-item" data-route="/new">
-                    <div class="nav-contento">
-                    <i class="far fa-plus-square"></i>
-                    <span>Create</span></div>
-                </a>
-                <a href="#/profile" class="nav-item nav-profile" data-route="/profile" id="profile-link">
+                <a href="#/profile" class="nav-item auth-required" data-route="/profile" id="profile-link">
                     <div class="nav-contento">
                     <i class="far fa-user"></i>
                     <span>Profile</span></div>
                 </a>
-                <!-- Add logout button -->
-                <a href="#" class="nav-item" id="logout-link" style="display: none;">
-                    <div class="nav-contento">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span></div>
-                </a>
-                <a href="#" class="nav-item login-link" id="login-link" style="display: none;">
-                    <div class="nav-contento">
-                    <i class="fas fa-sign-in-alt"></i>
-                    <span>Login</span></div>
-                </a>
+                
+                <!-- Theme toggle - always visible -->
                 <a href="#" class="nav-item" id="theme-toggle">
                     <div class="nav-contento">
                     <i class="fas fa-moon"></i>
                     <span>Dark Mode</span></div>
+                </a>
+                
+                <!-- Auth buttons -->
+                <a href="#" class="nav-item" id="login-link">
+                    <div class="nav-contento">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Login</span></div>
+                </a>
+                <a href="#" class="nav-item" id="logout-link">
+                    <div class="nav-contento">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span></div>
                 </a>
             </div>
         </div>

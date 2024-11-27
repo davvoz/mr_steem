@@ -1,38 +1,49 @@
 import { hideAllViews, showView } from '../utils/view-manager.js';
+import { steemConnection, showLoginModal } from '../auth/login-manager.js';
 import { renderNotifications } from '../services/notification-manager.js';
 import { searchService } from '../services/search-service.js';
 import { loadCommunity } from '../services/community-manager.js';
+import { cleanupInfiniteScroll,setupInfiniteScroll } from '../services/ui/infinite-scroll.js';
+import { loadSinglePost } from '../services/post/post-service.js';
+import { loadUserProfile } from '../services/profile/profile-service.js';
+import { loadSteemPosts, resetPostsState } from '../services/post/post-service.js';
+import { loadStories } from '../services/stories/stories-service.js';
+import { updateSidebar } from '../services/sidebar/sidebar-service.js';
 
 export const routes = {
-    home: {
-        path: '/',
-        template: 'home-view',
-        title: 'Home',
-        load: () => import('../services/post/post-service.js').then(m => m.loadSteemPosts())
+    '/': { 
+        viewId: 'home-view',
+        handler: async () => {
+            // Cleanup before setting up new scroll
+            cleanupInfiniteScroll();
+            
+            hideAllViews();
+            showView('home-view');
+            
+            // Reset posts state
+            resetPostsState();
+            
+            // Reset pagination state
+            window.lastPost = null;
+            window.hasMorePosts = true;
+            
+            await loadSteemPosts();
+            if (steemConnection.isConnected) {
+                await loadStories();
+                updateSidebar();
+            }
+            setupInfiniteScroll();
+        }
     },
-    profile: {
-        path: '/profile/:username',
-        template: 'profile-view',
-        title: 'Profile',
-        load: (params) => import('../services/profile/profile-service.js').then(m => m.loadUserProfile(params.username))
-    },
-    post: {
-        path: '/post/:author/:permlink',
-        template: 'post-view',
-        title: 'Post',
-        load: (params) => import('../services/post/post-service.js').then(m => m.loadSinglePost(params.author, params.permlink))
-    },
-    explore: {
-        path: '/explore',
-        template: 'explore-view',
-        title: 'Explore',
-        load: () => import('../services/explore/explore-service.js').then(m => m.loadExplorePosts())
-    },
-    suggestions: {
-        path: '/suggestions',
-        template: 'suggestions-view',
-        title: 'Suggestions',
-        load: () => import('../services/suggestions/suggestions-service.js').then(m => m.loadExtendedSuggestions())
+    '/explore': { 
+        viewId: 'explore-view',
+        handler: async () => {
+            hideAllViews();
+            showView('explore-view');
+            if (steemConnection) {
+                await loadExploreContent();
+            }
+        }
     },
     '/activity': { 
         viewId: 'activity-view',
@@ -40,6 +51,42 @@ export const routes = {
             hideAllViews();
             showView('activity-view');
             showLikedPosts();
+        }
+    },
+    '/profile': { 
+        viewId: 'profile-view',
+        handler: async () => {
+            hideAllViews();
+            showView('profile-view');
+            if (!steemConnection.isConnected) {
+                showLoginModal();
+                return;
+            }
+            await loadUserProfile(steemConnection.username);
+        }
+    },
+    '/profile/:username': {
+        viewId: 'profile-view',
+        handler: async (params) => {
+            hideAllViews();
+            showView('profile-view');
+            await loadUserProfile(params.username);
+        }
+    },
+    '/suggestions': {
+        viewId: 'suggestions-view',
+        handler: async () => {
+            hideAllViews();
+            showView('suggestions-view');
+            await loadExtendedSuggestions();
+        }
+    },
+    '/post/:author/:permlink': {
+        viewId: 'post-view',
+        handler: async (params) => {
+            hideAllViews();
+            showView('post-view');
+            await loadSinglePost(params.author, params.permlink);
         }
     },
     '/notifications': {
@@ -69,6 +116,74 @@ export const routes = {
         }
     }
 };
+
+async function showLikedPosts() {
+    try {
+        const modal = document.getElementById('likesModal');
+        const container = document.getElementById('liked-posts-list');
+        if (!modal || !container) {
+            console.error('Required DOM elements not found');
+            return;
+        }
+
+        container.innerHTML = '<p>Loading liked posts...</p>';
+        modal.style.display = 'flex';
+
+        // Get user's voting history
+        const votes = await steem.api.getAccountVotesAsync(steemUsername);
+        
+        if (!votes || votes.length === 0) {
+            container.innerHTML = '<p>No liked posts found</p>';
+            return;
+        }
+
+        // Get details for each voted post
+        const likedPosts = [];
+        for (const vote of votes.slice(-20)) {
+            try {
+                const post = await steem.api.getContentAsync(vote.author, vote.permlink);
+                if (post && post.parent_author === '') {
+                    likedPosts.push(post);
+                }
+            } catch (error) {
+                console.warn('Error fetching post:', error);
+            }
+        }
+
+        if (likedPosts.length === 0) {
+            container.innerHTML = '<p>No viewable liked posts found</p>';
+            return;
+        }
+
+        container.innerHTML = likedPosts.map(post => {
+            const imgRegex = /<img[^>]+src="([^">]+)"/;
+            const imgMatch = post.body.match(imgRegex);
+            const imageUrl = imgMatch ? imgMatch[1] : 'https://via.placeholder.com/50';
+            
+            return `
+                <div class="liked-post">
+                    <img src="${imageUrl}" alt="Post thumbnail">
+                    <div class="liked-post-info">
+                        <strong>${post.author}</strong>
+                        <p>${post.title}</p>
+                        <small>${new Date(post.created).toLocaleDateString()}</small>
+                    </div>
+                    <div class="post-stats">
+                        <small>${post.net_votes} votes</small>
+                        <small>$${parseFloat(post.pending_payout_value).toFixed(2)}</small>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error('Failed to load liked posts:', error);
+        const container = document.getElementById('liked-posts-list');
+        if (container) {
+            container.innerHTML = '<p>Error loading liked posts. Please try again.</p>';
+        }
+    }
+}
 
 async function setupSearchView() {
     const searchView = document.getElementById('search-view');

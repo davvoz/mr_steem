@@ -55,8 +55,12 @@ function renderSuggestions(accounts) {
     if (!container) return;
 
     container.innerHTML = accounts.map(account => `
-        <div class="suggestion-item">
-            // ...existing code...
+        <div class="suggestion">
+            <img src="${account.profile_image}" alt="${account.name}" class="suggestion-avatar">
+            <div class="suggestion-info">
+                <h3>${account.name}</h3>
+                <button onclick="followUser('${account.name}')">Follow</button>
+            </div>
         </div>
     `).join('');
 }
