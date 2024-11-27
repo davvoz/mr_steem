@@ -6,9 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SteemGram - Steem Edition</title>
     <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./css/media_max_width_768px.css">
+    <link rel="stylesheet" href="./css/media_min_width_1024px.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/steem/dist/steem.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@hiveio/hive-js/dist/hive.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script type="module"  src="./js/routes/router.js"></script>
     <script type="module" src="./js/app.js"></script>
@@ -118,13 +119,7 @@
         </div>
     </div>
     
-    <div class="main-container"  style="    min-width: -webkit-fill-available;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-content: space-between;
-    justify-content: space-evenly;
-    align-items: flex-start;">
+    <div class="main-container">
         <div class="feed">
             <div id="home-view" class="view">
                 <div class="stories" id="stories-container">

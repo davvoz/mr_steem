@@ -1,7 +1,7 @@
 
 import { steemConnection } from '../../auth/login-manager.js';
 import { avatarCache } from '../../utils/avatar-cache.js';
-
+import { extractProfileImage } from '../post/post-utils.js';
 export function updateSidebar() {
     const userProfile = document.getElementById('user-profile');
     const loginSection = document.getElementById('login-section');
@@ -13,14 +13,21 @@ export function updateSidebar() {
         if (loginSection) {
             loginSection.style.display = 'none';
         }
-
-        const profileImage = avatarCache.get(steemConnection.username) ||
-            `https://steemitimages.com/u/${steemConnection.username}/avatar`;
+        // Get profile image with fallback
+        let profileImage = avatarCache.get(steemConnection.username);
+        if (!profileImage) {
+            try {
+                profileImage = extractProfileImage(steemConnection.username);
+                avatarCache.set(steemConnection.username, profileImage);
+            } catch (error) {
+                console.error('Failed to load profile image:', error);
+                profileImage = '/images/default-avatar.png'; // Fallback image
+            }
+        }
 
         userProfile.innerHTML = `
             <div class="sidebar-profile">
-                <img src="${profileImage}" alt="${steemConnection.username}" 
-                     style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover;">
+                <img src="${profileImage}" alt="${steemConnection.username}" class="profile-avatar-mini">
                 <div class="sidebar-profile-info">
                     <h4>@${steemConnection.username}</h4>
                 </div>
@@ -53,6 +60,12 @@ export async function loadSuggestions() {
 
     const response = await fetch('https://api.steem.place/suggestions');
     const data = await response.json();
+
+
+    //valorizza l'avatar con il nostro metodo extractProfileImage
+    data.forEach(user => {
+        user.avatar = extractProfileImage(user.username);
+    });
 
     const suggestionsList = data.map(user => {
         return `

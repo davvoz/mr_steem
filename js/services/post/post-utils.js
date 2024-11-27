@@ -1,9 +1,22 @@
 export function extractProfileImage(account) {
+    const steemitUrl = `https://steemitimages.com/u/${account.name}/avatar`;
+    
     try {
-        const metadata = JSON.parse(account.json_metadata);
-        return metadata.profile.profile_image;
+        const metadata = JSON.parse(account.blog_json_metadata);
+        return metadata.profile.profile_image || steemitUrl;
     } catch (e) {
-        return null;
+        try {
+            const metadata = JSON.parse(account.posting_json_metadata);
+            return metadata.profile.profile_image || steemitUrl;
+        } catch (e) {
+            try {
+                const metadata = JSON.parse(account.json_metadata);
+                return metadata.profile.profile_image || steemitUrl;
+            } catch (e) {
+                console.warn('Failed to parse profile metadata');
+                return steemitUrl;
+            }
+        }
     }
 }
 

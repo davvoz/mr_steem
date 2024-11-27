@@ -80,12 +80,26 @@ export async function loadMoreProfilePosts(username, append = true) {
             start_permlink: profileLastPost?.permlink || undefined
         };
 
-        const posts = await SteemAPI.getDiscussionsBy('blog', query);
-        
-        if (!handlePostsResponse(posts)) return;
+        let posts = await SteemAPI.getDiscussionsBy('blog', query);
 
+        if (profileLastPost) {
+            // Remove the first post if it's the same as the last post from previous batch
+            if (posts.length && posts[0].permlink === profileLastPost.permlink) {
+                posts = posts.slice(1);
+            }
+        }
+
+        if (!posts.length) {
+            hasMoreProfilePosts = false;
+            return;
+        }
+
+        // Generate postsHTML using the updated posts array
         const postsHTML = await generatePostsHTML(posts, username);
         updateProfileGrid(postsHTML, append);
+
+        // Update profileLastPost to the last post of the current batch
+        profileLastPost = posts[posts.length - 1];
 
     } catch (error) {
         console.error('Failed to load profile posts:', error);
@@ -205,7 +219,7 @@ async function generatePostsHTML(posts, username) {
                 ${imageUrl ? `<img src="${imageUrl}" alt="Post image">` : 
                           '<div class="no-image">No Image</div>'}
                 <div class="post-overlay">
-                    <span><i class="fas fa-heart"></i> ${post.net_votes}</span>
+                    <span><i class="fas fa-heart"></i> ${post.active_votes.length}</span>
                     <span><i class="fas fa-comment"></i> ${post.children}</span>
                 </div>
             </div>

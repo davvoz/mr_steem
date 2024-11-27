@@ -1,7 +1,7 @@
 import { SteemAPI } from '../common/api-wrapper.js';
 import { steemConnection } from '../../auth/login-manager.js';
 import { showFollowPopup } from '../ui/modals.js';
-
+import { extractProfileImage } from '../post/post-utils.js';
 export async function loadSuggestions() {
     if (!steemConnection.isConnected) {
         console.log('No user connected, skipping suggestions');
@@ -53,7 +53,10 @@ function validateFollowPermissions() {
 function renderSuggestions(accounts) {
     const container = document.getElementById('suggestions-container');
     if (!container) return;
-
+    //recuperiamo l'immagine del profilo con il nostro metodo extractProfileImage
+    accounts.forEach(account => {
+        account.profile_image = extractProfileImage(account);
+    });
     container.innerHTML = accounts.map(account => `
         <div class="suggestion">
             <img src="${account.profile_image}" alt="${account.name}" class="suggestion-avatar">
