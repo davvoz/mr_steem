@@ -1,3 +1,4 @@
+import { extractProfileImage } from '../services/post/post-utils.js';
 class AvatarCache {
     constructor() {
         this.cache = new Map();
@@ -8,15 +9,16 @@ class AvatarCache {
     }
 
     get(username) {
-        return this.cache.get(username) || this.getDefaultAvatar();
+        return this.cache.get(username) || this.getDefaultAvatar(username);
     }
 
     set(username, url) {
         this.cache.set(username, url);
     }
 
-    getDefaultAvatar() {
-        return 'https://material.io/resources/icons/static/icons/baseline-account_circle-24px.svg';
+    getDefaultAvatar(username) {
+        //usiamo il nostro metodo extractProfileImage
+        return extractProfileImage({ name: username });
     }
 }
 

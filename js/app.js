@@ -4,6 +4,7 @@ import { routes } from './routes/routes.js';
 import { checkExistingLogin } from './auth/login-manager.js';
 import { startNotificationPolling } from './services/notification-manager.js';
 import { showWipNotification } from './utils/notifications.js';
+import { init as initSidebar } from './services/sidebar/sidebar-service.js';
 
 class App {
     constructor() {
@@ -29,6 +30,15 @@ class App {
         // Start notification polling if user is logged in
         if (checkExistingLogin()) {
             await startNotificationPolling();
+        }
+
+        // Initialize sidebar module
+        initSidebar();
+
+        // Load initial home feed after router setup
+        if (window.location.hash === '' || window.location.hash === '#/') {
+            const { loadHomeFeed } = await import('./services/posts-manager.js');
+            loadHomeFeed();
         }
     }
 

@@ -19,6 +19,7 @@
     --spacing-md: 16px;
     --spacing-lg: 24px;
     --spacing-xl: 32px;
+    --spacing-xxl: 100px;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
     --transition: all 0.2s ease;
@@ -48,10 +49,16 @@ body {
 }
 
 body {
-    display: flex;
+   
     background: var(--secondary-color);
     color: var(--text-primary);
     line-height: 1.5;
+}
+/*facciamo bella la scrollbar*/
+::-webkit-scrollbar {
+    width: 10px;
+    /*facciamo il colore del tema*/
+    background-color: var(--secondary-color);
 }
 
 /* Navbar Layout Improvements */
@@ -673,6 +680,14 @@ body {
     gap: 0.25rem;
 }
 
+.sidebar {
+    position: fixed ;
+    /*posizioniamola a destra*/
+    right: 0;
+    /*spostiamola in basso di var(--header-height)*/
+    top: var(--header-height);
+}
+
 .reputation {
     color: #666;
     font-size: 0.9rem;
@@ -680,6 +695,7 @@ body {
 
 #user-profile {
     display: none;
+    margin: var(--spacing-md) auto;
 }
 
 .text-danger {
@@ -1005,7 +1021,11 @@ body {
     border-radius: 50%;
     overflow: hidden;
 }
-
+.suggestion-avatar-button {
+ background-color: var(--background);
+color: var(--text-primary)  ;
+width: 50px;
+}
 .suggestion-avatar img {
     width: 50px;
     height: 50px;
@@ -3344,6 +3364,7 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition);
+    width: var(--spacing-xxl);
 }
 
 .follow-button:hover {

@@ -5,13 +5,21 @@ import { showLoadingIndicator, hideLoadingIndicator } from '../ui/loading-indica
 export async function loadSteemPosts(options = {}) {
     showLoadingIndicator();
     try {
-        const response = await steemConnection.getDiscussionsByCreated(options);
-        const posts = response.map(post => ({
-            author: post.author,
-            permlink: post.permlink,
-            title: post.title,
-            body: post.body,
-            image: extractImageFromContent(post.body)
+        const response = await steemConnection.getDiscussionsByCreated({ ...options, limit: 20 });
+        const posts = await Promise.all(response.map(async post => {
+            const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
+            return {
+                author: post.author,
+                permlink: post.permlink,
+                title: post.title,
+                body: post.body,
+                image: extractImageFromContent(post.body),
+                authorImage: authorAccount ? extractProfileImage(authorAccount) : null,
+                created: post.created,
+                active_votes: post.active_votes,
+                children: post.children,
+                pending_payout_value: post.pending_payout_value
+            };
         }));
         return posts;
     } catch (error) {

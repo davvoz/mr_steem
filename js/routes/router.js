@@ -49,7 +49,13 @@ export class Router {
         }
 
         if (matchedRoute) {
-            matchedRoute.handler(params);
+            // Check for either handler or init function
+            const routeFunction = matchedRoute.handler || matchedRoute.init;
+            if (typeof routeFunction === 'function') {
+                routeFunction(params);
+            } else {
+                console.error('No valid handler or init function found for route');
+            }
         }
     }
 

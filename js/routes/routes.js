@@ -9,30 +9,16 @@ import { loadUserProfile } from '../services/profile/profile-service.js';
 import { loadSteemPosts, resetPostsState } from '../services/post/post-service.js';
 import { loadStories } from '../services/stories/stories-service.js';
 import { updateSidebar } from '../services/sidebar/sidebar-service.js';
+import { loadHomeFeed, resetHomeFeed } from '../services/posts-manager.js';
 
 export const routes = {
-    '/': { 
-        viewId: 'home-view',
+    '/': {
+        template: 'home-view',
         handler: async () => {
-            // Cleanup before setting up new scroll
-            cleanupInfiniteScroll();
-            
             hideAllViews();
             showView('home-view');
-            
-            // Reset posts state
-            resetPostsState();
-            
-            // Reset pagination state
-            window.lastPost = null;
-            window.hasMorePosts = true;
-            
-            await loadSteemPosts();
-            if (steemConnection.isConnected) {
-                await loadStories();
-                updateSidebar();
-            }
-            setupInfiniteScroll();
+            resetHomeFeed(); // Reset feed state before loading
+            await loadHomeFeed(false); // Pass false to load fresh content
         }
     },
     '/explore': { 
@@ -247,6 +233,11 @@ function setupSearchHandlers(inputId, type) {
                 if (!results) return;
 
                 if (type === 'profiles') {
+                    //usiamo la nostra funzione per caricare le immagini dei profili
+                    //  results.profiles.forEach(profile => {
+                    //     profile.avatar = extractImageFromProfile(profile);
+                    // }   
+                    // );
                     resultsContainer.innerHTML = `
                         <h3>Profiles</h3>
                         ${results.profiles.length ? results.profiles.map(user => `

@@ -127,7 +127,7 @@ function renderProfile(account, followCount, profileImage, isFollowing) {
     if (!profileView) return;
 
     const isOwnProfile = steemConnection.username === account.name;
-    
+    //recupera l'immagine del profilo 
     profileView.innerHTML = `
         <div class="profile-header">
             <img src="${profileImage}" alt="${account.name}" class="profile-avatar">

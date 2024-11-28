@@ -1,7 +1,7 @@
 import { steemConnection } from '../../auth/login-manager.js';
 import { avatarCache } from '../../utils/avatar-cache.js';
 import { SteemAPI } from '../common/api-wrapper.js';
-import { extractImageFromContent } from '../post/post-utils.js';
+import { extractImageFromContent,extractProfileImage } from '../post/post-utils.js';
 
 export async function loadStories() {
     if (!steemConnection.isConnected || !steemConnection.username) {
@@ -36,7 +36,10 @@ export async function loadStories() {
 function renderStories(accounts) {
     const container = document.getElementById('stories-container');
     if (!container) return;
-
+    //recuperiamo l'immagine del profilo con il nostro metodo extractProfileImage
+    accounts.forEach(account => {
+        account.profile_image = extractProfileImage(account);
+    });
     const storiesHtml = `
         <button class="story-scroll-button left">
             <i class="fas fa-chevron-left"></i>
@@ -212,15 +215,4 @@ async function preloadAvatars(accounts) {
             avatarCache.set(account.name, profileImage);
         }
     }
-}
-function extractProfileImage(account) {
-    if (account.json_metadata) {
-        try {
-            const metadata = JSON.parse(account.json_metadata);
-            return metadata.profile?.profile_image || '';
-        } catch (e) {
-            console.error('Failed to parse JSON metadata for', account.name);
-        }
-    }
-    return '';
 }
