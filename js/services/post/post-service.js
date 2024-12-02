@@ -1,7 +1,8 @@
 import { steemConnection } from '../../auth/login-manager.js';
 import { SteemAPI } from '../common/api-wrapper.js';
 import { AppState } from '../../state/app-state.js';
-
+import { showLoadingIndicator, hideLoadingIndicator } from '../ui/loading-indicators.js';
+import { EventBus } from '../common/event-bus.js';
 
 let lastPostPermlink = null;
 let lastPostAuthor = null;
@@ -80,89 +81,27 @@ function filterUniquePosts(posts) {
 }
 
 export async function loadSinglePost(author, permlink) {
+    showLoadingIndicator();
     try {
-        // Mostra indicatore di caricamento
-        document.getElementById('post-view').innerHTML = '<div class="loading-spinner"></div>';
-
-        // Carica il post e l'account dell'autore in parallelo
-        const [post, [authorAccount]] = await Promise.all([
-            steem.api.getContentAsync(author, permlink),
-            steem.api.getAccountsAsync([author])
-        ]);
-
-        if (!post || !post.author) throw new Error('Post not found');
-
-        // Estrai immagine profilo autore
-        const authorImage = authorAccount ? extractProfileImage(authorAccount) : null;
-        const avatarUrl = authorImage || `https://images.hive.blog/u/${post.author}/avatar`;
+        // Use steem.api.getContent instead of steemConnection.getContent
+        const post = await steem.api.getContentAsync(author, permlink);
+        const [authorAccount] = await steem.api.getAccountsAsync([author]);
         
-        // Processa il contenuto markdown
-        const htmlContent = marked.parse(post.body);
-        
-        // Estrai la prima immagine dal contenuto
-        const mainImage = extractImageFromContent(post);
-        
-        // Formatta la data
-        const postDate = new Date(post.created).toLocaleString();
-        
-        // Genera HTML del post completo
-        const postHTML = `
-            <article class="full-post">
-                <header class="full-post-header">
-                    <div class="author-info">
-                        <img src="${avatarUrl}" alt="${post.author}" class="author-avatar">
-                        <div>
-                            <a href="#/profile/${post.author}" class="author-name">@${post.author}</a>
-                            <span class="post-date">${postDate}</span>
-                        </div>
-                    </div>
-                </header>
-                
-                <div class="full-post-content">
-                    <h1 class="post-title">${post.title}</h1>
-                    ${mainImage ? `
-                        <div class="main-image">
-                            <img src="${mainImage}" alt="Post main image">
-                        </div>
-                    ` : ''}
-                    <div class="post-body">
-                        ${htmlContent}
-                    </div>
-                </div>
+        if (!post || !post.author) {
+            throw new Error('Post not found');
+        }
 
-                <footer class="full-post-footer">
-                    <div class="post-stats">
-                        <span class="votes">
-                            <i class="far fa-heart"></i> ${post.active_votes.length} likes
-                        </span>
-                        <span class="comments">
-                            <i class="far fa-comment"></i> ${post.children} comments
-                        </span>
-                        <span class="payout">
-                            <i class="fas fa-dollar-sign"></i> ${parseFloat(post.pending_payout_value).toFixed(2)} pending payout
-                        </span>
-                    </div>
-                    <div class="post-tags">
-                        ${JSON.parse(post.json_metadata).tags?.map(tag => 
-                            `<a href="#/tag/${tag}" class="tag">#${tag}</a>`
-                        ).join(' ') || ''}
-                    </div>
-                </footer>
-            </article>
-        `;
-
-        document.getElementById('post-view').innerHTML = postHTML;
+        // Render the post
+        await renderSinglePost(post, authorAccount);
         
-        // Aggiorna il titolo della pagina
-        document.title = `${post.title} - SteemGram`;
-
+        return post;
     } catch (error) {
-        console.error('Failed to load post:', error);
-        document.getElementById('post-view').innerHTML = `
-            <div class="error-message">
-                Failed to load post. <a href="#/">Return to home</a>
-            </div>
-        `;
+        console.error('Error loading single post:', error);
+        document.getElementById('post-view').innerHTML = 
+            '<div class="error-message">Failed to load post. <a href="#/">Return home</a></div>';
+        throw error;
+    } finally {
+        hideLoadingIndicator();
     }
 }
 
@@ -317,14 +256,8 @@ function generatePostHeader(post, avatarUrl, postDate) {
 }
 
 function generatePostContent(post, htmlContent) {
-    const postImage = extractImageFromContent(post);
     return `
         <div class="post-content">
-            ${postImage ? `
-                <div class="post-main-image">
-                    <img src="${postImage}" alt="Post main image">
-                </div>
-            ` : ''}
             <h1 class="post-title">${post.title}</h1>
             <div class="markdown-content">
                 ${htmlContent}
@@ -341,24 +274,42 @@ function generatePostFooter(post) {
     return `
         <footer class="post-footer">
             <div class="post-stats">
-                <span class="net_votes clickable" onclick="window.showVotersModal('${post.author}', '${post.permlink}')">
+                <span class="net_votes clickable" 
+                      data-post-author="${post.author}" 
+                      data-post-permlink="${post.permlink}"
+                      style="cursor: pointer;">
+                    <i class="far fa-heart"></i>
                     ${post.active_votes?.length || 0} likes
                 </span>
-                <span class="comments-count clickable" onclick="window.showCommentsModal('${post.author}', '${post.permlink}')">
+                <span class="comments-count"
+                      data-post-author="${post.author}" 
+                      data-post-permlink="${post.permlink}"
+                      style="cursor: pointer;">
+                    <i class="far fa-comment"></i>
                     ${post.children || 0} comments
                 </span>
-                <span class="payout-value">$${parseFloat(post.pending_payout_value || 0).toFixed(2)}</span>
+                <span class="payout-value clickable"
+                      data-post-author="${post.author}" 
+                      data-post-permlink="${post.permlink}"
+                      style="cursor: pointer;">
+                    <i class="fas fa-dollar-sign"></i>
+                    ${parseFloat(post.pending_payout_value || 0).toFixed(2)}
+                </span>
             </div>
-            <div class="post-actions">
-                <button class="vote-button ${hasVoted ? 'voted' : ''}"
-                        onclick="window.handleVote('${post.author}', '${post.permlink}', this)"
-                        ${hasVoted ? 'disabled' : ''}>
-                    <i class="far fa-heart"></i> Like
-                </button>
-            </div>
+            <button class="vote-button ${hasVoted ? 'voted' : ''}"
+                    data-author="${post.author}"
+                    data-permlink="${post.permlink}"
+                    ${hasVoted ? 'disabled' : ''}>
+                <span class="vote-icon">
+                    <i class="far fa-heart"></i>
+                </span>
+                <span class="vote-count">${post.active_votes?.length || 0}</span>
+            </button>
         </footer>
     `;
 }
+
+// Remove the old click handler since we're now handling it in post-interactions.js
 
 // Add marked library if not already included
 if (typeof marked === 'undefined') {

@@ -298,4 +298,45 @@
     .modal-body {
         padding: var(--spacing-sm);
     }
+
+    
+    .nav-icons,
+    .search-bar {
+        display: none;
+    }
+
+    .hamburger-menu {
+        display: block;
+    }
+
+    .nav-content {
+        justify-content: space-between;
+    }
+
+    /* Stili per il menu mobile */
+    .mobile-menu {
+        display: none;
+        position: absolute;
+        top: var(--header-height);
+        right: 0;
+        background: var(--background);
+        width: 100%;
+        padding: var(--spacing-md);
+    }
+
+    .mobile-menu.active {
+        display: block;
+    }
+
+    .mobile-menu a {
+        display: block;
+        padding: var(--spacing-sm) 0;
+        color: var(--text-primary);
+        text-decoration: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .mobile-menu a:last-child {
+        border-bottom: none;
+    }
 }

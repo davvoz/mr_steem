@@ -172,7 +172,7 @@ async function displayPosts(posts, containerId = 'posts-container', append = fal
                         </div>
                         <a href="#/profile/${post.author}" class="author-name">@${post.author}</a>
                     </header>
-                    <div class="post-content" onclick="window.location.hash='#/post/${post.author}/${post.permlink}'">
+                    <div class="post-contento" onclick="window.location.hash='#/post/${post.author}/${post.permlink}'">
                         ${postImage ? `
                             <div class="post-image-container">
                                 <img src="${postImage}" 

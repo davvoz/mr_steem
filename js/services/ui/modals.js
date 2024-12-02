@@ -1,16 +1,21 @@
-
 import { extractImageFromContent } from '../post/post-utils.js';
+import { EventBus } from '../common/event-bus.js';
+import { votePost } from '../post/post-service.js';  // Aggiungi questa importazione
 
+// Keep both module exports and window globals
 export function showVotersModal(votes) {
+    // Ensure votes is an array
+    const votesArray = Array.isArray(votes) ? votes : [];
+    
     const modal = createBaseModal('voters-modal');
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Likes ${votes.length > 0 ? `(${votes.length})` : ''}</h3>
+                <h3>Likes ${votesArray.length > 0 ? `(${votesArray.length})` : ''}</h3>
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
-                ${renderVotersList(votes)}
+                ${renderVotersList(votesArray)}
             </div>
         </div>
     `;
@@ -19,15 +24,18 @@ export function showVotersModal(votes) {
 }
 
 export function showCommentsModal(comments) {
+    // Ensure comments is an array
+    const commentsArray = Array.isArray(comments) ? comments : [];
+    
     const modal = createBaseModal('comments-modal');
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Comments ${comments.length > 0 ? `(${comments.length})` : ''}</h3>
+                <h3>Comments ${commentsArray.length > 0 ? `(${commentsArray.length})` : ''}</h3>
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
-                ${renderCommentsList(comments)}
+                ${renderCommentsList(commentsArray)}
             </div>
         </div>
     `;
@@ -54,6 +62,158 @@ export function showFollowPopup(username) {
         setTimeout(() => popup.remove(), 300);
     }, 2000);
 }
+
+export function showPayoutModal(payoutDetails) {
+    const modal = createBaseModal('payout-modal');
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Payout Details</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="payout-details">
+                    <div class="payout-item">
+                        <span class="label">Pending Payout:</span>
+                        <span class="value">${payoutDetails.pendingPayout}</span>
+                    </div>
+                    <div class="payout-item">
+                        <span class="label">Payout Date:</span>
+                        <span class="value">${payoutDetails.payoutDate}</span>
+                    </div>
+                    <div class="payout-item">
+                        <span class="label">Author Payout:</span>
+                        <span class="value">${payoutDetails.totalPayout}</span>
+                    </div>
+                    <div class="payout-item">
+                        <span class="label">Curator Payout:</span>
+                        <span class="value">${payoutDetails.curatorPayout}</span>
+                    </div>
+                    ${payoutDetails.isPayoutDeclined ? 
+                        '<div class="payout-declined">Payout declined by author</div>' : ''}
+                    ${payoutDetails.beneficiaries.length > 0 ? `
+                        <div class="beneficiaries">
+                            <h4>Beneficiaries:</h4>
+                            ${payoutDetails.beneficiaries.map(b => `
+                                <div class="beneficiary-item">
+                                    <span>@${b.account}</span>
+                                    <span>${b.weight/100}%</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+
+    showModal(modal);
+}
+
+// Aggiungi questa funzione per il toast
+export function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${type}`;
+    toast.innerHTML = `
+        <div class="toast-content">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('active'));
+
+    setTimeout(() => {
+        toast.classList.remove('active');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+export function showVoteModal({ author, permlink, button }) {
+    const modal = createBaseModal('vote-modal');
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Vote Post</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="vote-slider-container">
+                    <input type="range" 
+                           min="1" 
+                           max="100" 
+                           value="100" 
+                           class="vote-slider" 
+                           id="voteSlider">
+                    <div class="vote-value">
+                        <span id="votePercent">100</span>%
+                    </div>
+                </div>
+                <button class="vote-submit-btn">
+                    <i class="far fa-heart"></i> Submit Vote
+                </button>
+            </div>
+        </div>
+    `;
+
+    const slider = modal.querySelector('#voteSlider');
+    const percentDisplay = modal.querySelector('#votePercent');
+    const submitBtn = modal.querySelector('.vote-submit-btn');
+
+    slider.addEventListener('input', () => {
+        percentDisplay.textContent = slider.value;
+    });
+
+    submitBtn.addEventListener('click', async () => {
+        try {
+            submitBtn.disabled = true;
+            const weight = slider.value * 100; // Convert to Steem format (0-10000)
+            const success = await votePost(author, permlink, weight);
+            
+            if (success) {
+                // Aggiorna il conteggio dei voti nel post
+                const voteCountSpan = document.querySelector(`.net_votes[data-post-author="${author}"][data-post-permlink="${permlink}"]`);
+                if (voteCountSpan) {
+                    const currentCount = parseInt(voteCountSpan.textContent) || 0;
+                    voteCountSpan.textContent = `${currentCount + 1} likes`;
+                }
+                
+                // Aggiorna il pulsante di voto
+                button.classList.add('voted');
+                button.disabled = true;
+                
+                // Chiudi il modale
+                modal.querySelector('.modal-close').click();
+                
+                // Mostra il toast
+                showToast(`Successfully voted with ${slider.value}% power!`);
+            }
+        } catch (error) {
+            console.error('Vote failed:', error);
+            showToast(error.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+
+    showModal(modal);
+}
+
+// Rimuovi le assegnazioni window globali
+// window.showVotersModal = showVotersModal;
+// window.showCommentsModal = showCommentsModal;
+// window.showFollowPopup = showFollowPopup;
+
+// Aggiungi gli event listeners
+EventBus.on('showVoters', showVotersModal);
+EventBus.on('showComments', showCommentsModal);
+EventBus.on('showFollowPopup', showFollowPopup);
+EventBus.on('showPayout', showPayoutModal);
+EventBus.on('showVoteModal', showVoteModal);
+
+// Aggiungi EventBus handler per il toast
+EventBus.on('showToast', ({ message, type }) => showToast(message, type));
 
 // Private helper functions
 function createBaseModal(className) {
@@ -88,9 +248,14 @@ function setupModalClosing(modal) {
 }
 
 function renderVotersList(votes) {
-    if (votes.length === 0) return '<div class="no-items">No likes yet</div>';
+    if (!Array.isArray(votes) || votes.length === 0) {
+        return '<div class="no-items">No likes yet</div>';
+    }
 
-    return votes.map(vote => `
+    // Sort votes by percent in descending order
+    const sortedVotes = [...votes].sort((a, b) => Math.abs(b.percent) - Math.abs(a.percent));
+
+    return sortedVotes.map(vote => `
         <div class="voter-item">
             <div class="voter-info">
                 <img src="https://steemitimages.com/u/${vote.voter}/avatar" 
@@ -101,47 +266,51 @@ function renderVotersList(votes) {
                    class="voter-name" 
                    onclick="this.closest('.modal-base').remove()">@${vote.voter}</a>
             </div>
-            <span class="vote-weight">${(vote.percent / 100).toFixed(0)}%</span>
+            <span class="vote-weight">${(Math.abs(vote.percent) / 100).toFixed(2)}%</span>
         </div>
     `).join('');
 }
 
 function renderCommentsList(comments) {
-    if (comments.length === 0) return '<div class="no-items">No comments yet</div>';
+    if (!Array.isArray(comments) || comments.length === 0) {
+        return '<div class="no-items">No comments yet</div>';
+    }
 
     return comments.map(comment => {
         const imageUrl = extractImageFromContent(comment);
-        const parsedBody = marked.parse(comment.body, {
+        // Rimuovi le immagini dal testo del commento
+        const cleanBody = comment.body.replace(/!\[.*?\]\((.*?)\)/g, '').trim();
+        
+        const parsedBody = marked.parse(cleanBody, {
             breaks: true,
-            sanitize: false,
-            gfm: true,
-            smartypants: true
-        }).replace(
-            /!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g, 
-            '<div class="comment-image-container">$&</div>'
-        );
+            sanitize: true,
+            gfm: true
+        });
 
         return `
             <div class="comment-item">
-                <img src="https://steemitimages.com/u/${comment.author}/avatar" 
-                     alt="@${comment.author}"
-                     class="comment-avatar"
-                     onerror="this.src='https://steemitimages.com/u/${comment.author}/avatar/small'">
+                <div class="comment-header">
+                    <img src="https://steemitimages.com/u/${comment.author}/avatar" 
+                         alt="@${comment.author}"
+                         class="comment-avatar"
+                         onerror="this.src='https://steemitimages.com/u/${comment.author}/avatar/small'">
+                    <div class="comment-info">
+                        <a href="#/profile/${comment.author}" 
+                           class="comment-author" 
+                           onclick="this.closest('.modal-base').remove()">@${comment.author}</a>
+                        <span class="comment-date">${new Date(comment.created).toLocaleString()}</span>
+                    </div>
+                </div>
                 <div class="comment-content">
-                    <a href="#/profile/${comment.author}" 
-                       class="comment-author" 
-                       onclick="this.closest('.modal-base').remove()">@${comment.author}</a>
+                    <div class="comment-text">${parsedBody}</div>
                     ${imageUrl ? `
-                        <div class="comment-image-container">
+                        <div class="comment-image-preview">
                             <img src="${imageUrl}" 
                                  alt="Comment image" 
-                                 class="comment-image comment-image-thumbnail">
+                                 class="comment-image-thumbnail"
+                                 onclick="window.open('${imageUrl}', '_blank')">
                         </div>
                     ` : ''}
-                    <div class="comment-text">${parsedBody}</div>
-                    <div class="comment-meta">
-                        ${new Date(comment.created).toLocaleString()}
-                    </div>
                 </div>
             </div>
         `;

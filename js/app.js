@@ -5,6 +5,7 @@ import { checkExistingLogin } from './auth/login-manager.js';
 import { startNotificationPolling } from './services/notification-manager.js';
 import { showWipNotification } from './utils/notifications.js';
 import { init as initSidebar } from './services/sidebar/sidebar-service.js';
+import { setupPostInteractions } from './services/post/post-interactions.js';
 
 class App {
     constructor() {
@@ -86,6 +87,8 @@ class App {
                     showWipNotification(e.currentTarget.querySelector('span').textContent);
                 });
             });
+
+            setupPostInteractions();
         });
     }
 
@@ -159,4 +162,5 @@ app.init();
 document.addEventListener('DOMContentLoaded', () => {
     setupUIEventListeners();
     // Rimuovi la gestione del menu da qui poiché ora è in ui-handlers.js
+    setupPostInteractions();
 });

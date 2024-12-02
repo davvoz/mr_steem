@@ -3,14 +3,10 @@ import { steemConnection, showLoginModal } from '../auth/login-manager.js';
 import { renderNotifications } from '../services/notification-manager.js';
 import { searchService } from '../services/search-service.js';
 import { loadCommunity } from '../services/community-manager.js';
-import { cleanupInfiniteScroll,setupInfiniteScroll } from '../services/ui/infinite-scroll.js';
 import { loadSinglePost } from '../services/post/post-service.js';
 import { loadUserProfile } from '../services/profile/profile-service.js';
-import { loadSteemPosts, resetPostsState } from '../services/post/post-service.js';
-import { loadStories } from '../services/stories/stories-service.js';
-import { updateSidebar } from '../services/sidebar/sidebar-service.js';
 import { loadHomeFeed, resetHomeFeed } from '../services/posts-manager.js';
-
+import { extractProfileImage } from '../services/post/post-utils.js';
 export const routes = {
     '/': {
         template: 'home-view',

@@ -70,3 +70,61 @@ export function getFallbackAvatar(username) {
     ];
     return fallbacks[0];
 }
+
+export function cleanPostContent(post) {
+    if (!post || !post.body) return { content: '', images: [] };
+
+    let content = post.body;
+    const images = new Set();
+    const seenUrls = new Set();
+
+    // Extract all images from content
+    const markdownImages = content.match(/!\[.*?\]\((.*?)\)/g) || [];
+    const htmlImages = content.match(/<img[^>]+src="([^">]+)"/g) || [];
+    const rawUrls = content.match(/(https?:\/\/[^\s<>"']*?\.(?:png|jpe?g|gif|webp))/gi) || [];
+
+    // Process markdown images
+    markdownImages.forEach(img => {
+        const url = img.match(/!\[.*?\]\((.*?)\)/)[1];
+        if (!seenUrls.has(url)) {
+            images.add(url);
+            seenUrls.add(url);
+            content = content.replace(img, ''); // Remove from content
+        } else {
+            content = content.replace(img, ''); // Remove duplicate
+        }
+    });
+
+    // Process HTML images
+    htmlImages.forEach(img => {
+        const url = img.match(/src="([^">]+)"/)[1];
+        if (!seenUrls.has(url)) {
+            images.add(url);
+            seenUrls.add(url);
+            content = content.replace(img, ''); // Remove from content
+        } else {
+            content = content.replace(img, ''); // Remove duplicate
+        }
+    });
+
+    // Process raw URLs
+    rawUrls.forEach(url => {
+        if (!seenUrls.has(url)) {
+            images.add(url);
+            seenUrls.add(url);
+            content = content.replace(url, ''); // Remove from content
+        } else {
+            content = content.replace(url, ''); // Remove duplicate
+        }
+    });
+
+    // Clean up empty lines and extra spaces
+    content = content
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/^\s+|\s+$/g, '');
+
+    return {
+        content,
+        images: Array.from(images)
+    };
+}

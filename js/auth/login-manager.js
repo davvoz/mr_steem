@@ -1,19 +1,33 @@
 import { avatarCache } from '../utils/avatar-cache.js';
 import { stopNotificationPolling } from '../services/notification-manager.js';
+import { steemClient } from '../api/steem-client.js';
 
 export const steemConnection = {
     username: null,
-    privateKey: null,
     isConnected: false,
+    steem: null,
+    postingKey: null,
+
     async connect(username, key) {
-        // Simulate the connection logic
-        if (!username || !key) {
-            throw new Error('Invalid username or key');
+        try {
+            const account = await steemClient.connect(username, key);
+            this.username = username;
+            this.isConnected = true;
+            this.steem = steemClient.getSteem();
+            this.postingKey = key;
+            return account;
+        } catch (error) {
+            this.disconnect();
+            throw error;
         }
-        // Assume connection is successful
-        this.username = username;
-        this.privateKey = key;
-        this.isConnected = true;
+    },
+
+    disconnect() {
+        this.username = null;
+        this.isConnected = false;
+        this.steem = null;
+        this.postingKey = null;
+        sessionStorage.removeItem('steemPostingKey');
     }
 };
 

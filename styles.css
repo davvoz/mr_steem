@@ -33,8 +33,19 @@
     --dark-text: #ffffff;
     --dark-text-secondary: #b0b0b0;
     --dark-border: #2d2d2d;
+    --bg-color: #ffffff;
+    --text-color: #262626;
 }
 
+[data-theme="dark"] {
+    --bg-color: #262626;
+    --text-color: #ffffff;
+}
+/*le immagini dentro markdown-content devono rispettare le Intrinsic size*/
+.markdown-content img {
+    max-width: 100%;
+    height: auto;
+}
 * {
     margin: 0;
     padding: 0;
@@ -252,11 +263,11 @@ body {
     position: relative;
 }
 
-.post-content img {
+ .post-contento img {
     width: 100%;
     max-height: 600px;
     object-fit: cover;
-}
+} 
 
 .post-content p {
     padding: var(--spacing-md);
@@ -1822,6 +1833,19 @@ width: 50px;
     height: auto;
     border-radius: var(--radius-sm);
     margin: var(--spacing-md) 0;
+    object-fit: contain;
+    /* Imposta una larghezza massima oltre la quale l'immagine viene ridimensionata */
+    max-height: 80vh;
+}
+
+/* Per immagini piccole, mantieni dimensioni originali */
+.markdown-content img[width] {
+    width: auto;
+    max-width: 100%;
+}
+
+.markdown-content img[height] {
+    height: auto;
 }
 
 .markdown-content p {
@@ -2773,9 +2797,72 @@ width: 50px;
     left: 0;
     right: 0;
     bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.voters-content {
     background: var(--background);
-    color: var(--text-primary);
+    padding: 20px;
+    border-radius: var(--radius-md);
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-md);
+}
+
+.voters-list {
     display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.voter-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.voter-details {
+    flex: 1;
+    margin-left: 12px;
+}
+
+.voter-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.voter-stats {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.voter-weight {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .voters-content {
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+}
+
+.voters-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
     justify-content: center;
     align-items: center;
     z-index: 1000;
@@ -2798,7 +2885,7 @@ width: 50px;
     align-items: center;
     margin-bottom: 15px;
     padding-bottom: 10px;
-    border-bottom: var(--border-color);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .close-modal {
@@ -2891,12 +2978,12 @@ width: 50px;
     border-bottom: 1px solid var (--border-color);
 }
 
-.comment-item {
+/* .comment-item {
     display: flex;
     gap: 12px;
     padding: 12px 0;
     border-bottom: 1px solid var (--border-color);
-}
+} */
 
 .comment-avatar {
     width: 32px;
@@ -3119,9 +3206,10 @@ width: 50px;
 
 .comment-item {
     display: flex;
-    gap: var (--spacing-md);
+    gap: var(--spacing-md);
     padding: var(--spacing-md);
     border-bottom: 1px solid var(--border-color);
+    flex-direction: column;
 }
 
 .comment-avatar {
@@ -3520,46 +3608,3 @@ width: 50px;
     color: var(--text-primary);
 }
 
-/* Media query per dispositivi mobili */
-@media (max-width: 768px) {
-
-    .nav-icons,
-    .search-bar {
-        display: none;
-    }
-
-    .hamburger-menu {
-        display: block;
-    }
-
-    .nav-content {
-        justify-content: space-between;
-    }
-
-    /* Stili per il menu mobile */
-    .mobile-menu {
-        display: none;
-        position: absolute;
-        top: var(--header-height);
-        right: 0;
-        background: var(--background);
-        width: 100%;
-        padding: var(--spacing-md);
-    }
-
-    .mobile-menu.active {
-        display: block;
-    }
-
-    .mobile-menu a {
-        display: block;
-        padding: var(--spacing-sm) 0;
-        color: var(--text-primary);
-        text-decoration: none;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .mobile-menu a:last-child {
-        border-bottom: none;
-    }
-}

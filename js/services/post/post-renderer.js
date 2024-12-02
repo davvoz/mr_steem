@@ -1,4 +1,4 @@
-
+import { cleanPostContent } from './post-utils.js';
 
 export function generatePostHtml(post) {
     return marked.parse(post.body, {

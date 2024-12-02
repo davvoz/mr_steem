@@ -122,6 +122,51 @@ async function checkIfFollowing(username) {
     return following.some(f => f.following === username);
 }
 
+export async function followUser(username) {
+    if (!steemConnection.isConnected || !steemConnection.username) {
+        alert('Please login first');
+        return;
+    }
+
+    if (!steemConnection.steem) {
+        console.error('Steem client not available');
+        alert('Connection error. Please try logging in again.');
+        return;
+    }
+    
+    const followButton = document.querySelector('.follow-button');
+    if (followButton) {
+        followButton.disabled = true;
+        followButton.textContent = 'Processing...';
+    }
+    
+    try {
+        const isAlreadyFollowing = await checkIfFollowing(username);
+        if (isAlreadyFollowing) {
+            throw new Error('Already following this user');
+        }
+
+        await SteemAPI.follow(
+            steemConnection.postingKey,
+            steemConnection.username,
+            username
+        );
+        
+        if (followButton) {
+            followButton.disabled = false;
+            followButton.classList.add('following');
+            followButton.textContent = 'Following';
+        }
+    } catch (error) {
+        console.error('Failed to follow user:', error);
+        if (followButton) {
+            followButton.disabled = false;
+            followButton.textContent = 'Follow';
+        }
+        alert(error.message || 'Failed to follow user. Please try again.');
+    }
+}
+
 function renderProfile(account, followCount, profileImage, isFollowing) {
     const profileView = document.getElementById('profile-view');
     if (!profileView) return;
@@ -146,6 +191,15 @@ function renderProfile(account, followCount, profileImage, isFollowing) {
         </div>
         ${renderProfileTabs()}
     `;
+
+    // Add event listener for follow button after rendering
+    const followButton = profileView.querySelector('.follow-button');
+    if (followButton) {
+        followButton.addEventListener('click', () => {
+            const username = followButton.getAttribute('data-username');
+            if (username) followUser(username);
+        });
+    }
 }
 
 function renderFollowButton(username, isFollowing, isOwnProfile) {
@@ -153,7 +207,7 @@ function renderFollowButton(username, isFollowing, isOwnProfile) {
     
     return `
         <button class="follow-button ${isFollowing ? 'following' : ''}" 
-                onclick="window.followUser('${username}')"
+                data-username="${username}"
                 ${!steemConnection.isConnected ? 'disabled' : ''}>
             ${isFollowing ? 'Following' : 'Follow'}
         </button>
@@ -215,7 +269,7 @@ async function generatePostsHTML(posts, username) {
         const isOwnPost = steemConnection.username === post.author;
 
         return `
-            <div class="user-post-item" data-author="${post.author}" data-permlink="${post.permlink}">
+            <div class="user-post-item" data-author="${post.author}" data-permlink="${post.permlink}" onclick="window.location.hash='#/post/${post.author}/${post.permlink}'">
                 ${imageUrl ? `<img src="${imageUrl}" alt="Post image">` : 
                           '<div class="no-image">No Image</div>'}
                 <div class="post-overlay">
@@ -224,12 +278,9 @@ async function generatePostsHTML(posts, username) {
                 </div>
             </div>
         `;
-
     });
 
     return (await Promise.all(postPromises)).join('');
-
-
 }
 
 function updateProfileGrid(postsHTML, append) {
