@@ -227,16 +227,10 @@ function getBio(account) {
 
 function renderProfileTabs() {
     return `
-        <div class="profile-tabs">
-            <div class="profile-tab active" data-tab="posts">POSTS</div>
-            <div class="profile-tab" data-tab="blog">BLOG</div>
-        </div>
+        
         <div class="profile-content">
             <div id="profile-posts" class="active">
                 <div class="user-posts-grid" id="profile-posts-grid"></div>
-            </div>
-            <div id="profile-blog">
-                <div class="posts" id="profile-blog-posts"></div>
             </div>
             <div class="loading-indicator" style="display: none;">
                 <div class="spinner"></div>
@@ -245,21 +239,6 @@ function renderProfileTabs() {
     `;
 }
 
-function handlePostsResponse(posts) {
-    if (!posts || posts.length === 0) {
-        hasMoreProfilePosts = false;
-        return false;
-    }
-
-    const postsToProcess = profileLastPost ? posts.slice(1) : posts;
-    if (postsToProcess.length === 0) {
-        hasMoreProfilePosts = false;
-        return false;
-    }
-
-    profileLastPost = posts[posts.length - 1];
-    return true;
-}
 
 async function generatePostsHTML(posts, username) {
     const postPromises = posts.map(async post => {
