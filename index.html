@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <base href="." />
     <meta charset="UTF-8">
@@ -11,88 +12,84 @@
     <link rel="stylesheet" href="./css/toast.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/steem/dist/steem.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script type="module"  src="./js/routes/router.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js" type="module"></script>
+    <script type="module" src="./js/routes/router.js"></script>
     <script type="module" src="./js/app.js"></script>
 </head>
+
 <body>
-    
+
     <nav class="navbar">
         <div class="nav-content">
             <div class="logo">
                 <img src="./imageedit_4_9355326386.png" alt="SteemGram Logo">
             </div>
-            <button class="hamburger-menu" 
-                    aria-label="Toggle menu" 
-                    aria-expanded="false" 
-                    aria-controls="nav-menu">
+            <button class="hamburger-menu" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-menu">
                 <i class="fas fa-bars"></i>
             </button>
-            <div class="nav-menu" 
-                 id="nav-menu" 
-                 role="menu"
-                 aria-label="Main navigation">
+            <div class="nav-menu" id="nav-menu" role="menu" aria-label="Main navigation">
                 <a href="#/" class="nav-item" data-route="/">
                     <div class="nav-contento">
-                    <i class="fas fa-home"></i>
-                    <span>Home</span>
-                </div>
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </div>
                 </a>
                 <a href="#/search" class="nav-item" data-route="/search">
                     <div class="nav-contento">
-                    <i class="fas fa-search"></i>
-                    <span>Search</span></div>
+                        <i class="fas fa-search"></i>
+                        <span>Search</span>
+                    </div>
                 </a>
-                
+
                 <!-- Auth-required items -->
-                <a href="#/notifications" class="nav-item auth-required" data-route="/notifications" id="notifications-link">
+                <a href="#/notifications" class="nav-item auth-required" data-route="/notifications"
+                    id="notifications-link">
                     <div class="nav-contento">
-                    <i class="far fa-heart"></i>
-                    <span>Notifications</span></div>
+                        <i class="far fa-heart"></i>
+                        <span>Notifications</span>
+                    </div>
                 </a>
                 <a href="#/profile" class="nav-item auth-required" data-route="/profile" id="profile-link">
                     <div class="nav-contento">
-                    <i class="far fa-user"></i>
-                    <span>Profile</span></div>
+                        <i class="far fa-user"></i>
+                        <span>Profile</span>
+                    </div>
                 </a>
-                
+
                 <!-- Theme toggle - always visible -->
                 <a href="#" class="nav-item" id="theme-toggle">
                     <div class="nav-contento">
-                    <i class="fas fa-moon"></i>
-                    <span>Dark Mode</span></div>
+                        <i class="fas fa-moon"></i>
+                        <span>Dark Mode</span>
+                    </div>
                 </a>
-                
+
                 <!-- Auth buttons -->
                 <a href="#" class="nav-item" id="login-link">
                     <div class="nav-contento">
-                    <i class="fas fa-sign-in-alt"></i>
-                    <span>Login</span></div>
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Login</span>
+                    </div>
                 </a>
                 <a href="#" class="nav-item" id="logout-link">
                     <div class="nav-contento">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span></div>
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </div>
                 </a>
             </div>
         </div>
     </nav>
-    
 
-    
+
+
     <!-- Update login modal for better security -->
     <div class="login-modal" id="loginModal" role="dialog" aria-labelledby="loginTitle">
         <div class="login-form">
             <h2 id="loginTitle">Connect to Steem Blockchain</h2>
-            <input type="text" 
-                   id="steemUsername" 
-                   placeholder="Steem Username" 
-                   autocomplete="username"
-                   required>
-            <input type="password" 
-                   id="steemKey" 
-                   placeholder="Private Posting Key (optional)"
-                   autocomplete="current-password">
+            <input type="text" id="steemUsername" placeholder="Steem Username" autocomplete="username" required>
+            <input type="password" id="steemKey" placeholder="Private Posting Key (optional)"
+                autocomplete="current-password">
             <button id="loginButton" type="submit">Connect to Steem</button>
             <div class="steem-info">
                 <small>Your private key is stored securely and never leaves your browser.</small>
@@ -119,12 +116,25 @@
             <div id="liked-posts-list"></div>
         </div>
     </div>
-    
+
     <div class="main-container">
         <div class="feed">
             <div id="home-view" class="view">
-                <div class="stories" id="stories-container">
-                    <!-- Stories will be loaded dynamically -->
+                <div class="posts-header">
+                    <div class="stories" id="stories-container">
+                        <!-- Stories will be loaded dynamically -->
+                    </div>
+                    <div class="tag-filter">
+                        <div class="tag-scroll">
+                            <button class="tag-button" data-tag="all">All</button>
+                            <button class="tag-button" data-tag="photography">Photography</button>
+                            <button class="tag-button" data-tag="art">Art</button>
+                            <button class="tag-button" data-tag="travel">Travel</button>
+                            <button class="tag-button" data-tag="food">Food</button>
+                            <button class="tag-button" data-tag="nature">Nature</button>
+                            <button class="tag-button" data-tag="technology">Technology</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="posts" id="posts-container">
                     <!-- Posts will be loaded dynamically -->
@@ -151,11 +161,11 @@
                     <!-- User's posts will be loaded here -->
                 </div>
             </div>
-            
+
             <div id="search-view" class="view" style="display: none;">
                 <!-- Search content will be loaded here -->
             </div>
-            
+
             <div id="suggestions-view" class="view" style="display: none;">
                 <!-- Extended suggestions will be loaded here -->
             </div>
@@ -186,10 +196,11 @@
             </div>
         </div>
     </div>
-    
+
     <div class="new-post-button" onclick="createNewPost()">
         <i class="fas fa-plus"></i>
     </div>
-    
+
 </body>
+
 </html>

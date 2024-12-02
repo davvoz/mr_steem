@@ -90,7 +90,7 @@ export function showCommentsModal(comments) {
                                 <img src="https://steemitimages.com/u/${comment.author}/avatar" 
                                      alt="@${comment.author}"
                                      class="comment-avatar"
-                                     onerror="this.src='https://steemitimages.com/u/${comment.author}/avatar/small'">
+                                     onerror="this.src='https://steemitimages.com/u/${comment.author}/avatar'">
                                 <div class="comment-content">
                                     <a href="#/profile/${comment.author}" class="comment-author" onclick="this.closest('.modal-base').remove()">@${comment.author}</a>
                                     ${imageUrl ? `

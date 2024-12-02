@@ -1,25 +1,12 @@
 export function extractProfileImage(account) {
-    const steemitUrl = `https://steemitimages.com/u/${account.name}/avatar`;
-    
     try {
-        const metadata = JSON.parse(account.blog_json_metadata);
-        return metadata.profile.profile_image || steemitUrl;
+        const metadata = null;
+        return metadata?.profile?.profile_image ||
+         `https://steemitimages.com/u/${account.name}/avatar`;
     } catch (e) {
-        try {
-            const metadata = JSON.parse(account.posting_json_metadata);
-            return metadata.profile.profile_image || steemitUrl;
-        } catch (e) {
-            try {
-                const metadata = JSON.parse(account.json_metadata);
-                return metadata.profile.profile_image || steemitUrl;
-            } catch (e) {
-                console.warn('Failed to parse profile metadata');
-                return steemitUrl;
-            }
-        }
+        return `https://steemitimages.com/u/${account.name}/avatar`;
     }
 }
-
 
 export function extractImageFromContent(post) {
     console.log(post);
@@ -70,8 +57,8 @@ export function cleanImageUrl(url) {
 export function getFallbackAvatar(username) {
     const fallbacks = [
         `https://images.hive.blog/u/${username}/avatar`,
-        `https://steemitimages.com/u/${username}/avatar/small`,
-        'https://steemitimages.com/u/default-avatar/avatar/small'
+        `https://steemitimages.com/u/${username}/avatar`,
+        'https://steemitimages.com/u/default-avatar/avatar'
     ];
     return fallbacks[0];
 }

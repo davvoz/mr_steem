@@ -1635,6 +1635,20 @@ width: 50px;
     }
 }
 
+.wip-notification.fade-out {
+    animation: fadeOut 0.5s ease forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
 .post-body {
     padding: 20px;
 }
@@ -2550,7 +2564,7 @@ width: 50px;
 /* Dark mode support */
 [data-theme="dark"] .community-result {
     background: var(--dark-surface);
-    border-color: var(--dark-border);
+    border-color: var (--dark-border);
 }
 
 [data-theme="dark"] .community-result:hover {
@@ -2655,7 +2669,7 @@ width: 50px;
 .community-avatar {
     width: 100px;
     height: 100px;
-    border-radius: var(--radius-md);
+    border-radius: var (--radius-md);
     object-fit: cover;
 }
 
@@ -3438,7 +3452,6 @@ width: 50px;
 /* Dark mode support */
 [data-theme="dark"] .follow-button {
     background: #0095f6;
-    /* Usiamo sempre il blu di Instagram per il bottone principale */
     color: white;
 }
 
@@ -3573,3 +3586,151 @@ width: 50px;
     color: var(--text-primary);
 }
 
+.tag-filter {
+    background: var(--bg-color);
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 15px;
+    z-index: 100;
+}
+
+.tag-scroll {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 0 15px;
+    gap: 10px;
+}
+
+.tag-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.tag-button {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tag-button:hover {
+    background: var(--hover-color);
+}
+
+.tag-button.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.post-excerpt {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    margin: var(--spacing-sm) 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.post-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+}
+
+.author-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.post-stats {
+    display: flex;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
+.post-stats span {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.post-stats i {
+    font-size: var(--font-size-md);
+}
+
+/* Updated tag button styles */
+.tag-button {
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tag-button:hover {
+    background: var(--secondary-color);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.tag-button.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    font-weight: 500;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .tag-button {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+}
+
+[data-theme="dark"] .tag-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.loading-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-xl);
+    width: 100%;
+}
+
+.loading-spinner::after {
+    content: '';
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--secondary-color);
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Dark mode support */
+[data-theme="dark"] .loading-spinner::after {
+    border-color: var(--dark-border);
+    border-top-color: var(--primary-color);
+}

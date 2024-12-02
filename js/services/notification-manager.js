@@ -134,7 +134,7 @@ async function loadMoreNotifications() {
         const uniqueUsers = [...new Set(newNotifications.map(n => n.from))];
         for (const username of uniqueUsers) {
             if (!avatarCache.has(username)) {
-                const avatarUrl = `https://steemitimages.com/u/${username}/avatar/small`;
+                const avatarUrl = `https://steemitimages.com/u/${username}/avatar`;
                 avatarCache.set(username, avatarUrl);
             }
         }
@@ -144,7 +144,7 @@ async function loadMoreNotifications() {
                 <div class="notification-avatar">
                     <img src="${avatarCache.get(n.from)}" 
                          alt="${n.from}"
-                         onerror="this.src='https://steemitimages.com/u/${n.from}/avatar/small'">
+                         onerror="this.src='https://steemitimages.com/u/${n.from}/avatar'">
                 </div>
                 <div class="notification-content">
                     <p><strong>@${n.from}</strong> ${getNotificationText(n)}</p>

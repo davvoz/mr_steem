@@ -261,7 +261,7 @@ function renderVotersList(votes) {
                 <img src="https://steemitimages.com/u/${vote.voter}/avatar" 
                      alt="@${vote.voter}"
                      class="voter-avatar"
-                     onerror="this.src='https://steemitimages.com/u/${vote.voter}/avatar/small'">
+                     onerror="this.src='https://steemitimages.com/u/${vote.voter}/avatar'">
                 <a href="#/profile/${vote.voter}" 
                    class="voter-name" 
                    onclick="this.closest('.modal-base').remove()">@${vote.voter}</a>
@@ -293,7 +293,7 @@ function renderCommentsList(comments) {
                     <img src="https://steemitimages.com/u/${comment.author}/avatar" 
                          alt="@${comment.author}"
                          class="comment-avatar"
-                         onerror="this.src='https://steemitimages.com/u/${comment.author}/avatar/small'">
+                         onerror="this.src='https://steemitimages.com/u/${comment.author}/avatar'">
                     <div class="comment-info">
                         <a href="#/profile/${comment.author}" 
                            class="comment-author" 

@@ -1,10 +1,8 @@
-import { steemConnection } from '../auth/login-manager.js';
-import { avatarCache } from '../utils/avatar-cache.js';
 import { extractProfileImage, extractImageFromContent } from './post/post-utils.js';
 import {  showProfileLoadingIndicator, hideProfileLoadingIndicator 
 } from './ui/loading-indicators.js';
-let isLoadingProfile = false;
-let hasMoreProfilePosts = true;
+
+
 
 const seenPosts = new Set(); 
 const globalPostsCache = {
@@ -12,7 +10,6 @@ const globalPostsCache = {
     profile: new Map()
 };
 
-const processedPostIds = new Set();
 
 let lastPost = null;
 let isLoading = false;
@@ -134,7 +131,7 @@ export function resetHomeFeed() {
     if (container) container.innerHTML = '';
 }
 
-async function displayPosts(posts, containerId = 'posts-container', append = false) {
+export async function displayPosts(posts, containerId = 'posts-container', append = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -155,7 +152,7 @@ async function displayPosts(posts, containerId = 'posts-container', append = fal
             
             // Fix avatar URL template string
             const avatarUrl = authorImage || 
-                `https://steemitimages.com/u/${post.author}/avatar/small`;
+                `https://steemitimages.com/u/${post.author}/avatar`;
 
             // Ensure post title exists
             const safeTitle = post.title || 'Untitled';
@@ -167,7 +164,7 @@ async function displayPosts(posts, containerId = 'posts-container', append = fal
                             <img src="${avatarUrl}" 
                                  alt="${post.author}" 
                                  class="author-avatar"
-                                 onerror="this.src='https://steemitimages.com/u/${post.author}/avatar/small'">
+                                 onerror="this.src='https://steemitimages.com/u/${post.author}/avatar'">
                         </div>
                         <a href="#/profile/${post.author}" class="author-name">@${post.author}</a>
                     </header>
@@ -207,9 +204,6 @@ async function displayPosts(posts, containerId = 'posts-container', append = fal
         container.innerHTML = postsHTML;
     }
 }
-
-
-
 
 window.handleVote = async (author, permlink, button) => {
     const success = await votePost(author, permlink);

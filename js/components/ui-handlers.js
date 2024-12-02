@@ -1,10 +1,11 @@
 import { handleLogin, showLoginModal, handleLogout, checkExistingLogin, steemConnection } from '../auth/login-manager.js';
-import { showWipNotification } from '../utils/notifications.js';  
 import { loadStories } from '../services/stories/stories-service.js';
 import { updateSidebar } from '../services/sidebar/sidebar-service.js';
 import { loadSuggestions } from '../services/suggestions/suggestions-service.js';
-import { startNotificationPolling, renderNotifications, stopNotificationPolling } from '../services/notification-manager.js'; // Ensure this import exists
+import { startNotificationPolling, renderNotifications, stopNotificationPolling } from '../services/notification-manager.js';
 import { Router } from '../routes/router.js';
+import { loadSteemPosts, resetPostsState } from '../services/posts/post-service.js'; // Add resetPostsState import
+import { setupInfiniteScroll, cleanupInfiniteScroll } from '../services/ui/infinite-scroll.js';
 
 export function setupUIEventListeners() {
     // Setup navigation handling
@@ -16,6 +17,8 @@ export function setupUIEventListeners() {
     // Setup mobile menu
     setupMobileMenu();
     
+    setupTagFilter();
+    
     console.log('UI event listeners setup complete');
 }
 
@@ -26,6 +29,9 @@ function setupNavigation() {
             e.preventDefault();
             const route = e.currentTarget.dataset.route;
             Router.navigate(route);
+            if (route.startsWith('/post/')) {
+                cleanupInfiniteScroll();
+            }
         });
     });
 }
@@ -420,4 +426,67 @@ function showLogoutConfirmation() {
         notification.classList.add('fade-out');
         setTimeout(() => notification.remove(), 300);
     }, 2000);
+}
+
+function setupTagFilter() {
+    const tagButtons = document.querySelectorAll('.tag-button');
+    const postsContainer = document.getElementById('posts-container');
+    
+    // Set default active tag
+    const defaultTag = 'all';
+    const defaultButton = document.querySelector(`.tag-button[data-tag="${defaultTag}"]`);
+    if (defaultButton) {
+        defaultButton.classList.add('active');
+    }
+    
+    // Show loading spinner immediately on page load
+    postsContainer.innerHTML = '<div class="loading-spinner"></div>';
+    
+    // Load default tag on page load
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            await loadSteemPosts({ tag: defaultTag });
+        } catch (error) {
+            console.error('Error loading initial posts:', error);
+            showErrorMessage(postsContainer);
+        }
+    });
+    
+    tagButtons.forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const tag = button.dataset.tag;
+            
+            // Non ricaricare se il tag è già attivo
+            if (button.classList.contains('active')) {
+                return;
+            }
+            
+            // Remove active class from all buttons
+            tagButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // Add active class to clicked button
+            button.classList.add('active');
+            
+            // Show loading spinner
+            postsContainer.innerHTML = '<div class="loading-spinner"></div>';
+            
+            try {
+                await loadSteemPosts({ tag });
+            } catch (error) {
+                console.error('Error loading filtered posts:', error);
+                showErrorMessage(postsContainer);
+            }
+        });
+    });
+}
+
+function showErrorMessage(container) {
+    container.innerHTML = `
+        <div class="error-message">
+            Failed to load posts. Please try again.
+            <button onclick="window.location.reload()" class="retry-button">
+                <i class="fas fa-redo"></i> Retry
+            </button>
+        </div>
+    `;
 }

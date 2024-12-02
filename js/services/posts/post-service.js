@@ -1,26 +1,21 @@
 import { steemConnection } from '../../auth/login-manager.js';
-import { extractImageFromContent } from '../post/post-utils.js';
+import { extractImageFromContent } from './post-utils.js';
 import { showLoadingIndicator, hideLoadingIndicator } from '../ui/loading-indicators.js';
+import { fetchPosts } from '../post/post-service.js';
+import { displayPosts } from '../../services/posts-manager.js';
+
+let lastPost = null;
+let isLoading = false;
+let hasMore = true;
+const seenPosts = new Set();
 
 export async function loadSteemPosts(options = {}) {
+    if (isLoading || !hasMore) return;
+    
     showLoadingIndicator();
     try {
-        const response = await steemConnection.getDiscussionsByCreated({ ...options, limit: 20 });
-        const posts = await Promise.all(response.map(async post => {
-            const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
-            return {
-                author: post.author,
-                permlink: post.permlink,
-                title: post.title,
-                body: post.body,
-                image: extractImageFromContent(post.body),
-                authorImage: authorAccount ? extractProfileImage(authorAccount) : null,
-                created: post.created,
-                active_votes: post.active_votes,
-                children: post.children,
-                pending_payout_value: post.pending_payout_value
-            };
-        }));
+        const posts = await fetchPosts(options);
+        await displayPosts(posts, 'posts-container', options.append);
         return posts;
     } catch (error) {
         console.error('Error loading posts:', error);
@@ -33,14 +28,37 @@ export async function loadSteemPosts(options = {}) {
 export async function loadSinglePost(author, permlink) {
     showLoadingIndicator();
     try {
-        const post = await steemConnection.getContent(author, permlink);
-        return {
+        // Get post and author data
+        const [post, [authorAccount]] = await Promise.all([
+            steem.api.getContentAsync(author, permlink),
+            steem.api.getAccountsAsync([author])
+        ]);
+
+        const processedPost = {
             author: post.author,
             permlink: post.permlink,
             title: post.title,
             body: post.body,
-            image: extractImageFromContent(post.body)
+            image: extractImageFromContent(post.body),
+            authorImage: authorAccount ? extractProfileImage(authorAccount) : null,
+            created: post.created,
+            active_votes: post.active_votes,
+            children: post.children,
+            pending_payout_value: post.pending_payout_value
         };
+
+        // Use the same rendering function with slight modifications for single post view
+        const postView = document.getElementById('post-view');
+        if (postView) {
+            postView.innerHTML = renderPostHTML(processedPost);
+            // Add any additional single post view specific elements
+            const fullContent = document.createElement('div');
+            fullContent.className = 'full-post-content';
+            fullContent.innerHTML = marked.parse(processedPost.body);
+            postView.querySelector('.post-preview').appendChild(fullContent);
+        }
+
+        return processedPost;
     } catch (error) {
         console.error('Error loading single post:', error);
         throw error;
@@ -63,6 +81,9 @@ export async function votePost(author, permlink) {
 }
 
 export function resetPostsState() {
-    // Implementation to reset the posts state
-    // This could involve clearing cached posts, resetting UI elements, etc.
+    lastPost = null;
+    isLoading = false;
+    hasMore = true;
+    seenPosts.clear();
 }
+

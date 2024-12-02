@@ -211,7 +211,7 @@ async function preloadAvatars(accounts) {
     for (const account of accounts) {
         if (!avatarCache.has(account.name)) {
             const profileImage = extractProfileImage(account) ||
-                `https://steemitimages.com/u/${account.name}/avatar/small`;
+                `https://steemitimages.com/u/${account.name}/avatar`;
             avatarCache.set(account.name, profileImage);
         }
     }

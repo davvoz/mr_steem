@@ -47,7 +47,7 @@ export async function loadSteemPosts(limit = 20) {
     }
 }
 
-async function fetchPosts() {
+export async function fetchPosts() {
     const query = {
         tag: 'photography',
         limit: 20,
@@ -107,7 +107,7 @@ export async function loadSinglePost(author, permlink) {
 
 async function renderSinglePost(post, authorAccount) {
     const authorImage = authorAccount ? extractProfileImage(authorAccount) : null;
-    const avatarUrl = authorImage || `https://steemitimages.com/u/${post.author}/avatar/small`;
+    const avatarUrl = authorImage || `https://steemitimages.com/u/${post.author}/avatar`;
     const htmlContent = generatePostHtml(post);
     const postDate = new Date(post.created).toLocaleString();
 
@@ -245,7 +245,7 @@ function generatePostHeader(post, avatarUrl, postDate) {
                 <img src="${avatarUrl}" 
                      alt="${post.author}" 
                      class="author-avatar"
-                     onerror="this.src='https://steemitimages.com/u/${post.author}/avatar/small'">
+                     onerror="this.src='https://steemitimages.com/u/${post.author}/avatar'">
                 <div class="author-details">
                     <a href="#/profile/${post.author}" class="author-name">@${post.author}</a>
                     <span class="post-date">${postDate}</span>
@@ -259,9 +259,9 @@ function generatePostContent(post, htmlContent) {
     console.log(post, htmlContent);
     //correggi nell html tutti gli a che hanno un href che ha dentro un immagine devono essere sostituiti con un img
     //esempio <a href="https://steemit
-    //images.com/u/steemitboard/avatar/small">https://steemitimages.com/u/steemitboard/avatar/small</a>
+    //images.com/u/steemitboard/avatar">https://steemitimages.com/u/steemitboard/avatar</a>
     //deve diventare <img src="https
-    //steemitimages.com/u/steemitboard/avatar/small" alt="https://steemitimages.com/u/steemitboard/avatar/small">
+    //steemitimages.com/u/steemitboard/avatar" alt="https://steemitimages.com/u/steemitboard/avatar">
     //per fare questo possiamo usare una regex
     const regex = /<a href="([^"]+)">([^<]+)<\/a>/g;
     htmlContent = htmlContent.replace(regex, '<img src="$1" alt="$2">');
@@ -280,6 +280,13 @@ function generatePostFooter(post) {
         vote.voter === steemConnection?.username
     );
     
+    let tags = [];
+    try {
+        tags = JSON.parse(post.json_metadata)?.tags || [];
+    } catch (error) {
+        console.warn('Failed to parse post tags:', error);
+    }
+
     return `
         <footer class="post-footer">
             <div class="post-stats">
@@ -304,6 +311,11 @@ function generatePostFooter(post) {
                     <i class="fas fa-dollar-sign"></i>
                     ${parseFloat(post.pending_payout_value || 0).toFixed(2)}
                 </span>
+            </div>
+            <div class="post-tags">
+                ${tags.map(tag => `
+                    <a href="#/tag/${tag}" class="tag">#${tag}</a>
+                `).join(' ')}
             </div>
             <button class="vote-button ${hasVoted ? 'voted' : ''}"
                     data-author="${post.author}"

@@ -124,7 +124,7 @@ export function showVoters(author, permlink, element) {
 
 async function getVoterAvatar(username) {
     if (!avatarCache.has(username)) {
-        avatarCache.set(username, `https://steemitimages.com/u/${username}/avatar/small`);
+        avatarCache.set(username, `https://steemitimages.com/u/${username}/avatar`);
     }
     return avatarCache.get(username);
 }

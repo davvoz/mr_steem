@@ -179,7 +179,7 @@ export async function loadCommunity(name, searchData = null) {
                     title: community.title || community.name,
                     about: community.about || '',
                     subscribers: community.subscribers || 0,
-                    icon: community.avatar_url || `https://steemitimages.com/u/${community.name}/avatar/small`
+                    icon: community.avatar_url || `https://steemitimages.com/u/${community.name}/avatar`
                 };
             }
         }

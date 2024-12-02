@@ -1,4 +1,3 @@
-
 import { loadSteemPosts } from '../post/post-service.js';
 import { loadMoreProfilePosts } from '../profile/profile-service.js';
 import { showLoadingIndicator, hideLoadingIndicator } from './loading-indicators.js';
@@ -19,6 +18,7 @@ function throttle(func, limit) {
 }
 
 export function setupInfiniteScroll(type = 'home') {
+    if (type === 'post') return;
     // Remove existing scroll listeners
     cleanupInfiniteScroll();
     

@@ -18,7 +18,7 @@ export function showVotersModal(votes) {
                                 <img src="https://steemitimages.com/u/${vote.voter}/avatar" 
                                      alt="@${vote.voter}"
                                      class="voter-avatar"
-                                     onerror="this.src='https://steemitimages.com/u/${vote.voter}/avatar/small'">
+                                     onerror="this.src='https://steemitimages.com/u/${vote.voter}/avatar'">
                                 <a href="#/profile/${vote.voter}" class="voter-name" onclick="this.closest('.modal-base').remove()">@${vote.voter}</a>
                             </div>
                             <span class="vote-weight">${(vote.percent / 100).toFixed(0)}%</span>

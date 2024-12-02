@@ -29,7 +29,7 @@ class SearchService {
                     title: community.title || community.name,
                     about: community.about || '',
                     subscribers: community.subscribers || 0,
-                    icon: community.avatar_url || `https://steemitimages.com/u/${community.name}/avatar/small`
+                    icon: community.avatar_url || `https://steemitimages.com/u/${community.name}/avatar`
                 }))
             };
         } catch (error) {
@@ -49,7 +49,7 @@ class SearchService {
             return {
                 username: account.name,
                 reputation: steem.formatter.reputation(account.reputation),
-                avatar: `https://steemitimages.com/u/${account.name}/avatar/small`,
+                avatar: `https://steemitimages.com/u/${account.name}/avatar`,
                 about: metadata.profile?.about || '',
                 postCount: account.post_count
             };
@@ -57,7 +57,7 @@ class SearchService {
             console.error('Error enriching user data:', error);
             return {
                 username,
-                avatar: `https://steemitimages.com/u/${username}/avatar/small`
+                avatar: `https://steemitimages.com/u/${username}/avatar`
             };
         }
     }
