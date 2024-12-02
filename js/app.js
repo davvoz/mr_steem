@@ -1,10 +1,11 @@
-import { steemClient } from './api/steem-client.js';
 import { Router } from './routes/router.js';
 import { setupUIEventListeners } from './components/ui-handlers.js';
 import { routes } from './routes/routes.js';
 import { checkExistingLogin } from './auth/login-manager.js';
 import { startNotificationPolling } from './services/notification-manager.js';
 import { showWipNotification } from './utils/notifications.js';
+import { init as initSidebar } from './services/sidebar/sidebar-service.js';
+import { setupPostInteractions } from './services/post/post-interactions.js';
 
 class App {
     constructor() {
@@ -14,6 +15,7 @@ class App {
     }
 
     async init() {
+        // Initialize router as singleton
         this.router = new Router(routes, this.basePath);
         
         // Controlla il login esistente prima di tutto
@@ -29,6 +31,15 @@ class App {
         // Start notification polling if user is logged in
         if (checkExistingLogin()) {
             await startNotificationPolling();
+        }
+
+        // Initialize sidebar module
+        initSidebar();
+
+        // Load initial home feed after router setup
+        if (window.location.hash === '' || window.location.hash === '#/') {
+            const { loadHomeFeed } = await import('./services/posts-manager.js');
+            loadHomeFeed();
         }
     }
 
@@ -76,6 +87,8 @@ class App {
                     showWipNotification(e.currentTarget.querySelector('span').textContent);
                 });
             });
+
+            setupPostInteractions();
         });
     }
 
@@ -149,4 +162,5 @@ app.init();
 document.addEventListener('DOMContentLoaded', () => {
     setupUIEventListeners();
     // Rimuovi la gestione del menu da qui poiché ora è in ui-handlers.js
+    setupPostInteractions();
 });

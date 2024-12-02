@@ -1,8 +1,8 @@
-
 export class SteemClient {
     constructor() {
         this.connection = null;
         this.username = null;
+        this.steem = window.steem; // Expose steem client
     }
 
     async connect(username, key) {
@@ -33,6 +33,14 @@ export class SteemClient {
 
     getUsername() {
         return this.username;
+    }
+
+    getSteem() {
+        return this.steem;
+    }
+
+    getPostingKey() {
+        return sessionStorage.getItem('steemPostingKey');
     }
 }
 

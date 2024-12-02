@@ -1,0 +1,501 @@
+CSS Duplicates Analysis Report 
+============================= 
+ 
+Checking duplicate classes... 
+.author-avatar { 
+.close-story { 
+.comment-author { 
+.comment-avatar { 
+.comment-content { 
+.comment-image { 
+.comment-image { 
+.comment-item { 
+.comment-text { 
+.comment-text img, 
+.comments-modal { 
+.comments-modal { 
+.community-info { 
+.community-info { 
+.community-name { 
+.community-result { 
+.community-result img { 
+.community-result:hover { 
+.community-stats { 
+.community-stats { 
+.full-post { 
+.loading-indicator { 
+.loading-indicator { 
+.loading-indicator { 
+.markdown-content { 
+.markdown-content img { 
+.markdown-content img { 
+.markdown-content p { 
+.modal-body { 
+.modal-content { 
+.nav-profile-image:hover { 
+.net_votes.clickable { 
+.net_votes.clickable:hover { 
+.no-notifications { 
+.notification-content { 
+.notification-content p { 
+.notification-content small { 
+.notification-item { 
+.notification-item { 
+.notification-item { 
+.notification-item.read { 
+.notification-item:hover { 
+.notification-item:hover { 
+.notification-item:hover { 
+.notifications-container { 
+.notifications-list { 
+.notifications-list { 
+.post-actions { 
+.post-actions i { 
+.post-actions i:hover { 
+.post-body { 
+.post-content { 
+.post-header { 
+.posts-grid { 
+.profile-header { 
+.profile-info { 
+.profile-post { 
+.profile-post img { 
+.profile-stats { 
+.search-bar .fa-times { 
+.search-bar { 
+.search-bar { 
+.search-bar input { 
+.search-bar input:focus { 
+.search-container { 
+.search-section { 
+.stories { 
+.stories::after { 
+.stories::after { 
+.stories::before, 
+.story-avatar { 
+.story-content { 
+.story-header { 
+.story-header img { 
+.story-modal { 
+.story-scroll-button { 
+.story { 
+.voter-avatar { 
+.voter-item { 
+.voter-name { 
+ 
+Checking duplicate IDs... 
+.author-avatar { 
+.close-story { 
+.comment-author { 
+.comment-avatar { 
+.comment-content { 
+.comment-image { 
+.comment-image { 
+.comment-item { 
+.comment-text { 
+.comment-text img, 
+.comments-modal { 
+.comments-modal { 
+.community-info { 
+.community-info { 
+.community-name { 
+.community-result { 
+.community-result img { 
+.community-result:hover { 
+.community-stats { 
+.community-stats { 
+.full-post { 
+.loading-indicator { 
+.loading-indicator { 
+.loading-indicator { 
+.markdown-content { 
+.markdown-content img { 
+.markdown-content img { 
+.markdown-content p { 
+.modal-body { 
+.modal-content { 
+.nav-profile-image:hover { 
+.net_votes.clickable { 
+.net_votes.clickable:hover { 
+.no-notifications { 
+.notification-content { 
+.notification-content p { 
+.notification-content small { 
+.notification-item { 
+.notification-item { 
+.notification-item { 
+.notification-item.read { 
+.notification-item:hover { 
+.notification-item:hover { 
+.notification-item:hover { 
+.notifications-container { 
+.notifications-list { 
+.notifications-list { 
+.post-actions { 
+.post-actions i { 
+.post-actions i:hover { 
+.post-body { 
+.post-content { 
+.post-header { 
+.posts-grid { 
+.profile-header { 
+.profile-info { 
+.profile-post { 
+.profile-post img { 
+.profile-stats { 
+.search-bar .fa-times { 
+.search-bar { 
+.search-bar { 
+.search-bar input { 
+.search-bar input:focus { 
+.search-container { 
+.search-section { 
+.stories { 
+.stories::after { 
+.stories::after { 
+.stories::before, 
+.story-avatar { 
+.story-content { 
+.story-header { 
+.story-header img { 
+.story-modal { 
+.story-scroll-button { 
+.story { 
+.voter-avatar { 
+.voter-item { 
+.voter-name { 
+#notifications-view { 
+.author-avatar { 
+.close-story { 
+.comment-author { 
+.comment-avatar { 
+.comment-content { 
+.comment-image { 
+.comment-image { 
+.comment-item { 
+.comment-text { 
+.comment-text img, 
+.comments-modal { 
+.comments-modal { 
+.community-info { 
+.community-info { 
+.community-name { 
+.community-result { 
+.community-result img { 
+.community-result:hover { 
+.community-stats { 
+.community-stats { 
+.full-post { 
+.loading-indicator { 
+.loading-indicator { 
+.loading-indicator { 
+.markdown-content { 
+.markdown-content img { 
+.markdown-content img { 
+.markdown-content p { 
+.modal-body { 
+.modal-content { 
+.nav-profile-image:hover { 
+.net_votes.clickable { 
+.net_votes.clickable:hover { 
+.no-notifications { 
+.notification-content { 
+.notification-content p { 
+.notification-content small { 
+.notification-item { 
+.notification-item { 
+.notification-item { 
+.notification-item.read { 
+.notification-item:hover { 
+.notification-item:hover { 
+.notification-item:hover { 
+.notifications-container { 
+.notifications-list { 
+.notifications-list { 
+.post-actions { 
+.post-actions i { 
+.post-actions i:hover { 
+.post-body { 
+.post-content { 
+.post-header { 
+.posts-grid { 
+.profile-header { 
+.profile-info { 
+.profile-post { 
+.profile-post img { 
+.profile-stats { 
+.search-bar .fa-times { 
+.search-bar { 
+.search-bar { 
+.search-bar input { 
+.search-bar input:focus { 
+.search-container { 
+.search-section { 
+.stories { 
+.stories::after { 
+.stories::after { 
+.stories::before, 
+.story-avatar { 
+.story-content { 
+.story-header { 
+.story-header img { 
+.story-modal { 
+.story-scroll-button { 
+.story { 
+.voter-avatar { 
+.voter-item { 
+.voter-name { 
+ 
+Checking duplicate properties within blocks... 
+.author-avatar { 
+.close-story { 
+.comment-author { 
+.comment-avatar { 
+.comment-content { 
+.comment-image { 
+.comment-image { 
+.comment-item { 
+.comment-text { 
+.comment-text img, 
+.comments-modal { 
+.comments-modal { 
+.community-info { 
+.community-info { 
+.community-name { 
+.community-result { 
+.community-result img { 
+.community-result:hover { 
+.community-stats { 
+.community-stats { 
+.full-post { 
+.loading-indicator { 
+.loading-indicator { 
+.loading-indicator { 
+.markdown-content { 
+.markdown-content img { 
+.markdown-content img { 
+.markdown-content p { 
+.modal-body { 
+.modal-content { 
+.nav-profile-image:hover { 
+.net_votes.clickable { 
+.net_votes.clickable:hover { 
+.no-notifications { 
+.notification-content { 
+.notification-content p { 
+.notification-content small { 
+.notification-item { 
+.notification-item { 
+.notification-item { 
+.notification-item.read { 
+.notification-item:hover { 
+.notification-item:hover { 
+.notification-item:hover { 
+.notifications-container { 
+.notifications-list { 
+.notifications-list { 
+.post-actions { 
+.post-actions i { 
+.post-actions i:hover { 
+.post-body { 
+.post-content { 
+.post-header { 
+.posts-grid { 
+.profile-header { 
+.profile-info { 
+.profile-post { 
+.profile-post img { 
+.profile-stats { 
+.search-bar .fa-times { 
+.search-bar { 
+.search-bar { 
+.search-bar input { 
+.search-bar input:focus { 
+.search-container { 
+.search-section { 
+.stories { 
+.stories::after { 
+.stories::after { 
+.stories::before, 
+.story-avatar { 
+.story-content { 
+.story-header { 
+.story-header img { 
+.story-modal { 
+.story-scroll-button { 
+.story { 
+.voter-avatar { 
+.voter-item { 
+.voter-name { 
+#notifications-view { 
+.author-avatar { 
+.close-story { 
+.comment-author { 
+.comment-avatar { 
+.comment-content { 
+.comment-image { 
+.comment-image { 
+.comment-item { 
+.comment-text { 
+.comment-text img, 
+.comments-modal { 
+.comments-modal { 
+.community-info { 
+.community-info { 
+.community-name { 
+.community-result { 
+.community-result img { 
+.community-result:hover { 
+.community-stats { 
+.community-stats { 
+.full-post { 
+.loading-indicator { 
+.loading-indicator { 
+.loading-indicator { 
+.markdown-content { 
+.markdown-content img { 
+.markdown-content img { 
+.markdown-content p { 
+.modal-body { 
+.modal-content { 
+.nav-profile-image:hover { 
+.net_votes.clickable { 
+.net_votes.clickable:hover { 
+.no-notifications { 
+.notification-content { 
+.notification-content p { 
+.notification-content small { 
+.notification-item { 
+.notification-item { 
+.notification-item { 
+.notification-item.read { 
+.notification-item:hover { 
+.notification-item:hover { 
+.notification-item:hover { 
+.notifications-container { 
+.notifications-list { 
+.notifications-list { 
+.post-actions { 
+.post-actions i { 
+.post-actions i:hover { 
+.post-body { 
+.post-content { 
+.post-header { 
+.posts-grid { 
+.profile-header { 
+.profile-info { 
+.profile-post { 
+.profile-post img { 
+.profile-stats { 
+.search-bar .fa-times { 
+.search-bar { 
+.search-bar { 
+.search-bar input { 
+.search-bar input:focus { 
+.search-container { 
+.search-section { 
+.stories { 
+.stories::after { 
+.stories::after { 
+.stories::before, 
+.story-avatar { 
+.story-content { 
+.story-header { 
+.story-header img { 
+.story-modal { 
+.story-scroll-button { 
+.story { 
+.voter-avatar { 
+.voter-item { 
+.voter-name { 
+#notifications-view { 
+.author-avatar { 
+.close-story { 
+.comment-author { 
+.comment-avatar { 
+.comment-content { 
+.comment-image { 
+.comment-image { 
+.comment-item { 
+.comment-text { 
+.comment-text img, 
+.comments-modal { 
+.comments-modal { 
+.community-info { 
+.community-info { 
+.community-name { 
+.community-result { 
+.community-result img { 
+.community-result:hover { 
+.community-stats { 
+.community-stats { 
+.full-post { 
+.loading-indicator { 
+.loading-indicator { 
+.loading-indicator { 
+.markdown-content { 
+.markdown-content img { 
+.markdown-content img { 
+.markdown-content p { 
+.modal-body { 
+.modal-content { 
+.nav-profile-image:hover { 
+.net_votes.clickable { 
+.net_votes.clickable:hover { 
+.no-notifications { 
+.notification-content { 
+.notification-content p { 
+.notification-content small { 
+.notification-item { 
+.notification-item { 
+.notification-item { 
+.notification-item.read { 
+.notification-item:hover { 
+.notification-item:hover { 
+.notification-item:hover { 
+.notifications-container { 
+.notifications-list { 
+.notifications-list { 
+.post-actions { 
+.post-actions i { 
+.post-actions i:hover { 
+.post-body { 
+.post-content { 
+.post-header { 
+.posts-grid { 
+.profile-header { 
+.profile-info { 
+.profile-post { 
+.profile-post img { 
+.profile-stats { 
+.search-bar .fa-times { 
+.search-bar { 
+.search-bar { 
+.search-bar input { 
+.search-bar input:focus { 
+.search-container { 
+.search-section { 
+.stories { 
+.stories::after { 
+.stories::after { 
+.stories::before, 
+.story-avatar { 
+.story-content { 
+.story-header { 
+.story-header img { 
+.story-modal { 
+.story-scroll-button { 
+.story { 
+.voter-avatar { 
+.voter-item { 
+.voter-name { 
+ 
+ 
+Prompt for corrections: 
+====================== 
+Please review the CSS file and make the following corrections: 
+1. Combine duplicate class definitions into a single definition 
+2. Remove or rename duplicate IDs (IDs must be unique) 
+3. Check duplicate properties within the same selector and keep only the last occurrence 
+4. Consider creating utility classes for commonly reused styles 
+5. Use CSS custom properties (variables) for repeated values 

@@ -1,20 +1,43 @@
 import { avatarCache } from '../utils/avatar-cache.js';
+import { stopNotificationPolling } from '../services/notification-manager.js';
+import { steemClient } from '../api/steem-client.js';
 
 export const steemConnection = {
+    username: null,
     isConnected: false,
-    username: null
+    steem: null,
+    postingKey: null,
+
+    async connect(username, key) {
+        try {
+            const account = await steemClient.connect(username, key);
+            this.username = username;
+            this.isConnected = true;
+            this.steem = steemClient.getSteem();
+            this.postingKey = key;
+            return account;
+        } catch (error) {
+            this.disconnect();
+            throw error;
+        }
+    },
+
+    disconnect() {
+        this.username = null;
+        this.isConnected = false;
+        this.steem = null;
+        this.postingKey = null;
+        sessionStorage.removeItem('steemPostingKey');
+    }
 };
 
 export function showLoginModal() {
-    // Remove previous check for already logged in since we want to show the modal anyway
     const loginModal = document.getElementById('loginModal');
     if (loginModal) {
-        // Reset form fields
         const usernameInput = document.getElementById('steemUsername');
         const keyInput = document.getElementById('steemKey');
         if (usernameInput) usernameInput.value = '';
         if (keyInput) keyInput.value = '';
-        
         loginModal.style.display = 'flex';
     }
 }
@@ -28,55 +51,32 @@ export function hideLoginModal() {
 
 export async function handleLogin(username, key) {
     try {
-        if (!username) {
-            throw new Error('Username is required');
+        if (!username || !key) {
+            throw new Error('Username and key are required');
         }
 
-        if (typeof steem === 'undefined') {
-            throw new Error('Steem library not loaded');
-        }
+        await steemConnection.connect(username, key);
+        steemConnection.username = username;
+        steemConnection.isConnected = true;
 
-        // Set default if no key provided
-        if (!key) {
-            steem.api.setOptions({ url: 'https://api.steemit.com' });
-        } else {
-            steem.api.setOptions({ url: 'https://api.steemit.com', useTestNet: false });
-        }
+        // Save login state
+        localStorage.setItem('steemUsername', username);
+        if (key) sessionStorage.setItem('steemPostingKey', key);
 
-        // Test connection by getting account info
-        const accounts = await steem.api.getAccountsAsync([username]);
-        if (accounts && accounts.length > 0) {
-            steemConnection.isConnected = true;
-            steemConnection.username = username;
-            
-            // Save data to sessionStorage
-            sessionStorage.setItem('steemUsername', username);
-            if (key) {
-                sessionStorage.setItem('steemPostingKey', key);
-            }
-            
-            // Update UI - Aggiungi l'aggiornamento del bottone logout
-            const profileLink = document.getElementById('profile-link');
-            const loginLink = document.getElementById('login-link');
-            const logoutLink = document.getElementById('logout-link');
-            
-            if (profileLink) profileLink.style.display = '';
-            if (loginLink) loginLink.style.display = 'none';
-            if (logoutLink) logoutLink.style.display = ''; // Mostra il bottone logout
-            
-            hideLoginModal();
-            await updateProfileImage(accounts[0]);
-            
-            // Emit a custom event instead of directly calling functions
-            window.dispatchEvent(new CustomEvent('loginSuccess'));
-            
-            window.location.hash = 'profile';
-            
-            return true;
-        }
-        throw new Error('Account not found');
+        // Close modal
+        const modal = document.getElementById('loginModal');
+        if (modal) modal.style.display = 'none';
+
+        // Dispatch login success event
+        window.dispatchEvent(new CustomEvent('loginSuccess'));
+        
+        // Redirect to profile page
+        window.location.hash = `/profile/${username}`;
+        
+        return true;
     } catch (error) {
-        console.error('Login failed:', error);
+        console.error('Login error:', error);
+        steemConnection.isConnected = false;
         throw error;
     }
 }
@@ -84,113 +84,36 @@ export async function handleLogin(username, key) {
 export function handleLogout() {
     steemConnection.isConnected = false;
     steemConnection.username = null;
-    
-    // Clear session storage
+    steemConnection.privateKey = null;
+
     sessionStorage.removeItem('steemUsername');
     sessionStorage.removeItem('steemPostingKey');
-    
-    // Update UI elements
-    const profileLink = document.getElementById('profile-link');
-    const loginLink = document.getElementById('login-link');
-    const logoutLink = document.getElementById('logout-link');
-    
-    if (profileLink) profileLink.style.display = 'none';
-    if (loginLink) {
-        loginLink.style.display = '';
-        // Ensure login link is clickable
-        loginLink.replaceWith(loginLink.cloneNode(true));
-        // Re-attach click listener to new element
-        document.getElementById('login-link').addEventListener('click', (e) => {
-            e.preventDefault();
-            showLoginModal();
-        });
-    }
-    if (logoutLink) logoutLink.style.display = 'none';
-    
-    // Reset profile image
-    const navProfileImg = document.querySelector('.nav-profile-image img');
-    if (navProfileImg) {
-        navProfileImg.src = 'https://material.io/resources/icons/static/icons/baseline-account_circle-24px.svg';
-        navProfileImg.alt = 'Profile';
-    }
-    
-    // Reset login modal
-    const loginModal = document.getElementById('loginModal');
-    if (loginModal) {
-        loginModal.style.display = 'none';
-        const usernameInput = document.getElementById('steemUsername');
-        const keyInput = document.getElementById('steemKey');
-        if (usernameInput) usernameInput.value = '';
-        if (keyInput) keyInput.value = '';
-    }
-    
-    // Redirect to home
-    window.location.hash = '/';
-    
-    // Dispatch logout event
+
+    stopNotificationPolling();
+
     window.dispatchEvent(new CustomEvent('logoutSuccess'));
+    window.location.hash = '/';
 }
 
 export function checkExistingLogin() {
     const username = sessionStorage.getItem('steemUsername');
-    const profileLink = document.getElementById('profile-link');
-    const loginLink = document.getElementById('login-link');
-    const logoutLink = document.getElementById('logout-link');
-    
     if (username) {
         steemConnection.username = username;
         steemConnection.isConnected = true;
-        
-        // Show profile and logout, hide login
-        if (profileLink) profileLink.style.display = '';
-        if (loginLink) loginLink.style.display = 'none';
-        if (logoutLink) logoutLink.style.display = '';
-        
-        // Load account data for profile image
-        steem.api.getAccountsAsync([username]).then(accounts => {
-            if (accounts && accounts[0]) {
-                updateProfileImage(accounts[0]);
-            }
-        });
-        
-        // Dispatch event for successful login restoration
-        window.dispatchEvent(new CustomEvent('loginSuccess'));
-        
         return true;
     }
-
-    // Show login, hide profile and logout
-    if (profileLink) profileLink.style.display = 'none';
-    if (loginLink) {
-        loginLink.style.display = '';
-        // Rimuovi eventuali listener esistenti
-        loginLink.replaceWith(loginLink.cloneNode(true));
-        // Prendi il riferimento aggiornato dopo il clone
-        const newLoginLink = document.getElementById('login-link');
-        // Aggiungi il nuovo listener
-        newLoginLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            showLoginModal();
-        });
-    }
-    if (logoutLink) logoutLink.style.display = 'none';
-
     return false;
 }
 
 async function updateProfileImage(account) {
     try {
         let profileImage = '';
-        
         if (account.json_metadata) {
             try {
                 const metadata = typeof account.json_metadata === 'string' 
                     ? JSON.parse(account.json_metadata) 
                     : account.json_metadata;
-                
                 profileImage = metadata?.profile?.profile_image;
-                
-                // Se non troviamo l'immagine nel json_metadata, proviamo nel posting_json_metadata
                 if (!profileImage && account.posting_json_metadata) {
                     const postingMetadata = JSON.parse(account.posting_json_metadata);
                     profileImage = postingMetadata?.profile?.profile_image;
@@ -199,14 +122,8 @@ async function updateProfileImage(account) {
                 console.warn('Failed to parse account metadata');
             }
         }
-
-        // Fallback all'avatar di Steemit se non troviamo un'immagine personalizzata
         profileImage = profileImage || `https://steemitimages.com/u/${account.name}/avatar`;
-        
-        // Aggiorna la cache e l'UI
         avatarCache.set(account.name, profileImage);
-        
-        // Aggiorna l'immagine nella navbar
         const navProfileImg = document.querySelector('.nav-profile-image img');
         if (navProfileImg) {
             navProfileImg.src = profileImage;
@@ -232,18 +149,14 @@ export async function attemptSteemLogin() {
 
     try {
         const accounts = await steem.api.getAccountsAsync([username]);
-        
         if (accounts && accounts.length > 0) {
             steemConnection.isConnected = true;
             steemConnection.username = username;
-            
             if (key) {
                 sessionStorage.setItem('steemPostingKey', key);
             }
-            
             document.getElementById('loginModal').style.display = 'none';
             updateConnectionStatus(username);
-            
             await initializeSteemContent();
             return true;
         }

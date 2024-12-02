@@ -1,33 +1,20 @@
 import { hideAllViews, showView } from '../utils/view-manager.js';
 import { steemConnection, showLoginModal } from '../auth/login-manager.js';
-import { loadSteemPosts, loadStories, loadExploreContent, setupInfiniteScroll, loadUserProfile, loadExtendedSuggestions, updateSidebar, loadSinglePost, resetPostsState, cleanupInfiniteScroll } from '../services/posts-manager.js';
 import { renderNotifications } from '../services/notification-manager.js';
 import { searchService } from '../services/search-service.js';
 import { loadCommunity } from '../services/community-manager.js';
-
+import { loadSinglePost } from '../services/post/post-service.js';
+import { loadUserProfile } from '../services/profile/profile-service.js';
+import { loadHomeFeed, resetHomeFeed } from '../services/posts-manager.js';
+import { extractProfileImage } from '../services/post/post-utils.js';
 export const routes = {
-    '/': { 
-        viewId: 'home-view',
+    '/': {
+        template: 'home-view',
         handler: async () => {
-            // Cleanup before setting up new scroll
-            cleanupInfiniteScroll();
-            
             hideAllViews();
             showView('home-view');
-            
-            // Reset posts state
-            resetPostsState();
-            
-            // Reset pagination state
-            window.lastPost = null;
-            window.hasMorePosts = true;
-            
-            await loadSteemPosts();
-            if (steemConnection.isConnected) {
-                await loadStories();
-                updateSidebar();
-            }
-            setupInfiniteScroll();
+            resetHomeFeed(); // Reset feed state before loading
+            await loadHomeFeed(false); // Pass false to load fresh content
         }
     },
     '/explore': { 
@@ -112,6 +99,74 @@ export const routes = {
     }
 };
 
+async function showLikedPosts() {
+    try {
+        const modal = document.getElementById('likesModal');
+        const container = document.getElementById('liked-posts-list');
+        if (!modal || !container) {
+            console.error('Required DOM elements not found');
+            return;
+        }
+
+        container.innerHTML = '<p>Loading liked posts...</p>';
+        modal.style.display = 'flex';
+
+        // Get user's voting history
+        const votes = await steem.api.getAccountVotesAsync(steemUsername);
+        
+        if (!votes || votes.length === 0) {
+            container.innerHTML = '<p>No liked posts found</p>';
+            return;
+        }
+
+        // Get details for each voted post
+        const likedPosts = [];
+        for (const vote of votes.slice(-20)) {
+            try {
+                const post = await steem.api.getContentAsync(vote.author, vote.permlink);
+                if (post && post.parent_author === '') {
+                    likedPosts.push(post);
+                }
+            } catch (error) {
+                console.warn('Error fetching post:', error);
+            }
+        }
+
+        if (likedPosts.length === 0) {
+            container.innerHTML = '<p>No viewable liked posts found</p>';
+            return;
+        }
+
+        container.innerHTML = likedPosts.map(post => {
+            const imgRegex = /<img[^>]+src="([^">]+)"/;
+            const imgMatch = post.body.match(imgRegex);
+            const imageUrl = imgMatch ? imgMatch[1] : 'https://via.placeholder.com/50';
+            
+            return `
+                <div class="liked-post">
+                    <img src="${imageUrl}" alt="Post thumbnail">
+                    <div class="liked-post-info">
+                        <strong>${post.author}</strong>
+                        <p>${post.title}</p>
+                        <small>${new Date(post.created).toLocaleDateString()}</small>
+                    </div>
+                    <div class="post-stats">
+                        <small>${post.net_votes} votes</small>
+                        <small>$${parseFloat(post.pending_payout_value).toFixed(2)}</small>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error('Failed to load liked posts:', error);
+        const container = document.getElementById('liked-posts-list');
+        if (container) {
+            container.innerHTML = '<p>Error loading liked posts. Please try again.</p>';
+        }
+    }
+}
+
 async function setupSearchView() {
     const searchView = document.getElementById('search-view');
     if (!searchView) return;
@@ -174,6 +229,11 @@ function setupSearchHandlers(inputId, type) {
                 if (!results) return;
 
                 if (type === 'profiles') {
+                    //usiamo la nostra funzione per caricare le immagini dei profili
+                    //  results.profiles.forEach(profile => {
+                    //     profile.avatar = extractImageFromProfile(profile);
+                    // }   
+                    // );
                     resultsContainer.innerHTML = `
                         <h3>Profiles</h3>
                         ${results.profiles.length ? results.profiles.map(user => `

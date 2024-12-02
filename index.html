@@ -1,14 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <base href="." />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SteemGram - Steem Edition</title>
     <link rel="stylesheet" href="./styles.css">
+    <link rel="stylesheet" href="./css/media_max_width_768px.css">
+    <link rel="stylesheet" href="./css/media_min_width_1024px.css">
+    <link rel="stylesheet" href="./css/toast.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/steem/dist/steem.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@hiveio/hive-js/dist/hive.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script type="module"  src="./js/routes/router.js"></script>
     <script type="module" src="./js/app.js"></script>
@@ -28,8 +30,8 @@
             </button>
             <div class="nav-menu" 
                  id="nav-menu" 
-                 aria-hidden="true" 
-                 role="navigation">
+                 role="menu"
+                 aria-label="Main navigation">
                 <a href="#/" class="nav-item" data-route="/">
                     <div class="nav-contento">
                     <i class="fas fa-home"></i>
@@ -41,54 +43,36 @@
                     <i class="fas fa-search"></i>
                     <span>Search</span></div>
                 </a>
-                <!-- <a href="/explore" class="nav-item" data-route="/explore">
-                    <i class="far fa-compass"></i>
-                    <span>Explore</span>
-                </a> -->
-                <!-- <a href="/reels" class="nav-item" data-route="/reels">
-                    <i class="fas fa-film"></i>
-                    <span>Reels</span>
-                </a>
-                <a href="/messages" class="nav-item" data-route="/messages">
-                    <i class="far fa-paper-plane"></i>
-                    <span>Messages</span>
-                </a> -->
-                <a href="#/notifications" class="nav-item" data-route="/notifications">
+                
+                <!-- Auth-required items -->
+                <a href="#/notifications" class="nav-item auth-required" data-route="/notifications" id="notifications-link">
                     <div class="nav-contento">
                     <i class="far fa-heart"></i>
                     <span>Notifications</span></div>
                 </a>
-                <!-- Add new suggestions navigation item -->
-                <a href="#/suggested" class="nav-item" data-route="/suggested">
-                    <div class="nav-contento">
-                    <i class="fas fa-user-friends"></i>
-                    <span>Suggested</span></div>
-                </a>
-                <a href="#/new" class="nav-item" data-route="/new">
-                    <div class="nav-contento">
-                    <i class="far fa-plus-square"></i>
-                    <span>Create</span></div>
-                </a>
-                <a href="#/profile" class="nav-item nav-profile" data-route="/profile" id="profile-link">
+                <a href="#/profile" class="nav-item auth-required" data-route="/profile" id="profile-link">
                     <div class="nav-contento">
                     <i class="far fa-user"></i>
                     <span>Profile</span></div>
                 </a>
-                <!-- Add logout button -->
-                <a href="#" class="nav-item" id="logout-link" style="display: none;">
-                    <div class="nav-contento">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span></div>
-                </a>
-                <a href="#" class="nav-item login-link" id="login-link" style="display: none;">
-                    <div class="nav-contento">
-                    <i class="fas fa-sign-in-alt"></i>
-                    <span>Login</span></div>
-                </a>
+                
+                <!-- Theme toggle - always visible -->
                 <a href="#" class="nav-item" id="theme-toggle">
                     <div class="nav-contento">
                     <i class="fas fa-moon"></i>
                     <span>Dark Mode</span></div>
+                </a>
+                
+                <!-- Auth buttons -->
+                <a href="#" class="nav-item" id="login-link">
+                    <div class="nav-contento">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Login</span></div>
+                </a>
+                <a href="#" class="nav-item" id="logout-link">
+                    <div class="nav-contento">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span></div>
                 </a>
             </div>
         </div>
@@ -96,14 +80,22 @@
     
 
     
-    <div class="login-modal" id="loginModal">
+    <!-- Update login modal for better security -->
+    <div class="login-modal" id="loginModal" role="dialog" aria-labelledby="loginTitle">
         <div class="login-form">
-            <h2>Connect to Steem Blockchain</h2>
-            <input type="text" id="steemUsername" placeholder="Steem Username" required>
-            <input type="password" id="steemKey" placeholder="Private Posting Key (optional)">
-            <button id="loginButton">Connect to Steem</button>
+            <h2 id="loginTitle">Connect to Steem Blockchain</h2>
+            <input type="text" 
+                   id="steemUsername" 
+                   placeholder="Steem Username" 
+                   autocomplete="username"
+                   required>
+            <input type="password" 
+                   id="steemKey" 
+                   placeholder="Private Posting Key (optional)"
+                   autocomplete="current-password">
+            <button id="loginButton" type="submit">Connect to Steem</button>
             <div class="steem-info">
-                <small>Your private key is stored securely in session storage and is only used for posting.</small>
+                <small>Your private key is stored securely and never leaves your browser.</small>
             </div>
         </div>
     </div>
@@ -128,13 +120,7 @@
         </div>
     </div>
     
-    <div class="main-container"  style="    min-width: -webkit-fill-available;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-content: space-between;
-    justify-content: space-evenly;
-    align-items: flex-start;">
+    <div class="main-container">
         <div class="feed">
             <div id="home-view" class="view">
                 <div class="stories" id="stories-container">
@@ -174,7 +160,7 @@
                 <!-- Extended suggestions will be loaded here -->
             </div>
             <div id="post-view" class="view" style="display: none;">
-                <!-- Single post content will be loaded here -->
+                <!-- Il contenuto del post verrà generato dinamicamente senza onclick inline -->
             </div>
             <div id="notifications-view" class="view" style="display: none;">
                 <!-- Notifications will be loaded here -->
