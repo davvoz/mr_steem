@@ -6,6 +6,7 @@ import { startNotificationPolling, renderNotifications, stopNotificationPolling 
 import { Router } from '../routes/router.js';
 import { loadSteemPosts, resetPostsState } from '../services/posts/post-service.js'; // Add resetPostsState import
 import { setupInfiniteScroll, cleanupInfiniteScroll } from '../services/ui/infinite-scroll.js';
+import { loadPostsByTag } from '../services/tag/tag-service.js';
 
 export function setupUIEventListeners() {
     // Setup navigation handling
@@ -20,6 +21,31 @@ export function setupUIEventListeners() {
     setupTagFilter();
     
     console.log('UI event listeners setup complete');
+
+    // Aggiungi handler per i tag buttons
+    const tagButtons = document.querySelectorAll('.tag-button');
+    tagButtons.forEach(button => {
+        button.addEventListener('click', async (e) => {
+            // Rimuovi la classe active da tutti i bottoni
+            tagButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // Aggiungi la classe active al bottone cliccato
+            e.target.classList.add('active');
+            
+            const tag = e.target.dataset.tag;
+            const container = document.getElementById('posts-container');
+            container.innerHTML = ''; // Clear current posts
+            
+            if (tag === 'all') {
+                // Se il tag è 'all', ricarica il feed normale
+                const { loadHomeFeed } = await import('../services/posts-manager.js');
+                loadHomeFeed(false);
+            } else {
+                // Altrimenti carica i post per il tag specifico
+                await loadPostsByTag(tag);
+            }
+        });
+    });
 }
 
 function setupNavigation() {
@@ -430,51 +456,16 @@ function showLogoutConfirmation() {
 
 function setupTagFilter() {
     const tagButtons = document.querySelectorAll('.tag-button');
-    const postsContainer = document.getElementById('posts-container');
-    
-    // Set default active tag
-    const defaultTag = 'all';
-    const defaultButton = document.querySelector(`.tag-button[data-tag="${defaultTag}"]`);
-    if (defaultButton) {
-        defaultButton.classList.add('active');
-    }
-    
-    // Show loading spinner immediately on page load
-    postsContainer.innerHTML = '<div class="loading-spinner"></div>';
-    
-    // Load default tag on page load
-    window.addEventListener('DOMContentLoaded', async () => {
-        try {
-            await loadSteemPosts({ tag: defaultTag });
-        } catch (error) {
-            console.error('Error loading initial posts:', error);
-            showErrorMessage(postsContainer);
-        }
-    });
     
     tagButtons.forEach(button => {
-        button.addEventListener('click', async (e) => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
             const tag = button.dataset.tag;
             
-            // Non ricaricare se il tag è già attivo
-            if (button.classList.contains('active')) {
-                return;
-            }
-            
-            // Remove active class from all buttons
-            tagButtons.forEach(btn => btn.classList.remove('active'));
-            
-            // Add active class to clicked button
-            button.classList.add('active');
-            
-            // Show loading spinner
-            postsContainer.innerHTML = '<div class="loading-spinner"></div>';
-            
-            try {
-                await loadSteemPosts({ tag });
-            } catch (error) {
-                console.error('Error loading filtered posts:', error);
-                showErrorMessage(postsContainer);
+            if (tag === 'all') {
+                window.location.hash = '/';
+            } else {
+                window.location.hash = `/tag/${tag}`;
             }
         });
     });

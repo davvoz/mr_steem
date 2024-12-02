@@ -135,9 +135,32 @@ export async function displayPosts(posts, containerId = 'posts-container', appen
     const container = document.getElementById(containerId);
     if (!container) return;
 
+    // Filter posts based on current tag if we're in tag view
+    const currentTag = getCurrentTagFromHash();
+    const filteredPosts = currentTag ? 
+        posts.filter(post => {
+            try {
+                const metadata = JSON.parse(post.json_metadata);
+                return metadata.tags && metadata.tags.includes(currentTag);
+            } catch (error) {
+                console.warn('Failed to parse post metadata:', error);
+                return false;
+            }
+        }) : posts;
+
+    if (filteredPosts.length === 0) {
+        container.innerHTML = `
+            <div class="no-posts-message">
+                ${currentTag ? 
+                    `No posts found with tag #${currentTag}` : 
+                    'No posts available'}
+            </div>`;
+        return;
+    }
+
     let postsHTML = '';
 
-    for (const post of posts) {
+    for (const post of filteredPosts) {
         try {
             const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
             const postImage = extractImageFromContent(post);
@@ -203,6 +226,11 @@ export async function displayPosts(posts, containerId = 'posts-container', appen
     } else {
         container.innerHTML = postsHTML;
     }
+}
+
+function getCurrentTagFromHash() {
+    const match = window.location.hash.match(/#\/tag\/([^/]+)/);
+    return match ? match[1] : null;
 }
 
 window.handleVote = async (author, permlink, button) => {

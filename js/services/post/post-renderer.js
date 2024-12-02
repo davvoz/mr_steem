@@ -1,4 +1,3 @@
-
 export function generatePostHtml(post) {
     return marked.parse(post.body, {
         breaks: true,
@@ -62,9 +61,19 @@ export function generatePostFooter(post) {
             </div>
             <div class="post-tags">
                 ${tags.map(tag => `
-                    <a href="#/tag/${tag}" class="tag">#${tag}</a>
+                    <a href="#/tag/${tag}" 
+                       class="tag" 
+                       data-tag="${tag}"
+                       onclick="handleTagClick(event, '${tag}')">#${tag}</a>
                 `).join(' ')}
             </div>
         </footer>
     `;
 }
+
+// Aggiungi questa funzione globale per gestire i click sui tag
+window.handleTagClick = function(event, tag) {
+    event.preventDefault();
+    event.stopPropagation();
+    window.location.hash = `/tag/${tag}`;
+};

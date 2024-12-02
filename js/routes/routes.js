@@ -7,6 +7,7 @@ import { loadSinglePost } from '../services/post/post-service.js';
 import { loadUserProfile } from '../services/profile/profile-service.js';
 import { loadHomeFeed, resetHomeFeed } from '../services/posts-manager.js';
 import { extractProfileImage } from '../services/post/post-utils.js';
+import { loadPostsByTag } from '../services/tag/tag-service.js';
 export const routes = {
     '/': {
         template: 'home-view',
@@ -95,6 +96,20 @@ export const routes = {
             // Get community data from the search results if available
             const communityData = window.searchResults?.communities?.find(c => c.name === params.name);
             await loadCommunity(params.name, communityData);
+        }
+    },
+    '/tag/:tag': {
+        viewId: 'home-view',
+        handler: async (params) => {
+            hideAllViews();
+            showView('home-view');
+            
+            // Attiva il bottone del tag corrispondente
+            document.querySelectorAll('.tag-button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tag === params.tag);
+            });
+            
+            await loadPostsByTag(params.tag);
         }
     }
 };

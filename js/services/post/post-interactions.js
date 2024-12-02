@@ -1,4 +1,3 @@
-import { SteemAPI } from '../common/api-wrapper.js';
 import { EventBus } from '../common/event-bus.js';
 
 let isInitialized = false;
