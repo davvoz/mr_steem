@@ -44,7 +44,12 @@ export async function loadPostsByTag(tag, append = false) {
             container.innerHTML = `
                 <div class="no-posts">
                     <p>No posts found for #${tag}</p>
-                    <button onclick="window.location.hash='/'">Return to Home</button>
+                    <div class="tag-actions">
+                        <button class="retry-button" onclick="window.location.hash='/tag/${tag}'">Try Again</button>
+                        <button class="try-tags-button" onclick="window.location.hash='/search#tags=${tag}'">
+                            <i class="fas fa-tags"></i> Search in Tags
+                        </button>
+                    </div>
                 </div>`;
             return;
         }

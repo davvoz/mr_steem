@@ -18,7 +18,7 @@ export const routes = {
             await loadHomeFeed(false); // Pass false to load fresh content
         }
     },
-    '/explore': { 
+    '/explore': {
         viewId: 'explore-view',
         handler: async () => {
             hideAllViews();
@@ -28,7 +28,7 @@ export const routes = {
             }
         }
     },
-    '/activity': { 
+    '/activity': {
         viewId: 'activity-view',
         handler: () => {
             hideAllViews();
@@ -36,7 +36,7 @@ export const routes = {
             showLikedPosts();
         }
     },
-    '/profile': { 
+    '/profile': {
         viewId: 'profile-view',
         handler: async () => {
             hideAllViews();
@@ -103,12 +103,12 @@ export const routes = {
         handler: async (params) => {
             hideAllViews();
             showView('home-view');
-            
+
             // Attiva il bottone del tag corrispondente
             document.querySelectorAll('.tag-button').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.tag === params.tag);
             });
-            
+
             await loadPostsByTag(params.tag);
         }
     }
@@ -128,7 +128,7 @@ async function showLikedPosts() {
 
         // Get user's voting history
         const votes = await steem.api.getAccountVotesAsync(steemUsername);
-        
+
         if (!votes || votes.length === 0) {
             container.innerHTML = '<p>No liked posts found</p>';
             return;
@@ -156,7 +156,7 @@ async function showLikedPosts() {
             const imgRegex = /<img[^>]+src="([^">]+)"/;
             const imgMatch = post.body.match(imgRegex);
             const imageUrl = imgMatch ? imgMatch[1] : 'https://via.placeholder.com/50';
-            
+
             return `
                 <div class="liked-post">
                     <img src="${imageUrl}" alt="Post thumbnail">
@@ -205,11 +205,19 @@ async function setupSearchView() {
                 </div>
                 <div class="communities-results"></div>
             </div>
+        <div class="search-section">
+            <div class="search-bar">
+                <i class="fas fa-hashtag"></i>
+                <input type="text" id="tags-search-input" placeholder="Search tags...">
+                <i class="fas fa-times clear-search" style="display: none;"></i>
+                <div class="tags-results"></div>
+            </div>
         </div>
     `;
 
     setupSearchHandlers('users-search-input', 'profiles');
     setupSearchHandlers('communities-search-input', 'communities');
+    setupSearchHandlers('tags-search-input', 'tags');
 }
 
 function setupSearchHandlers(inputId, type) {
@@ -244,11 +252,6 @@ function setupSearchHandlers(inputId, type) {
                 if (!results) return;
 
                 if (type === 'profiles') {
-                    //usiamo la nostra funzione per caricare le immagini dei profili
-                    //  results.profiles.forEach(profile => {
-                    //     profile.avatar = extractImageFromProfile(profile);
-                    // }   
-                    // );
                     resultsContainer.innerHTML = `
                         <h3>Profiles</h3>
                         ${results.profiles.length ? results.profiles.map(user => `
@@ -261,7 +264,7 @@ function setupSearchHandlers(inputId, type) {
                             </div>
                         `).join('') : '<p>No profiles found</p>'}
                     `;
-                } else {
+                } else if (type === 'communities') {
                     resultsContainer.innerHTML = `
                         <h3>Communities</h3>
                         ${results.communities.length ? results.communities.map(community => `
@@ -274,6 +277,18 @@ function setupSearchHandlers(inputId, type) {
                                 </div>
                             </div>
                         `).join('') : '<p>No communities found</p>'}
+                    `;
+                } else if (type === 'tags') {
+                    resultsContainer.innerHTML = `
+                        <h3>Tags</h3>
+                        ${results.tags.length ? results.tags.map(tag => `
+                            <div class="tag-result" onclick="window.location.hash='/tag/${tag.name}'">
+                                <div class="tag-info">
+                                    <span class="tag-name">#${tag.name}</span>
+                                    <span class="tag-stats">${tag.posts_count} posts</span>
+                                </div>
+                            </div>
+                        `).join('') : '<p>No tags found</p>'}
                     `;
                 }
             } catch (error) {

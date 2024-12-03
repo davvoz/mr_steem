@@ -17,9 +17,16 @@ function throttle(func, limit) {
     };
 }
 
+function resetLoadingState() {
+    loadingLock = false;
+    hideLoadingIndicator();
+}
+
 export function setupInfiniteScroll(type = 'home') {
     if (type === 'post') return;
-    // Remove existing scroll listeners
+    
+    // Reset state and remove existing listeners
+    resetLoadingState();
     cleanupInfiniteScroll();
     
     // Create new optimized scroll handler based on type
@@ -58,6 +65,9 @@ export function setupInfiniteScroll(type = 'home') {
 }
 
 export function cleanupInfiniteScroll() {
+    // Reset loading state when cleaning up
+    resetLoadingState();
+    
     // Remove all scroll handlers
     ['_homeScrollHandler', '_profileScrollHandler'].forEach(key => {
         if (window[key]) {

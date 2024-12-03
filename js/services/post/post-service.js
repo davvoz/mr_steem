@@ -256,23 +256,15 @@ function generatePostHeader(post, avatarUrl, postDate) {
 }
 
 function generatePostContent(post, htmlContent) {
-    console.log(post, htmlContent);
-    //correggi nell html tutti gli a che hanno un href che ha dentro un immagine devono essere sostituiti con un img
-    //esempio <a href="https://steemit
-    //images.com/u/steemitboard/avatar">https://steemitimages.com/u/steemitboard/avatar</a>
-    //deve diventare <img src="https
-    //steemitimages.com/u/steemitboard/avatar" alt="https://steemitimages.com/u/steemitboard/avatar">
-    //per fare questo possiamo usare una regex
-    const regex = /<a href="([^"]+)">([^<]+)<\/a>/g;
-    htmlContent = htmlContent.replace(regex, '<img src="$1" alt="$2">');
     return `
-        <div class="post-content">
-            <h1 class="post-title">${post.title}</h1>
-            <div class="markdown-content">
-                ${htmlContent}
-            </div>
+    <div class="post-contents-title">
+        <h1>${post.title}</h1>
+    </div>
+        <div class="markdown-content" style="margin: var(--spacing-medium) 0;">
+            ${htmlContent}
         </div>
     `;
+
 }
 
 function generatePostFooter(post) {

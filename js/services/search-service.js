@@ -9,12 +9,14 @@ class SearchService {
             if (query === this.lastQuery) return null;
             this.lastQuery = query;
 
-            // Aumentiamo il limite e cerchiamo senza fermarci al primo match
-            const accounts = await steem.api.lookupAccountsAsync(query.toLowerCase(), 20);
-            const profiles = await Promise.all(accounts.map(username => this.enrichUserData(username)));
+            // Run all searches in parallel for better performance
+            const [accounts, communitiesResponse, tags] = await Promise.all([
+                steem.api.lookupAccountsAsync(query.toLowerCase(), 20),
+                fetch('https://develop-imridd.eu.pythonanywhere.com/api/steem/communities'),
+                this.searchTags(query)
+            ]);
 
-            // Manteniamo invariata la logica per le communities
-            const communitiesResponse = await fetch('https://develop-imridd.eu.pythonanywhere.com/api/steem/communities');
+            const profiles = await Promise.all(accounts.map(username => this.enrichUserData(username)));
             const allCommunities = await communitiesResponse.json();
             
             const communities = allCommunities.filter(community => 
@@ -30,11 +32,43 @@ class SearchService {
                     about: community.about || '',
                     subscribers: community.subscribers || 0,
                     icon: community.avatar_url || `https://steemitimages.com/u/${community.name}/avatar`
-                }))
+                })),
+                tags
             };
         } catch (error) {
             console.error('Error searching:', error);
-            return { profiles: [], communities: [] };
+            return { profiles: [], communities: [], tags: [] };
+        }
+    }
+
+    async searchTags(query) {
+        try {
+            // Get recent discussions to extract tags
+            const discussions = await steem.api.getDiscussionsByCreatedAsync({ limit: 100, tag: '' });
+            
+            // Extract unique tags from discussions
+            const allTags = new Set();
+            discussions.forEach(post => {
+                try {
+                    const metadata = JSON.parse(post.json_metadata);
+                    if (metadata.tags) {
+                        metadata.tags.forEach(tag => allTags.add(tag));
+                    }
+                } catch (e) {}
+            });
+
+            // Filter and format tags
+            return Array.from(allTags)
+                .filter(tag => tag.toLowerCase().includes(query.toLowerCase()))
+                .map(tag => ({
+                    name: tag,
+                    posts: 0, // We don't have post count here
+                    trending: false
+                }))
+                .slice(0, 10);
+        } catch (error) {
+            console.error('Error searching tags:', error);
+            return [];
         }
     }
 
