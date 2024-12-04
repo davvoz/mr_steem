@@ -1822,6 +1822,7 @@ body {
 .markdown-content img {
     max-width: 100%;
     height: auto;
+    max-height: 100%;
     border-radius: var(--radius-sm);
     margin: var(--spacing-md) 0;
     object-fit: contain;
@@ -1846,7 +1847,12 @@ body {
 .markdown-content p {
     margin: var(--spacing-md) 0;
 }
-
+.markdown-content p img {
+    margin: var(--spacing-md) 0;
+    max-width: 100%;
+    height: auto;
+    max-height: 100%;
+}
 .markdown-content h1,
 .markdown-content h2,
 .markdown-content h3,
@@ -3830,4 +3836,9 @@ h1 {
     background: var(--dark-surface);
     border-color: var(--dark-border);
     color: var(--dark-text);
+}
+
+img {
+    max-width: 100%;
+    height: auto;
 }
