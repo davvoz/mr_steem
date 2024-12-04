@@ -256,15 +256,28 @@ function generatePostHeader(post, avatarUrl, postDate) {
 }
 
 function generatePostContent(post, htmlContent) {
+    // Replace MP4 links with video elements
+    const videoContent = htmlContent.replace(
+        /(?:<a[^>]*href="([^"]*\.mp4)"[^>]*>([^<]*)<\/a>|!\[[^\]]*\]\(([^)]*\.mp4)\))/gi,
+        (match, hrefUrl, linkText, markdownUrl) => {
+            const videoUrl = hrefUrl || markdownUrl;
+            return `
+                <video controls style="max-width: 100%; height: auto;">
+                    <source src="${videoUrl}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            `;
+        }
+    );
+
     return `
-    <div class="post-contents-title">
-        <h1>${post.title}</h1>
-    </div>
+        <div class="post-contents-title">
+            <h1>${post.title}</h1>
+        </div>
         <div class="markdown-content" style="margin: var(--spacing-medium) 0;">
-            ${htmlContent}
+            ${videoContent}
         </div>
     `;
-
 }
 
 function generatePostFooter(post) {
