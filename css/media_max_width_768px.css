@@ -182,10 +182,7 @@
         padding: 10px;
     }
 
-    /* Search */
-    .search-bar {
-        display: none;
-    }
+
 
     .search-button {
         position: fixed;
@@ -300,8 +297,8 @@
     }
 
     
-    .nav-icons,
-    .search-bar {
+    .nav-icons
+    {
         display: none;
     }
 

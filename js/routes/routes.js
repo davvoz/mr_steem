@@ -184,57 +184,151 @@ async function showLikedPosts() {
 
 async function setupSearchView() {
     const searchView = document.getElementById('search-view');
-    if (!searchView) return;
+    if (!searchView) {
+        console.error('Search view not found');
+        return;
+    }
 
-    searchView.innerHTML = `
-        <div class="search-container">
-            <div class="search-section">
-                <div class="search-bar">
-                    <i class="fas fa-user"></i>
-                    <input type="text" id="users-search-input" placeholder="Search profiles...">
-                    <i class="fas fa-times clear-search" style="display: none;"></i>
+    // Controlla se siamo su mobile
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+        searchView.innerHTML = `
+            <div class="search-container">
+                <div class="search-tabs">
+                    <div class="search-tab active" data-section="profiles">Users</div>
+                    <div class="search-tab" data-section="communities">Communities</div>
+                    <div class="search-tab" data-section="tags">Tags</div>
                 </div>
-                <div class="profiles-results"></div>
-            </div>
 
-            <div class="search-section">
-                <div class="search-bar">
-                    <i class="fas fa-users"></i>
-                    <input type="text" id="communities-search-input" placeholder="Search communities...">
-                    <i class="fas fa-times clear-search" style="display: none;"></i>
+                <div class="search-sections">
+                    <div class="search-section profiles-section active">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" placeholder="Search profiles...">
+                            <i class="fas fa-times clear-search" style="display: none;"></i>
+                        </div>
+                        <div class="profiles-results"></div>
+                    </div>
+
+                    <div class="search-section communities-section">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" placeholder="Search communities...">
+                            <i class="fas fa-times clear-search" style="display: none;"></i>
+                        </div>
+                        <div class="communities-results"></div>
+                    </div>
+
+                    <div class="search-section tags-section">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" placeholder="Search tags...">
+                            <i class="fas fa-times clear-search" style="display: none;"></i>
+                        </div>
+                        <div class="tags-results"></div>
+                    </div>
                 </div>
-                <div class="communities-results"></div>
             </div>
-        <div class="search-section">
-            <div class="search-bar">
-                <i class="fas fa-hashtag"></i>
-                <input type="text" id="tags-search-input" placeholder="Search tags...">
-                <i class="fas fa-times clear-search" style="display: none;"></i>
-                <div class="tags-results"></div>
-            </div>
-        </div>
-    `;
+        `;
 
-    setupSearchHandlers('users-search-input', 'profiles');
-    setupSearchHandlers('communities-search-input', 'communities');
-    setupSearchHandlers('tags-search-input', 'tags');
+        // Gestione dei tab
+        const tabs = searchView.querySelectorAll('.search-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Rimuovi active da tutti i tab e sezioni
+                tabs.forEach(t => t.classList.remove('active'));
+                searchView.querySelectorAll('.search-section').forEach(s => s.classList.remove('active'));
+                
+                // Attiva il tab cliccato e la sua sezione
+                tab.classList.add('active');
+                const section = searchView.querySelector(`.${tab.dataset.section}-section`);
+                section.classList.add('active');
+                
+                // Focus sull'input della sezione attiva
+                section.querySelector('input').focus();
+            });
+        });
+    } else {
+        // Mantieni il layout desktop esistente
+        searchView.innerHTML = `
+            <div class="search-container">
+                <div class="search-section profiles-section">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search profiles...">
+                        <i class="fas fa-times clear-search" style="display: none;"></i>
+                    </div>
+                    <div class="profiles-results"></div>
+                </div>
+
+                <div class="search-section communities-section">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search communities...">
+                        <i class="fas fa-times clear-search" style="display: none;"></i>
+                    </div>
+                    <div class="communities-results"></div>
+                </div>
+
+                <div class="search-section tags-section">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search tags...">
+                        <i class="fas fa-times clear-search" style="display: none;"></i>
+                    </div>
+                    <div class="tags-results"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Setup dei gestori di ricerca per ogni sezione
+    const sections = ['profiles', 'communities', 'tags'];
+    sections.forEach(section => {
+        const sectionElement = searchView.querySelector(`.${section}-section`);
+        if (!sectionElement) {
+            console.error(`Section ${section} not found`);
+            return;
+        }
+        
+        const input = sectionElement.querySelector('.search-bar input');
+        if (input) {
+            setupSearchHandler(input, section);
+        } else {
+            console.error(`Input not found in ${section} section`);
+        }
+    });
 }
 
-function setupSearchHandlers(inputId, type) {
-    const searchInput = document.getElementById(inputId);
-    const clearButton = searchInput.parentElement.querySelector('.clear-search');
-    const resultsContainer = document.querySelector(`.${type}-results`);
+function setupSearchHandler(input, section) {
+    if (!input) {
+        console.error(`Search input for ${section} section not found`);
+        return;
+    }
 
-    searchInput.focus();
+    const parentElement = input.closest('.search-section');
+    if (!parentElement) {
+        console.error(`Parent .search-section not found for ${section}`);
+        return;
+    }
+
+    const clearButton = parentElement.querySelector('.clear-search');
+    const resultsContainer = parentElement.querySelector(`.${section}-results`);
+
+    if (!clearButton || !resultsContainer) {
+        console.error(`Required elements not found for ${section} section`);
+        return;
+    }
 
     clearButton.addEventListener('click', () => {
-        searchInput.value = '';
+        input.value = '';
         clearButton.style.display = 'none';
         resultsContainer.innerHTML = '';
     });
 
     let searchTimeout;
-    searchInput.addEventListener('input', (e) => {
+    input.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         clearButton.style.display = query ? 'block' : 'none';
 
@@ -244,56 +338,60 @@ function setupSearchHandlers(inputId, type) {
         }
 
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(async () => {
-            resultsContainer.innerHTML = '<div class="loading">Searching...</div>';
-
-            try {
-                const results = await searchService.search(query);
-                if (!results) return;
-
-                if (type === 'profiles') {
-                    resultsContainer.innerHTML = `
-                        <h3>Profiles</h3>
-                        ${results.profiles.length ? results.profiles.map(user => `
-                            <div class="user-result" onclick="window.location.hash='/profile/${user.username}'">
-                                <img src="${user.avatar}" alt="${user.username}">
-                                <div class="user-info">
-                                    <span class="username">@${user.username}</span>
-                                    <span class="reputation">Rep: ${user.reputation}</span>
-                                </div>
-                            </div>
-                        `).join('') : '<p>No profiles found</p>'}
-                    `;
-                } else if (type === 'communities') {
-                    resultsContainer.innerHTML = `
-                        <h3>Communities</h3>
-                        ${results.communities.length ? results.communities.map(community => `
-                            <div class="community-result" onclick="window.location.hash='/community/${community.name}'">
-                                <img src="${community.icon}" alt="${community.name}">
-                                <div class="community-info">
-                                    <span class="community-name">${community.title}</span>
-                                    <span class="community-stats">${community.subscribers} subscribers</span>
-                                    ${community.about ? `<p class="community-about">${community.about.substring(0, 100)}...</p>` : ''}
-                                </div>
-                            </div>
-                        `).join('') : '<p>No communities found</p>'}
-                    `;
-                } else if (type === 'tags') {
-                    resultsContainer.innerHTML = `
-                        <h3>Tags</h3>
-                        ${results.tags.length ? results.tags.map(tag => `
-                            <div class="tag-result" onclick="window.location.hash='/tag/${tag.name}'">
-                                <div class="tag-info">
-                                    <span class="tag-name">#${tag.name}</span>
-                                    <span class="tag-stats">${tag.posts_count} posts</span>
-                                </div>
-                            </div>
-                        `).join('') : '<p>No tags found</p>'}
-                    `;
-                }
-            } catch (error) {
-                resultsContainer.innerHTML = '<div class="error">Search failed. Please try again.</div>';
-            }
+        searchTimeout = setTimeout(() => {
+            performSearch(query, section, resultsContainer);
         }, 300);
     });
+}
+
+async function performSearch(query, section, resultsContainer) {
+    resultsContainer.innerHTML = '<div class="loading">Searching...</div>';
+
+    try {
+        const results = await searchService.search(query);
+        if (!results) return;
+
+        if (section === 'profiles') {
+            resultsContainer.innerHTML = `
+                <h3>Profiles</h3>
+                ${results.profiles.length ? results.profiles.map(user => `
+                    <div class="user-result" onclick="window.location.hash='/profile/${user.username}'">
+                        <img src="${user.avatar}" alt="${user.username}">
+                        <div class="user-info">
+                            <span class="username">@${user.username}</span>
+                            <span class="reputation">Rep: ${user.reputation}</span>
+                        </div>
+                    </div>
+                `).join('') : '<p>No profiles found</p>'}
+            `;
+        } else if (section === 'communities') {
+            resultsContainer.innerHTML = `
+                <h3>Communities</h3>
+                ${results.communities.length ? results.communities.map(community => `
+                    <div class="community-result" onclick="window.location.hash='/community/${community.name}'">
+                        <img src="${community.icon}" alt="${community.name}">
+                        <div class="community-info">
+                            <span class="community-name">${community.title}</span>
+                            <span class="community-stats">${community.subscribers} subscribers</span>
+                            ${community.about ? `<p class="community-about">${community.about.substring(0, 100)}...</p>` : ''}
+                        </div>
+                    </div>
+                `).join('') : '<p>No communities found</p>'}
+            `;
+        } else if (section === 'tags') {
+            resultsContainer.innerHTML = `
+                <h3>Tags</h3>
+                ${results.tags.length ? results.tags.map(tag => `
+                    <div class="tag-result" onclick="window.location.hash='/tag/${tag.name}'">
+                        <div class="tag-info">
+                            <span class="tag-name">#${tag.name}</span>
+                            <span class="tag-stats">${tag.posts_count} posts</span>
+                        </div>
+                    </div>
+                `).join('') : '<p>No tags found</p>'}
+            `;
+        }
+    } catch (error) {
+        resultsContainer.innerHTML = '<div class="error">Search failed. Please try again.</div>';
+    }
 }
