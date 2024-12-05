@@ -1,17 +1,15 @@
 import { steemConnection } from '../../auth/login-manager.js';
 import { extractImageFromContent } from './post-utils.js';
 import { showLoadingIndicator, hideLoadingIndicator } from '../ui/loading-indicators.js';
-import { fetchPosts } from '../post/post-service.js';
 import { displayPosts } from '../../services/posts-manager.js';
-
-let lastPost = null;
+import { extractProfileImage } from './post-utils.js';
+import { SteemAPI } from '../common/api-wrapper.js';
 let isLoading = false;
 let hasMore = true;
-const seenPosts = new Set();
 
 export async function loadSteemPosts(options = {}) {
     if (isLoading || !hasMore) return;
-    
+
     showLoadingIndicator();
     try {
         const posts = await fetchPosts(options);
@@ -51,11 +49,6 @@ export async function loadSinglePost(author, permlink) {
         const postView = document.getElementById('post-view');
         if (postView) {
             postView.innerHTML = renderPostHTML(processedPost);
-            // Add any additional single post view specific elements
-            const fullContent = document.createElement('div');
-            fullContent.className = 'full-post-content';
-            fullContent.innerHTML = marked.parse(processedPost.body);
-            postView.querySelector('.post-preview').appendChild(fullContent);
         }
 
         return processedPost;
@@ -67,23 +60,151 @@ export async function loadSinglePost(author, permlink) {
     }
 }
 
-export async function votePost(author, permlink) {
-    showLoadingIndicator();
+function generatePostHeader(post, avatarUrl, postDate) {
+    return `
+        <header class="post-header">
+            <div class="author-info">
+                <img src="${avatarUrl}" 
+                     alt="${post.author}" 
+                     class="author-avatar"
+                     onerror="this.src='https://steemitimages.com/u/${post.author}/avatar'">
+                <div class="author-details">
+                    <a href="#/profile/${post.author}" class="author-name">@${post.author}</a>
+                    <span class="post-date">${postDate}</span>
+                </div>
+            </div>
+        </header>
+    `;
+}
+
+function generatePostContent(post, htmlContent) {
+    // Convert markdown to HTML if marked is available
+    const convertedHtml = typeof marked !== 'undefined'
+        ? marked.parse(htmlContent)
+        : htmlContent;
+
+    //dobbiamo beccare tuttti i tipi di link che sono immafini e video e renderizzarli in modo corretto
+
+    return `
+        <div class="post-content">
+            <h1 class="post-title">${post.title}</h1>
+            <div class="post-body markdown-content">
+                ${convertedHtml}
+            </div>
+        </div>
+    `;
+}
+
+function generatePostFooter(post) {
+    const hasVoted = post.active_votes?.some(vote =>
+        vote.voter === steemConnection?.username
+    );
+
+    let tags = [];
     try {
-        const response = await steemConnection.vote(author, permlink);
-        return response;
+        tags = JSON.parse(post.json_metadata)?.tags || [];
     } catch (error) {
-        console.error('Error voting post:', error);
-        throw error;
-    } finally {
-        hideLoadingIndicator();
+        console.warn('Failed to parse post tags:', error);
+    }
+
+    return `
+        <footer class="post-footer">
+            <div class="post-stats">
+                <span class="net_votes clickable" 
+                      data-post-author="${post.author}" 
+                      data-post-permlink="${post.permlink}"
+                      style="cursor: pointer;">
+                    <i class="far fa-heart"></i>
+                    ${post.active_votes?.length || 0} likes
+                </span>
+                <span class="comments-count"
+                      data-post-author="${post.author}" 
+                      data-post-permlink="${post.permlink}"
+                      style="cursor: pointer;">
+                    <i class="far fa-comment"></i>
+                    ${post.children || 0} comments
+                </span>
+                <span class="payout-value clickable"
+                      data-post-author="${post.author}" 
+                      data-post-permlink="${post.permlink}"
+                      style="cursor: pointer;">
+                    <i class="fas fa-dollar-sign"></i>
+                    ${parseFloat(post.pending_payout_value || 0).toFixed(2)}
+                </span>
+            </div>
+            <div class="post-tags">
+                ${tags.map(tag => `
+                    <a href="#/tag/${tag}" class="tag">#${tag}</a>
+                `).join(' ')}
+            </div>
+            <button class="vote-button ${hasVoted ? 'voted' : ''}"
+                    data-author="${post.author}"
+                    data-permlink="${post.permlink}"
+                    ${hasVoted ? 'disabled' : ''}>
+                <span class="vote-icon">
+                    <i class="far fa-heart"></i>
+                </span>
+                <span class="vote-count">${post.active_votes?.length || 0}</span>
+            </button>
+        </footer>
+    `;
+}
+
+function renderPostHTML(post) {
+    const postDate = new Date(post.created).toLocaleDateString();
+    const avatarUrl = post.authorImage || `https://steemitimages.com/u/${post.author}/avatar`;
+    return `
+        <article class="post-preview">
+            ${generatePostHeader(post, avatarUrl, postDate)}
+            ${generatePostContent(post, post.body)}
+            ${generatePostFooter(post)}
+        </article>
+    `;
+}
+
+
+async function fetchPosts(options) {
+    const query = {
+        tag: 'photography',
+        limit: 20,
+        start_author: options.append ? lastPostAuthor : undefined,
+        start_permlink: options.append ? lastPostPermlink : undefined
+    };
+
+    const posts = await SteemAPI.getDiscussionsBy('created', query);
+    return filterUniquePosts(posts);
+}
+function validateVotePermissions() {
+    if (!steemConnection.isConnected || !steemConnection.username) {
+        alert('Please connect to Steem first');
+        return false;
+    }
+
+    const key = sessionStorage.getItem('steemPostingKey');
+    if (!key) {
+        alert('Posting key required to vote');
+        return false;
+    }
+
+    return true;
+}
+export async function votePost(author, permlink, weight = 10000) {
+    if (!validateVotePermissions()) return false;
+
+    try {
+        const key = sessionStorage.getItem('steemPostingKey');
+        await SteemAPI.vote(key, steemConnection.username, author, permlink, weight);
+        return true;
+    } catch (error) {
+        console.error('Failed to vote:', error);
+        alert('Failed to vote: ' + error.message);
+        return false;
     }
 }
 
-export function resetPostsState() {
-    lastPost = null;
-    isLoading = false;
-    hasMore = true;
-    seenPosts.clear();
+// Add marked library if not already included
+if (typeof marked === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+    document.head.appendChild(script);
 }
-

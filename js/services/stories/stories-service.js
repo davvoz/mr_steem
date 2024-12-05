@@ -1,7 +1,7 @@
 import { steemConnection } from '../../auth/login-manager.js';
 import { avatarCache } from '../../utils/avatar-cache.js';
 import { SteemAPI } from '../common/api-wrapper.js';
-import { extractImageFromContent,extractProfileImage } from '../post/post-utils.js';
+import { extractImageFromContent,extractProfileImage } from '../posts/post-utils.js';
 
 export async function loadStories() {
     if (!steemConnection.isConnected || !steemConnection.username) {

@@ -1,4 +1,4 @@
-import { extractProfileImage, extractImageFromContent } from './post/post-utils.js';
+import { extractProfileImage, extractImageFromContent } from './posts/post-utils.js';
 import {  showProfileLoadingIndicator, hideProfileLoadingIndicator 
 } from './ui/loading-indicators.js';
 

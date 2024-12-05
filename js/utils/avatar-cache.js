@@ -1,4 +1,4 @@
-import { extractProfileImage } from '../services/post/post-utils.js';
+import { extractProfileImage } from '../services/posts/post-utils.js';
 class AvatarCache {
     constructor() {
         this.cache = new Map();

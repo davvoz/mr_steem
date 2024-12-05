@@ -40,8 +40,9 @@ export function cleanImageUrl(url) {
 
 export function extractProfileImage(account) {
     try {
-        const metadata = JSON.parse(account.json_metadata);
-        return metadata?.profile?.profile_image || `https://steemitimages.com/u/${account.name}/avatar`;
+        const metadata = null;
+        return metadata?.profile?.profile_image ||
+         `https://steemitimages.com/u/${account.name}/avatar`;
     } catch (e) {
         return `https://steemitimages.com/u/${account.name}/avatar`;
     }

@@ -1,4 +1,4 @@
-import { extractImageFromContent } from '../services/post/post-utils.js';
+import { extractImageFromContent } from '../services/posts/post-utils.js';
 
 async function withTimeout(promise, timeout = 10000) {
     let timer;

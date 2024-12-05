@@ -3,10 +3,9 @@ import { steemConnection, showLoginModal } from '../auth/login-manager.js';
 import { renderNotifications } from '../services/notification-manager.js';
 import { searchService } from '../services/search-service.js';
 import { loadCommunity } from '../services/community-manager.js';
-import { loadSinglePost } from '../services/post/post-service.js';
+import { loadSinglePost } from '../services/posts/post-service.js';
 import { loadUserProfile } from '../services/profile/profile-service.js';
 import { loadHomeFeed, resetHomeFeed } from '../services/posts-manager.js';
-import { extractProfileImage } from '../services/post/post-utils.js';
 import { loadPostsByTag } from '../services/tag/tag-service.js';
 export const routes = {
     '/': {
@@ -77,6 +76,10 @@ export const routes = {
         handler: async () => {
             hideAllViews();
             showView('notifications-view');
+            const navMenu = document.querySelector('.nav-menu');
+            if (window.innerWidth <= 768) {
+                navMenu.classList.remove('active');
+            }
             await renderNotifications();
         }
     },

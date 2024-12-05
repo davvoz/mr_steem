@@ -1,6 +1,6 @@
-import { extractImageFromContent } from '../post/post-utils.js';
+import { extractImageFromContent } from '../posts/post-utils.js';
 import { EventBus } from '../common/event-bus.js';
-import { votePost } from '../post/post-service.js';  // Aggiungi questa importazione
+import { votePost } from '../posts/post-service.js';  // Aggiungi questa importazione
 
 // Keep both module exports and window globals
 export function showVotersModal(votes) {

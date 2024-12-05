@@ -4,22 +4,21 @@ import { updateSidebar } from '../services/sidebar/sidebar-service.js';
 import { loadSuggestions } from '../services/suggestions/suggestions-service.js';
 import { startNotificationPolling, renderNotifications, stopNotificationPolling } from '../services/notification-manager.js';
 import { Router } from '../routes/router.js';
-import { loadSteemPosts, resetPostsState } from '../services/posts/post-service.js'; // Add resetPostsState import
-import { setupInfiniteScroll, cleanupInfiniteScroll } from '../services/ui/infinite-scroll.js';
+import { cleanupInfiniteScroll } from '../services/ui/infinite-scroll.js';
 import { loadPostsByTag } from '../services/tag/tag-service.js';
 
 export function setupUIEventListeners() {
     // Setup navigation handling
     setupNavigation();
-    
+
     // Setup auth-related UI
     setupAuthUI();
-    
+
     // Setup mobile menu
     setupMobileMenu();
-    
+
     setupTagFilter();
-    
+
     console.log('UI event listeners setup complete');
 
     // Aggiungi handler per i tag buttons
@@ -28,14 +27,14 @@ export function setupUIEventListeners() {
         button.addEventListener('click', async (e) => {
             // Rimuovi la classe active da tutti i bottoni
             tagButtons.forEach(btn => btn.classList.remove('active'));
-            
+
             // Aggiungi la classe active al bottone cliccato
             e.target.classList.add('active');
-            
+
             const tag = e.target.dataset.tag;
             const container = document.getElementById('posts-container');
             container.innerHTML = ''; // Clear current posts
-            
+
             if (tag === 'all') {
                 // Se il tag è 'all', ricarica il feed normale
                 const { loadHomeFeed } = await import('../services/posts-manager.js');
@@ -78,7 +77,7 @@ function setupAuthUI() {
 
             // Avvia immediatamente il polling delle notifiche
             await startNotificationPolling();
-            
+
             // Carica subito le notifiche
             const notificationsView = document.getElementById('notifications-view');
             if (notificationsView && window.location.hash === '#/notifications') {
@@ -131,7 +130,7 @@ function setupAuthUI() {
             e.preventDefault();
             const username = document.getElementById('steemUsername').value;
             const key = document.getElementById('steemKey').value;
-            
+
             try {
                 await handleLogin(username, key);
                 // Il reindirizzamento al profilo ora viene gestito in handleLogin
@@ -170,7 +169,7 @@ function setupAuthUI() {
         // Remove any existing listeners by cloning the node
         const newLogoutLink = logoutLink.cloneNode(true);
         logoutLink.parentNode.replaceChild(newLogoutLink, logoutLink);
-        
+
         newLogoutLink.addEventListener('click', (e) => {
             e.preventDefault();
             showLogoutDialog();
@@ -181,10 +180,10 @@ function setupAuthUI() {
         try {
             const overlay = document.createElement('div');
             overlay.className = 'dialog-overlay';
-            
+
             const dialog = document.createElement('div');
             dialog.className = 'dialog';
-            
+
             dialog.innerHTML = `
                 <h3 class="dialog-title">Logout</h3>
                 <p class="dialog-message">Are you sure you want to logout?</p>
@@ -215,19 +214,19 @@ function setupAuthUI() {
             dialog.querySelector('.confirm').addEventListener('click', async () => {
                 try {
                     closeDialog(overlay);
-                    
+
                     // Prima stoppa il polling e resetta lo stato
                     await resetAppState();
-                    
+
                     // Poi esegui il logout
                     await handleLogout();
-                    
+
                     // Redirect alla home
                     window.location.hash = '/';
-                    
+
                     // Mostra messaggio di conferma
                     showLogoutConfirmation();
-                    
+
                 } catch (error) {
                     console.error('Error during logout:', error);
                     showLogoutError(error.message);
@@ -257,9 +256,9 @@ function setupAuthUI() {
         const notification = document.createElement('div');
         notification.className = 'logout-notification error';
         notification.textContent = `Logout failed: ${message}`;
-        
+
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             notification.classList.add('fade-out');
             setTimeout(() => notification.remove(), 300);
@@ -281,7 +280,7 @@ async function resetAppState() {
         // Stop all active processes
         await stopNotificationPolling();
         clearAllIntervals();
-        
+
         // Clear UI state
         const containers = {
             'stories-container': '',
@@ -301,7 +300,7 @@ async function resetAppState() {
         document.querySelectorAll('.view').forEach(view => {
             view.style.display = 'none';
         });
-        
+
         // Show home view
         const homeView = document.getElementById('home-view');
         if (homeView) {
@@ -334,7 +333,7 @@ async function resetAppState() {
 
 function clearAllIntervals() {
     // Clear any existing intervals
-    const highestId = window.setInterval(() => {}, 0);
+    const highestId = window.setInterval(() => { }, 0);
     for (let i = 0; i < highestId; i++) {
         window.clearInterval(i);
     }
@@ -343,7 +342,7 @@ function clearAllIntervals() {
 // Modify the updateNavigationUI() function
 function updateNavigationUI() {
     const isLoggedIn = steemConnection.isConnected;
-    
+
     // Gestione specifica del link delle notifiche
     const notificationsLink = document.getElementById('notifications-link');
     if (notificationsLink) {
@@ -391,7 +390,7 @@ function updateNavigationUI() {
         const element = document.getElementById(item.id);
         if (element) {
             element.style.display = item.show ? 'flex' : 'none';
-            
+
             // Aggiorna immediatamente il badge delle notifiche se necessario
             if (item.id === 'notifications-link' && isLoggedIn) {
                 startNotificationPolling();
@@ -410,15 +409,15 @@ function updateNavigationUI() {
 function setupMobileMenu() {
     const hamburger = document.querySelector('.hamburger-menu');
     const navMenu = document.querySelector('.nav-menu');
-    
+
     if (!hamburger || !navMenu) return;
-    
+
     const toggleMenu = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         navMenu.classList.toggle('active');
-        document.body.style.overflow = 
+        document.body.style.overflow =
             navMenu.classList.contains('active') ? 'hidden' : '';
     };
 
@@ -429,8 +428,8 @@ function setupMobileMenu() {
     };
 
     const handleOutsideClick = (e) => {
-        if (!navMenu.contains(e.target) && 
-            !hamburger.contains(e.target) && 
+        if (!navMenu.contains(e.target) &&
+            !hamburger.contains(e.target) &&
             navMenu.classList.contains('active')) {
             toggleMenu(e);
         }
@@ -445,9 +444,9 @@ function showLogoutConfirmation() {
     const notification = document.createElement('div');
     notification.className = 'logout-notification';
     notification.textContent = 'Successfully logged out';
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.classList.add('fade-out');
         setTimeout(() => notification.remove(), 300);
@@ -456,12 +455,12 @@ function showLogoutConfirmation() {
 
 function setupTagFilter() {
     const tagButtons = document.querySelectorAll('.tag-button');
-    
+
     tagButtons.forEach(button => {
         button.addEventListener('click', (e) => {
             e.preventDefault();
             const tag = button.dataset.tag;
-            
+
             if (tag === 'all') {
                 window.location.hash = '/';
             } else {

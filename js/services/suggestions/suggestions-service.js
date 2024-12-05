@@ -1,7 +1,7 @@
 import { SteemAPI } from '../common/api-wrapper.js';
 import { steemConnection } from '../../auth/login-manager.js';
 import { showFollowPopup } from '../ui/modals.js';
-import { extractProfileImage } from '../post/post-utils.js';
+import { extractProfileImage } from '../posts/post-utils.js';
 
 // Centralize the event system
 export const suggestionEvents = new EventTarget();

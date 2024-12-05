@@ -1,6 +1,6 @@
 
 import { setupModalClosing } from './modal-utils.js';
-import { extractImageFromContent } from '../post/post-utils.js';
+import { extractImageFromContent } from '../posts/post-utils.js';
 
 export function showCommentsModal(comments) {
     const modal = document.createElement('div');

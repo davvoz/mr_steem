@@ -1,13 +1,13 @@
 import { steemConnection } from '../../auth/login-manager.js';
 import { avatarCache } from '../../utils/avatar-cache.js';
-import { extractProfileImage } from '../post/post-utils.js';
+import { extractProfileImage } from '../posts/post-utils.js';
 import { SteemAPI } from '../common/api-wrapper.js';
 import { suggestionEvents } from '../suggestions/suggestions-service.js';
 
 export function updateSidebar() {
     const userProfile = document.getElementById('user-profile');
     const loginSection = document.getElementById('login-section');
-console.log('steemConnection.isConnected', steemConnection.isConnected);
+    console.log('steemConnection.isConnected', steemConnection.isConnected);
     if (!userProfile) return;
     console.log('steemConnection.isConnected', steemConnection.isConnected);
     if (steemConnection.isConnected && steemConnection.username) {
@@ -154,7 +154,7 @@ export function init() {
             loadSuggestions();
         }, 2000);
     });
-    
+
     // Initial load
     loadSuggestions();
 }

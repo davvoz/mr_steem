@@ -105,6 +105,7 @@ body {
 .logo img {
     margin: 82px 0 0 0;
     height: 177px;
+    width: 177px;
     border-radius: 20%;
     transition: filter 0.3s ease;
 }
