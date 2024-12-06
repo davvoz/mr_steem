@@ -32,45 +32,6 @@ export function generatePostContent(post, htmlContent) {
     `;
 }
 
-export function generatePostFooter(post) {
-    const tags = JSON.parse(post.json_metadata)?.tags || [];
-    
-    return `
-        <footer class="post-footer">
-            <div class="post-stats">
-                <span class="votes-container">
-                    <i class="far fa-heart"></i> 
-                    <span class="net_votes clickable" 
-                          data-post-author="${post.author}" 
-                          data-post-permlink="${post.permlink}">
-                        ${post.net_votes} likes
-                    </span>
-                </span>
-                <span class="comments-container">
-                    <i class="far fa-comment"></i> 
-                    <span class="comments-count clickable" 
-                          data-post-author="${post.author}" 
-                          data-post-permlink="${post.permlink}">
-                        ${post.children} comments
-                    </span>
-                </span>
-                <span>
-                    <i class="fas fa-dollar-sign"></i> 
-                    ${parseFloat(post.pending_payout_value).toFixed(2)} payout
-                </span>
-            </div>
-            <div class="post-tags">
-                ${tags.map(tag => `
-                    <a href="#/tag/${tag}" 
-                       class="tag" 
-                       data-tag="${tag}"
-                       onclick="handleTagClick(event, '${tag}')">#${tag}</a>
-                `).join(' ')}
-            </div>
-        </footer>
-    `;
-}
-
 // Aggiungi questa funzione globale per gestire i click sui tag
 window.handleTagClick = function(event, tag) {
     event.preventDefault();

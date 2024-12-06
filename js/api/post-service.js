@@ -12,11 +12,11 @@ export class PostService {
             throw new Error('Not connected to Steem');
         }
 
-        const permlink = 'instaclone-' + Date.now();
+        const permlink = 'steemgram-' + Date.now();
         const operations = [
             ['comment', {
                 parent_author: '',
-                parent_permlink: 'instaclone',
+                parent_permlink: 'steemgram',
                 author: steemClient.getUsername(),
                 permlink,
                 title,
@@ -36,17 +36,15 @@ export class PostService {
 
     _formatPostBody(description, imageUrl) {
         return `
-${description}
-
-![Post Image](${imageUrl})
-
-Posted via InstaClone`;
-    }
+            ${description}
+            ![Post Image](${imageUrl})
+            Posted via SteemGram`;
+                }
 
     _createPostMetadata(imageUrl) {
         return JSON.stringify({
-            tags: ['instaclone', 'photo', 'social'],
-            app: 'instaclone/1.0',
+            tags: ['steemgram', 'photo', 'social'],
+            app: 'steemgram/1.0',
             image: [imageUrl]
         });
     }

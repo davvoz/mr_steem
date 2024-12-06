@@ -6,7 +6,7 @@
     <title>Redirecting...</title>
     <script>
         const pathSegments = window.location.pathname.split('/');
-        const repoName = 'insta_clone'; // Cambia questo con il nome del tuo repository
+        const repoName = 'steemgram'; // Cambia questo con il nome del tuo repository
         const baseUrl = window.location.origin + 
                       (pathSegments[1] === repoName ? '/' + repoName : '');
         window.location.replace(baseUrl + '/#' + window.location.pathname);

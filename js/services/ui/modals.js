@@ -1,12 +1,12 @@
 import { extractImageFromContent } from '../posts/post-utils.js';
 import { EventBus } from '../common/event-bus.js';
-import { votePost } from '../posts/post-service.js';  // Aggiungi questa importazione
+import { votePost,addComment } from '../posts/post-service.js';  // Aggiungi questa importazione
 
 // Keep both module exports and window globals
 export function showVotersModal(votes) {
     // Ensure votes is an array
     const votesArray = Array.isArray(votes) ? votes : [];
-    
+
     const modal = createBaseModal('voters-modal');
     modal.innerHTML = `
         <div class="modal-content">
@@ -26,7 +26,7 @@ export function showVotersModal(votes) {
 export function showCommentsModal(comments) {
     // Ensure comments is an array
     const commentsArray = Array.isArray(comments) ? comments : [];
-    
+
     const modal = createBaseModal('comments-modal');
     modal.innerHTML = `
         <div class="modal-content">
@@ -89,15 +89,15 @@ export function showPayoutModal(payoutDetails) {
                         <span class="label">Curator Payout:</span>
                         <span class="value">${payoutDetails.curatorPayout}</span>
                     </div>
-                    ${payoutDetails.isPayoutDeclined ? 
-                        '<div class="payout-declined">Payout declined by author</div>' : ''}
+                    ${payoutDetails.isPayoutDeclined ?
+            '<div class="payout-declined">Payout declined by author</div>' : ''}
                     ${payoutDetails.beneficiaries.length > 0 ? `
                         <div class="beneficiaries">
                             <h4>Beneficiaries:</h4>
                             ${payoutDetails.beneficiaries.map(b => `
                                 <div class="beneficiary-item">
                                     <span>@${b.account}</span>
-                                    <span>${b.weight/100}%</span>
+                                    <span>${b.weight / 100}%</span>
                                 </div>
                             `).join('')}
                         </div>
@@ -170,7 +170,7 @@ export function showVoteModal({ author, permlink, button }) {
             submitBtn.disabled = true;
             const weight = slider.value * 100; // Convert to Steem format (0-10000)
             const success = await votePost(author, permlink, weight);
-            
+
             if (success) {
                 // Aggiorna il conteggio dei voti nel post
                 const voteCountSpan = document.querySelector(`.net_votes[data-post-author="${author}"][data-post-permlink="${permlink}"]`);
@@ -178,14 +178,14 @@ export function showVoteModal({ author, permlink, button }) {
                     const currentCount = parseInt(voteCountSpan.textContent) || 0;
                     voteCountSpan.textContent = `${currentCount + 1} likes`;
                 }
-                
+
                 // Aggiorna il pulsante di voto
                 button.classList.add('voted');
                 button.disabled = true;
-                
+
                 // Chiudi il modale
                 modal.querySelector('.modal-close').click();
-                
+
                 // Mostra il toast
                 showToast(`Successfully voted with ${slider.value}% power!`);
             }
@@ -200,10 +200,64 @@ export function showVoteModal({ author, permlink, button }) {
     showModal(modal);
 }
 
-// Rimuovi le assegnazioni window globali
-// window.showVotersModal = showVotersModal;
-// window.showCommentsModal = showCommentsModal;
-// window.showFollowPopup = showFollowPopup;
+export function showCommentEditor({ author, permlink }) {
+    const modal = createBaseModal('comment-editor-modal');
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Comment</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <textarea class="comment-editor" placeholder="Write your comment here"></textarea>
+                <button class="comment-submit-btn">
+                    <i class="far fa-comment"></i> Submit Comment
+                </button>
+            </div>
+        </div>
+    `;
+
+    showModal(modal);
+
+
+    const editor = modal.querySelector('.comment-editor');
+    const submitBtn = modal.querySelector('.comment-submit-btn');
+
+    submitBtn.addEventListener('click', async () => {
+        try {
+            submitBtn.disabled = true;
+            const comment = editor.value.trim();
+            if (!comment) {
+                showToast('Comment cannot be empty', 'error');
+                return;
+            }
+
+            // Aggiungi il commento al post
+            const success = await addComment(author, permlink, comment);
+            if (success) {
+                // Aggiorna il conteggio dei commenti nel post
+                const commentCountSpan = document.querySelector(`.comments-count[data-post-author="${author}"][data-post-permlink="${permlink}"]`);
+                if (commentCountSpan) {
+                    const currentCount = parseInt(commentCountSpan.textContent) || 0;
+                    commentCountSpan.textContent = `${currentCount + 1} comments`;
+                }
+
+                // Chiudi il modale
+                modal.querySelector('.modal-close').click();
+
+                // Mostra il toast
+                showToast('Comment added successfully!');
+            }
+        } catch (error) {
+            console.error('Comment failed:', error);
+            showToast(error.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+
+}
+
 
 // Aggiungi gli event listeners
 EventBus.on('showVoters', showVotersModal);
@@ -211,6 +265,8 @@ EventBus.on('showComments', showCommentsModal);
 EventBus.on('showFollowPopup', showFollowPopup);
 EventBus.on('showPayout', showPayoutModal);
 EventBus.on('showVoteModal', showVoteModal);
+EventBus.on('showCommentEditor', showCommentEditor);
+EventBus.on('showToast', showToast);
 
 // Aggiungi EventBus handler per il toast
 EventBus.on('showToast', ({ message, type }) => showToast(message, type));
@@ -238,7 +294,7 @@ function setupModalClosing(modal) {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) close();
     });
-    
+
     document.addEventListener('keydown', function escapeHandler(e) {
         if (e.key === 'Escape') {
             close();
@@ -280,7 +336,7 @@ function renderCommentsList(comments) {
         const imageUrl = extractImageFromContent(comment);
         // Rimuovi le immagini dal testo del commento
         const cleanBody = comment.body.replace(/!\[.*?\]\((.*?)\)/g, '').trim();
-        
+
         const parsedBody = marked.parse(cleanBody, {
             breaks: true,
             sanitize: true,
@@ -328,24 +384,24 @@ function setupCommentImages(modal) {
 
 function setupImageExpansion(container, img, imageUrl) {
     let overlay = null;
-    
+
     const expandImage = (event) => {
         event.preventDefault();
-        
+
         if (!overlay) {
             overlay = document.createElement('div');
             overlay.className = 'comment-image-overlay';
             document.body.appendChild(overlay);
         }
-        
+
         const expandedImg = img.cloneNode(true);
         expandedImg.classList.add('expanded');
         expandedImg.classList.remove('comment-image-thumbnail');
-        
+
         overlay.innerHTML = '';
         overlay.appendChild(expandedImg);
         overlay.classList.add('active');
-        
+
         setupOverlayClosing(overlay);
     };
 
@@ -383,7 +439,7 @@ function addExpandButton(container, expandHandler) {
             <i class="fas fa-expand"></i>
         </button>
     `;
-    
+
     container.appendChild(titleBar);
     titleBar.querySelector('.comment-image-expand').addEventListener('click', expandHandler);
 }

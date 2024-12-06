@@ -28,12 +28,7 @@
         gap: var(--spacing-xl);
         padding: 0 var(--spacing-md);
         align-items: flex-start;
-    }
-
-    .logo {
-        font-size: 2rem;
-        padding: var(--spacing-md) var(--spacing-lg);
-    }
+    }   
 
     .nav-menu {
         flex: 1;

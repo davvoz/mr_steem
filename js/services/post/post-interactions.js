@@ -20,6 +20,19 @@ export function setupPostInteractions() {
                 EventBus.emit('showVoteModal', { author, permlink, button: voteButton });
             }
         }
+                // Handle button add comment clicks
+        const addCommentButton = e.target.closest('.comment-button');
+        if (addCommentButton) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const author = addCommentButton.dataset.author;
+            const permlink = addCommentButton.dataset.permlink;
+            alert('Add comment to post: ' + author + '/' + permlink);
+            if (author && permlink) {
+                EventBus.emit('showCommentEditor', { author, permlink });
+            }
+        }
 
         // Aggiungi handler per il payout
         const payoutElement = e.target.closest('.payout-value');
@@ -92,6 +105,7 @@ export function setupPostInteractions() {
                 EventBus.emit('showComments', []);
             }
         }
+        
     });
 }
 

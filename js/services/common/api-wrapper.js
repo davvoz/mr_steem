@@ -1,4 +1,3 @@
-
 export class SteemAPI {
     static async getDiscussionsBy(type, query) {
         switch(type) {
@@ -59,6 +58,30 @@ export class SteemAPI {
                 following,
                 what: ['blog']
             }])
+        );
+    }
+
+    static async comment(commentParams) {
+        const {
+            postingKey,
+            parentAuthor,
+            parentPermlink,
+            author,
+            permlink,
+            title,
+            body,
+            jsonMetadata
+        } = commentParams;
+
+        return steem.broadcast.commentAsync(
+            postingKey,
+            parentAuthor,
+            parentPermlink,
+            author,
+            permlink,
+            title,
+            body,
+            jsonMetadata
         );
     }
 }

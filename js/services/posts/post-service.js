@@ -42,7 +42,8 @@ export async function loadSinglePost(author, permlink) {
             created: post.created,
             active_votes: post.active_votes,
             children: post.children,
-            pending_payout_value: post.pending_payout_value
+            pending_payout_value: post.pending_payout_value,
+            tags: post.json_metadata ? JSON.parse(post.json_metadata).tags : []
         };
 
         // Use the same rendering function with slight modifications for single post view
@@ -62,7 +63,9 @@ export async function loadSinglePost(author, permlink) {
 
 function generatePostHeader(post, avatarUrl, postDate) {
     return `
-        <header class="post-header">
+        <header class="post-header-all">
+        <h1 class="post-title" style="font-size: 2.6rem;font-weight: 300;">${post.title}</h1>
+        <div class="post-header">
             <div class="author-info">
                 <img src="${avatarUrl}" 
                      alt="${post.author}" 
@@ -73,21 +76,19 @@ function generatePostHeader(post, avatarUrl, postDate) {
                     <span class="post-date">${postDate}</span>
                 </div>
             </div>
+            </div>
         </header>
     `;
 }
 
-function generatePostContent(post, htmlContent) {
+function generatePostContent(htmlContent) {
     // Convert markdown to HTML if marked is available
     const convertedHtml = typeof marked !== 'undefined'
         ? marked.parse(htmlContent)
         : htmlContent;
 
-    //dobbiamo beccare tuttti i tipi di link che sono immafini e video e renderizzarli in modo corretto
-
     return `
         <div class="post-content">
-            <h1 class="post-title">${post.title}</h1>
             <div class="post-body markdown-content">
                 ${convertedHtml}
             </div>
@@ -100,12 +101,8 @@ function generatePostFooter(post) {
         vote.voter === steemConnection?.username
     );
 
-    let tags = [];
-    try {
-        tags = JSON.parse(post.json_metadata)?.tags || [];
-    } catch (error) {
-        console.warn('Failed to parse post tags:', error);
-    }
+    let tags = post.tags || [];
+
 
     return `
         <footer class="post-footer">
@@ -134,8 +131,8 @@ function generatePostFooter(post) {
             </div>
             <div class="post-tags">
                 ${tags.map(tag => `
-                    <a href="#/tag/${tag}" class="tag">#${tag}</a>
-                `).join(' ')}
+                    <a href="#/tag/${tag}" class="tag">${tag}</a>
+                `).join('')}
             </div>
             <button class="vote-button ${hasVoted ? 'voted' : ''}"
                     data-author="${post.author}"
@@ -146,6 +143,12 @@ function generatePostFooter(post) {
                 </span>
                 <span class="vote-count">${post.active_votes?.length || 0}</span>
             </button>
+            <button class="comment-button"  data-author="${post.author}" data-permlink="${post.permlink}">
+                <span class="comment-icon">
+                    <i class="far fa-comment"></i>
+                </span>
+                <span class="comment-count">${post.children || 0}</span>
+            </button>
         </footer>
     `;
 }
@@ -154,11 +157,9 @@ function renderPostHTML(post) {
     const postDate = new Date(post.created).toLocaleDateString();
     const avatarUrl = post.authorImage || `https://steemitimages.com/u/${post.author}/avatar`;
     return `
-        <article class="post-preview">
             ${generatePostHeader(post, avatarUrl, postDate)}
-            ${generatePostContent(post, post.body)}
+            ${generatePostContent(post.body)}
             ${generatePostFooter(post)}
-        </article>
     `;
 }
 
@@ -198,6 +199,41 @@ export async function votePost(author, permlink, weight = 10000) {
     } catch (error) {
         console.error('Failed to vote:', error);
         alert('Failed to vote: ' + error.message);
+        return false;
+    }
+}
+
+export async function addComment(parentAuthor, parentPermlink, commentBody) {
+    if (!validateVotePermissions()) return false;
+
+    try {
+        const key = sessionStorage.getItem('steemPostingKey');
+        const username = steemConnection.username;
+
+        // Create a valid permlink (only lowercase alphanumeric characters and hyphens)
+        const sanitizedParentAuthor = parentAuthor.toLowerCase().replace(/[^a-z0-9-]/g, '');
+        const timestamp = new Date().getTime();
+        const permlink = `re-${sanitizedParentAuthor}-${timestamp}`.toLowerCase();
+
+        const commentParams = {
+            postingKey: key,
+            author: username,
+            permlink: permlink,
+            parentAuthor: parentAuthor,
+            parentPermlink: parentPermlink,
+            title: '',
+            body: commentBody,
+            jsonMetadata: JSON.stringify({
+                tags: ['steemgram'],
+                app: 'steemgram/1.0'
+            })
+        };
+
+        await SteemAPI.comment(commentParams);
+        return true;
+    } catch (error) {
+        console.error('Failed to add comment:', error);
+        alert('Failed to add comment: ' + error.message);
         return false;
     }
 }
