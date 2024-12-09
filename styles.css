@@ -3927,3 +3927,14 @@ a {
 .text-jutify {
     text-align: justify;
 }
+.vote-submit-btn {
+    background-color: var(--primary-color);
+    color: var(--background);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
