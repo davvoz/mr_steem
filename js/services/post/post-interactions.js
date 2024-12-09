@@ -28,7 +28,6 @@ export function setupPostInteractions() {
 
             const author = addCommentButton.dataset.author;
             const permlink = addCommentButton.dataset.permlink;
-            alert('Add comment to post: ' + author + '/' + permlink);
             if (author && permlink) {
                 EventBus.emit('showCommentEditor', { author, permlink });
             }
