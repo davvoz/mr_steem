@@ -1761,12 +1761,6 @@ body {
     align-items: center;
 }
 
-.markdown-content {
-    font-size: var(--font-size-md);
-    line-height: 1.6;
-    color: var(--text-primary);
-}
-
 .post-footer {
     padding: var(--spacing-lg);
     border-top: 1px solid var(--border-color);
@@ -1814,17 +1808,34 @@ body {
     line-height: 1.8;
     color: var(--text-primary);
     padding: 0 var(--spacing-lg);
+    max-width: 100%;
 }
-
+.markdown-content table{
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--spacing-md) 0;
+}
+.markdown-content table th,
+.markdown-content table td {
+    border: 1px solid var(--border-color);
+    padding: var(--spacing-sm);
+    text-align: left;
+}
+.markdown-content table th {
+    background: var(--secondary-color);
+}
+.markdown-content table tr:nth-child(even) {
+    background: var(--secondary-color);
+}
+.markdown-content table tr:nth-child(odd) {
+    background: var(--background);
+}
 .markdown-content img {
     max-width: 100%;
+    width: 100%;
     height: auto;
     max-height: 100%;
     border-radius: var(--radius-sm);
-    margin: var(--spacing-md) 0;
-    object-fit: contain;
-    /* Imposta una larghezza massima oltre la quale l'immagine viene ridimensionata */
-    max-height: 80vh;
 }
 
 /* Per immagini piccole, mantieni dimensioni originali */
@@ -1847,6 +1858,11 @@ body {
 
 .markdown-content p img {
     margin: 0 auto;
+}
+
+.markdown-content h6 {
+    margin: 1rem 0 0.2rem;
+    font-size: 90%;
 }
 
 .markdown-content h1,
@@ -3900,4 +3916,14 @@ a {
 /* Centrare le immagini */
 .center {
     text-align: center;
+}
+
+.pull-left {
+    float: left;
+    padding-right: 1rem;
+    max-width: 50%;
+}
+
+.text-jutify {
+    text-align: justify;
 }

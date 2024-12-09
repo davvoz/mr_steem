@@ -31,7 +31,7 @@ export async function loadSinglePost(author, permlink) {
             steem.api.getContentAsync(author, permlink),
             steem.api.getAccountsAsync([author])
         ]);
-
+        console.log(post);
         const processedPost = {
             author: post.author,
             permlink: post.permlink,
@@ -84,7 +84,7 @@ function generatePostHeader(post, avatarUrl, postDate) {
 function generatePostContent(htmlContent) {
     // Convert markdown to HTML if the `marked` library is available
     let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
-
+console.log(convertedHtml);
     // Process markdown-style image URLs to maintain PNG transparency
     convertedHtml = convertedHtml.replace(
         /!\[(.*?)\]\((.*?)\)/g,
@@ -142,7 +142,7 @@ function generatePostContent(htmlContent) {
         /http:\/\/([^\s]+\.(png|jpg|jpeg|gif|webp))/gi,
         (match, url) => {
             const fullUrl = `http://${url}`;
-            
+
             // Special handling for PNG files to preserve transparency
             if (fullUrl.match(/\.png$/i)) {
                 return `<center><img src="${fullUrl}" 
@@ -160,7 +160,28 @@ function generatePostContent(htmlContent) {
                 loading="lazy" /></center>`;
         }
     );
-
+    convertedHtml = convertedHtml.replace(
+        /<a[^>]+href="([^"]+\.(png|jpg|jpeg|gif|webp)(\?[^"]*)?)"[^>]*>(.*?)<\/a>/gi,
+        (match, href, extension, queryString, innerText) => {
+            // Decodifica entità HTML e pulizia dell'URL
+            let originalUrl = href.replace(/&amp;/g, '&');
+    
+            // Costruzione del prefisso Steemit CDN
+            let steemitBaseUrl = 'https://steemitimages.com';
+            let steemitUrl = `${steemitBaseUrl}/640x0/${originalUrl}`;
+            let steemitUrlHD = `${steemitBaseUrl}/1280x0/${originalUrl}`;
+    
+            // Generazione del tag `img` completo
+            return `<img 
+                src="${steemitUrl}" 
+                srcset="${steemitUrl} 1x, ${steemitUrlHD} 2x" 
+                alt="image" 
+                style="width: 100%; max-width: 100%; height: auto;"
+            />`;
+        }
+    );
+    
+    
     // Wrap the processed HTML in a container
     return `<div class="post-content">
         <div class="post-body markdown-content">${convertedHtml}</div>
