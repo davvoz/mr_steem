@@ -82,18 +82,89 @@ function generatePostHeader(post, avatarUrl, postDate) {
 }
 
 function generatePostContent(htmlContent) {
-    // Convert markdown to HTML if marked is available
-    const convertedHtml = typeof marked !== 'undefined'
-        ? marked.parse(htmlContent)
-        : htmlContent;
+    // Convert markdown to HTML if the `marked` library is available
+    let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
 
-    return `
-        <div class="post-content">
-            <div class="post-body markdown-content">
-                ${convertedHtml}
-            </div>
-        </div>
-    `;
+    // Process markdown-style image URLs to maintain PNG transparency
+    convertedHtml = convertedHtml.replace(
+        /!\[(.*?)\]\((.*?)\)/g,
+        (match, alt, url) => {
+            // Ensure the URL starts with "http" or "//"
+            if (!url.match(/^https?:\/\//)) url = `https://${url}`;
+
+            // Special handling for PNG files to preserve transparency
+            if (url.match(/\.png$/i)) {
+                return `<center><img src="${url}" 
+                    alt="${alt}"
+                    class="post-image"
+                    loading="lazy" /></center>`;
+            }
+
+            // Use CDN for other formats
+            const cdnUrl = `https://steemitimages.com/640x0/${url}`;
+            const cdnUrlHD = `https://steemitimages.com/1280x0/${url}`;
+
+            return `<center><img src="${cdnUrl}" 
+                alt="${alt}" 
+                srcset="${cdnUrl} 1x, ${cdnUrlHD} 2x"
+                class="post-image"
+                loading="lazy" /></center>`;
+        }
+    );
+
+    // Process existing <img> tags to maintain PNG transparency
+    convertedHtml = convertedHtml.replace(
+        /<img[^>]+src="([^"]+)"[^>]*>/gi,
+        (match, src) => {
+            // Ensure the URL starts with "http" or "//"
+            if (!src.match(/^https?:\/\//)) src = `https://${src}`;
+
+            // Special handling for PNG files to preserve transparency
+            if (src.match(/\.png$/i)) {
+                return `<center><img src="${src}" 
+                    class="post-image"
+                    loading="lazy" /></center>`;
+            }
+
+            // Use CDN for other formats
+            const cdnUrl = `https://steemitimages.com/640x0/${src}`;
+            const cdnUrlHD = `https://steemitimages.com/1280x0/${src}`;
+
+            return `<center><img src="${cdnUrl}" 
+                srcset="${cdnUrl} 1x, ${cdnUrlHD} 2x"
+                class="post-image"
+                loading="lazy" /></center>`;
+        }
+    );
+
+    // Process additional image URLs starting with http
+    convertedHtml = convertedHtml.replace(
+        /http:\/\/([^\s]+\.(png|jpg|jpeg|gif|webp))/gi,
+        (match, url) => {
+            const fullUrl = `http://${url}`;
+            
+            // Special handling for PNG files to preserve transparency
+            if (fullUrl.match(/\.png$/i)) {
+                return `<center><img src="${fullUrl}" 
+                    class="post-image"
+                    loading="lazy" /></center>`;
+            }
+
+            // Use CDN for other formats
+            const cdnUrl = `https://steemitimages.com/640x0/${fullUrl}`;
+            const cdnUrlHD = `https://steemitimages.com/1280x0/${fullUrl}`;
+
+            return `<center><img src="${cdnUrl}" 
+                srcset="${cdnUrl} 1x, ${cdnUrlHD} 2x"
+                class="post-image"
+                loading="lazy" /></center>`;
+        }
+    );
+
+    // Wrap the processed HTML in a container
+    return `<div class="post-content">
+        <div class="post-body markdown-content">${convertedHtml}</div>
+    </div>`;
 }
 
 function generatePostFooter(post) {

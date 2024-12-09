@@ -1,6 +1,5 @@
 import { extractProfileImage, extractImageFromContent } from './posts/post-utils.js';
-import {  showProfileLoadingIndicator, hideProfileLoadingIndicator 
-} from './ui/loading-indicators.js';
+import {  showLoadingIndicator, hideLoadingIndicator} from './ui/loading-indicators.js';
 
 
 
@@ -46,7 +45,7 @@ export async function loadHomeFeed(append = false) {
     
     try {
         isLoading = true;
-        showProfileLoadingIndicator();
+        showLoadingIndicator();
 
         // Ensure Steem connection is initialized
         await initSteemConnection();
@@ -99,7 +98,7 @@ export async function loadHomeFeed(append = false) {
         }
     } finally {
         isLoading = false;
-        hideProfileLoadingIndicator();
+        hideLoadingIndicator();
     }
 }
 

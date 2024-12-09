@@ -71,7 +71,7 @@ export async function handleLogin(username, key) {
         window.dispatchEvent(new CustomEvent('loginSuccess'));
         
         // Redirect to profile page
-        window.location.hash = `/profile/${username}`;
+        //window.location.hash = `/profile/${username}`;
         
         return true;
     } catch (error) {
@@ -103,35 +103,6 @@ export function checkExistingLogin() {
         return true;
     }
     return false;
-}
-
-async function updateProfileImage(account) {
-    try {
-        let profileImage = '';
-        if (account.json_metadata) {
-            try {
-                const metadata = typeof account.json_metadata === 'string' 
-                    ? JSON.parse(account.json_metadata) 
-                    : account.json_metadata;
-                profileImage = metadata?.profile?.profile_image;
-                if (!profileImage && account.posting_json_metadata) {
-                    const postingMetadata = JSON.parse(account.posting_json_metadata);
-                    profileImage = postingMetadata?.profile?.profile_image;
-                }
-            } catch (e) {
-                console.warn('Failed to parse account metadata');
-            }
-        }
-        profileImage = profileImage || `https://steemitimages.com/u/${account.name}/avatar`;
-        avatarCache.set(account.name, profileImage);
-        const navProfileImg = document.querySelector('.nav-profile-image img');
-        if (navProfileImg) {
-            navProfileImg.src = profileImage;
-            navProfileImg.alt = `@${account.name}`;
-        }
-    } catch (error) {
-        console.warn('Failed to update profile image:', error);
-    }
 }
 
 export async function attemptSteemLogin() {

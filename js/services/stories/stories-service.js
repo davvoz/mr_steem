@@ -159,7 +159,6 @@ function renderStoryModal(username, post, imageUrl) {
                     </div>
                 ` : ''}
                 <h3>${post.title}</h3>
-                <p>${post.body.substring(0, 280)}${post.body.length > 280 ? '...' : ''}</p>
                 <a href="#/post/${post.author}/${post.permlink}" class="view-full-post">
                     View Full Post
                 </a>

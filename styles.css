@@ -3721,7 +3721,7 @@ h1 {
     justify-content: center;
     align-items: center;
     padding: var(--spacing-xl);
-    width: 100%;
+    width: 150%;
 }
 
 .loading-spinner::after {
@@ -3879,4 +3879,25 @@ img {
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s;
+}
+/*correggi i link in dark mode*/
+a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+
+.post-body a {
+    color: #007bff;
+    text-decoration: none;
+}
+.post-body a:hover {
+    text-decoration: underline;
+}
+
+
+/* Centrare le immagini */
+.center {
+    text-align: center;
 }
