@@ -31,7 +31,7 @@ export async function loadSinglePost(author, permlink) {
             steem.api.getContentAsync(author, permlink),
             steem.api.getAccountsAsync([author])
         ]);
-        console.log(post);
+        
         const processedPost = {
             author: post.author,
             permlink: post.permlink,

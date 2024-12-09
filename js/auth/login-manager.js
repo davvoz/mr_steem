@@ -8,7 +8,7 @@ export const steemConnection = {
     steem: null,
     postingKey: null,
 
-    async connect(username, key) {
+    async connect(username, key = null) {
         try {
             const account = await steemClient.connect(username, key);
             this.username = username;
@@ -38,6 +38,34 @@ export function showLoginModal() {
         const keyInput = document.getElementById('steemKey');
         if (usernameInput) usernameInput.value = '';
         if (keyInput) keyInput.value = '';
+
+        // Add close button if it doesn't exist
+        if (!loginModal.querySelector('.close-button')) {
+            const closeButton = document.createElement('button');
+            closeButton.className = 'close-button';
+            closeButton.innerHTML = '&times;';
+            closeButton.style.cssText = `
+                position: absolute;
+                right: 10px;
+                top: 10px;
+                background: none;
+                border: none;
+                font-size: 24px;
+                cursor: pointer;
+                color: #666;
+                padding: 5px 10px;
+            `;
+            closeButton.onclick = hideLoginModal;
+            loginModal.appendChild(closeButton);
+        }
+
+        // Add click outside listener
+        loginModal.onclick = (e) => {
+            if (e.target === loginModal) {
+                hideLoginModal();
+            }
+        };
+
         loginModal.style.display = 'flex';
     }
 }
@@ -49,10 +77,10 @@ export function hideLoginModal() {
     }
 }
 
-export async function handleLogin(username, key) {
+export async function handleLogin(username, key = null) {
     try {
-        if (!username || !key) {
-            throw new Error('Username and key are required');
+        if (!username) {
+            throw new Error('Username is required');
         }
 
         await steemConnection.connect(username, key);
@@ -111,7 +139,7 @@ export async function attemptSteemLogin() {
         return;
     }
     const username = document.getElementById('steemUsername').value;
-    const key = document.getElementById('steemKey').value;
+    const key = document.getElementById('steemKey').value || null;
 
     if (!username) {
         alert('Please enter a username');
