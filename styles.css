@@ -1829,7 +1829,6 @@ body {
 
 .markdown-content img {
     max-width: 100%;
-    width: 100%;
     height: auto;
     max-height: 100%;
     border-radius: var(--radius-sm);
@@ -1843,10 +1842,17 @@ body {
 
 .markdown-content ul {
     padding-left: var(--spacing-lg);
+    margin: var(--spacing-md) ;
 }
 
 .markdown-content img[height] {
     height: auto;
+}
+
+ul {
+    list-style-type: none;
+    margin-left: var(--spacing-lg);
+    padding: 0;
 }
 
 .markdown-content p {

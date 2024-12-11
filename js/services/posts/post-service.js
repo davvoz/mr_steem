@@ -84,7 +84,6 @@ function generatePostHeader(post, avatarUrl, postDate) {
 function generatePostContent(htmlContent) {
     // Convert markdown to HTML if the `marked` library is available
     let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
-console.log(convertedHtml);
     // Process markdown-style image URLs to maintain PNG transparency
     convertedHtml = convertedHtml.replace(
         /!\[(.*?)\]\((.*?)\)/g,
@@ -94,21 +93,21 @@ console.log(convertedHtml);
 
             // Special handling for PNG files to preserve transparency
             if (url.match(/\.png$/i)) {
-                return `<center><img src="${url}" 
+                return `<img src="${url}" 
                     alt="${alt}"
                     class="post-image"
-                    loading="lazy" /></center>`;
+                    loading="lazy" />`;
             }
 
             // Use CDN for other formats
             const cdnUrl = `https://steemitimages.com/640x0/${url}`;
             const cdnUrlHD = `https://steemitimages.com/1280x0/${url}`;
 
-            return `<center><img src="${cdnUrl}" 
+            return `<img src="${cdnUrl}" 
                 alt="${alt}" 
                 srcset="${cdnUrl} 1x, ${cdnUrlHD} 2x"
                 class="post-image"
-                loading="lazy" /></center>`;
+                loading="lazy" />`;
         }
     );
 
@@ -121,19 +120,19 @@ console.log(convertedHtml);
 
             // Special handling for PNG files to preserve transparency
             if (src.match(/\.png$/i)) {
-                return `<center><img src="${src}" 
+                return `<img src="${src}" 
                     class="post-image"
-                    loading="lazy" /></center>`;
+                    loading="lazy" />`;
             }
 
             // Use CDN for other formats
             const cdnUrl = `https://steemitimages.com/640x0/${src}`;
             const cdnUrlHD = `https://steemitimages.com/1280x0/${src}`;
 
-            return `<center><img src="${cdnUrl}" 
+            return `<img src="${cdnUrl}" 
                 srcset="${cdnUrl} 1x, ${cdnUrlHD} 2x"
                 class="post-image"
-                loading="lazy" /></center>`;
+                loading="lazy" />`;
         }
     );
 
@@ -145,19 +144,19 @@ console.log(convertedHtml);
 
             // Special handling for PNG files to preserve transparency
             if (fullUrl.match(/\.png$/i)) {
-                return `<center><img src="${fullUrl}" 
+                return `<img src="${fullUrl}" 
                     class="post-image"
-                    loading="lazy" /></center>`;
+                    loading="lazy" />`;
             }
 
             // Use CDN for other formats
             const cdnUrl = `https://steemitimages.com/640x0/${fullUrl}`;
             const cdnUrlHD = `https://steemitimages.com/1280x0/${fullUrl}`;
 
-            return `<center><img src="${cdnUrl}" 
+            return `<img src="${cdnUrl}" 
                 srcset="${cdnUrl} 1x, ${cdnUrlHD} 2x"
                 class="post-image"
-                loading="lazy" /></center>`;
+                loading="lazy" />`;
         }
     );
     convertedHtml = convertedHtml.replace(
