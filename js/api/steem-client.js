@@ -8,6 +8,8 @@ export class SteemClient {
     async connect(username, key) {
         try {
             steem.api.setOptions({ url: 'https://api.steemit.com' });
+            //se usassimo moecki, dovremmo usare il seguente url
+            steem.api.setOptions({ url: 'https://api.moecki.online' });
             const accounts = await steem.api.getAccountsAsync([username]);
             
             if (accounts && accounts.length > 0) {

@@ -337,7 +337,7 @@ async function checkNotifications() {
     }
 }
 
- async function renderNotifications() {
+async function renderNotifications() {
     const container = document.getElementById('notifications-view');
     if (!container) {
         console.error('Notifications container not found');
@@ -351,36 +351,85 @@ async function checkNotifications() {
     container.innerHTML = `
         <div class="notifications-header">
             <h2>Notifications</h2>
+            <button id="refresh-notifications" class="refresh-button">
+                <i class="fas fa-sync-alt"></i>
+            </button>
         </div>
         <div class="notifications-list"></div>
     `;
 
+    // Aggiungi il gestore per il bottone refresh
+    const refreshButton = container.querySelector('#refresh-notifications');
+    refreshButton.addEventListener('click', async () => {
+        const icon = refreshButton.querySelector('i');
+        if (icon) {
+            refreshButton.disabled = true;
+            icon.classList.add('fa-spin');
+        }
+        // Reset dello stato
+        lastId = -1;
+        hasMore = true;
+        totalFetched = 0;
+        lastPostPermlink = null;
+        
+        // Pulisci la lista e ricarica
+        const listContainer = container.querySelector('.notifications-list');
+        listContainer.innerHTML = '';
+        
+        await loadMoreNotifications();
+        
+        refreshButton.disabled = false;
+        icon.classList.remove('fa-spin');
+    });
+
+    // Reset state
     isLoading = false;
     hasMore = true;
     lastId = -1;
+    totalFetched = 0;
+    lastPostPermlink = null;
 
-    const scrollHandler = () => {
+    // Setup scroll handler
+    const scrollHandler = throttle(() => {
+        if (document.documentElement.scrollHeight <= window.innerHeight) {
+            // If content doesn't fill the viewport, load more
+            if (!isLoading && hasMore) {
+                loadMoreNotifications();
+            }
+            return;
+        }
+
         const scrollPosition = window.innerHeight + window.pageYOffset;
         const threshold = document.documentElement.scrollHeight - (window.innerHeight * 1.5);
 
         if (scrollPosition >= threshold && !isLoading && hasMore) {
-            console.log('Triggering load more...', {
+            console.log('Loading more notifications...', {
                 scrollPosition,
                 threshold,
                 isLoading,
-                hasMore
+                hasMore,
+                totalFetched
             });
             loadMoreNotifications();
         }
-    };
+    }, 150);
 
-    const throttledHandler = throttle(scrollHandler, 150);
+    // Remove any existing scroll handler
+    if (container._notificationScrollHandler) {
+        window.removeEventListener('scroll', container._notificationScrollHandler);
+    }
 
-    window.addEventListener('scroll', throttledHandler, { passive: true });
+    // Add new scroll handler
+    window.addEventListener('scroll', scrollHandler, { passive: true });
+    container._notificationScrollHandler = scrollHandler;
 
-    container._notificationScrollHandler = throttledHandler;
-
+    // Initial load
     await loadMoreNotifications();
+
+    // Check if we need to load more content if the initial content doesn't fill the viewport
+    if (document.documentElement.scrollHeight <= window.innerHeight && !isLoading && hasMore) {
+        await loadMoreNotifications();
+    }
 
     console.log('Notifications rendered with infinite scroll');
 }
@@ -391,8 +440,6 @@ function cleanupNotificationsView() {
         window.removeEventListener('scroll', container._notificationScrollHandler);
         container._notificationScrollHandler = null;
     }
-    lastId = -1;
-    hasMore = true;
     isLoading = false;
     lastPostPermlink = null;
     totalFetched = 0;
@@ -515,3 +562,4 @@ async function restoreNotificationsState() {
     }
     return false;
 }
+
