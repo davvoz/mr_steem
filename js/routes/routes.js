@@ -125,36 +125,43 @@ export const routes = {
 
             hideAllViews();
             showView('post-view');
-            const post = await loadSinglePost(params.author, params.permlink);
             
-            // Rimuovi la condizione che controlla il tipo di notifica
-            const contextHeader = document.createElement('div');
-            contextHeader.className = 'notification-context-header';
-            
-            // Ottieni il titolo del post originale dal post caricato
-            const parentTitle = post.parent_permlink ? 
-                `<a href="#/post/${post.parent_author}/${post.parent_permlink}" class="parent-post-link">
-                    View original post: "${post.parent_title || 'Untitled'}"
-                </a>` : '';
-            
-            contextHeader.innerHTML = `
-                <div class="notification-context-nav">
-                    <button class="back-button">
-                        <i class="fas fa-arrow-left"></i> Back to Notifications
-                    </button>
-                    ${parentTitle}
-                </div>
-            `;
-            
-            contextHeader.querySelector('.back-button').addEventListener('click', (e) => {
-                e.preventDefault();
-                window.location.hash = '/notifications';
-            });
-            
-            const postView = document.getElementById('post-view');
-            postView.insertBefore(contextHeader, postView.firstChild);
+            try {
+                // First try to load the post directly
+                const post = await loadSinglePost(params.author, params.permlink);
+                
+                if (!post || !post.body) {
+                    console.error('Failed to load post directly, trying parent post');
+                    // If post not found, might be a comment, try to load parent post
+                    const content = await steem.api.getContentAsync(params.author, params.permlink);
+                    if (content && content.parent_author) {
+                        await loadSinglePost(content.parent_author, content.parent_permlink);
+                    }
+                }
+
+                const contextHeader = document.createElement('div');
+                contextHeader.className = 'notification-context-header';
+                
+                contextHeader.innerHTML = `
+                    <div class="notification-context-nav">
+                        <button class="back-button">
+                            <i class="fas fa-arrow-left"></i> Back to Notifications
+                        </button>
+                    </div>
+                `;
+                
+                contextHeader.querySelector('.back-button').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.location.hash = '/notifications';
+                });
+                
+                const postView = document.getElementById('post-view');
+                postView.insertBefore(contextHeader, postView.firstChild);
+            } catch (error) {
+                console.error('Error loading notification content:', error);
+            }
         }
-    }
+    },
 };
 
 async function showLikedPosts() {

@@ -96,6 +96,7 @@ async function fetchNotifications(fromId = -1, limit = 20) {
                             id: `vote-${vote.time}-${post.permlink}`,
                             type: 'vote',
                             from: vote.voter,
+                            author: post.author,      // Ensure author is always set
                             permlink: post.permlink,
                             weight: vote.percent / 100,
                             timestamp: vote.time,
@@ -115,7 +116,10 @@ async function fetchNotifications(fromId = -1, limit = 20) {
                             id: `comment-${reply.created}-${reply.author}`,
                             type: 'comment',
                             from: reply.author,
+                            author: reply.author,     // Use reply author for comments
                             permlink: reply.permlink,
+                            parentAuthor: post.author,
+                            parentPermlink: post.permlink,
                             timestamp: reply.created,
                             title: sanitizeContent(post.title || post.permlink),
                             comment: sanitizeContent(reply.body).substring(0, 100),
