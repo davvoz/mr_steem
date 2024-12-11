@@ -2,12 +2,21 @@ import { steemConnection } from '../../auth/login-manager.js';
 import { showProfileLoadingIndicator, hideProfileLoadingIndicator } from '../ui/loading-indicators.js';
 import { SteemAPI } from '../common/api-wrapper.js';
 import { extractProfileImage, extractImageFromContent } from '../posts/post-utils.js';
-import { setupInfiniteScroll } from '../ui/infinite-scroll.js';
+import { setupInfiniteScroll, cleanupInfiniteScroll } from '../ui/infinite-scroll.js';  // Add cleanupInfiniteScroll import
 let profileLastPost = null;
 let isLoadingProfile = false;
 let hasMoreProfilePosts = true;
 
 export async function loadUserProfile(username) {
+    // Reset scroll position and state immediately
+    window.scrollTo(0, 0);
+    profileLastPost = null;
+    isLoadingProfile = false;
+    hasMoreProfilePosts = true;
+    
+    // Ensure clean state
+    cleanupInfiniteScroll();
+    
     // Ensure view is visible
     const profileView = document.getElementById('profile-view');
     if (!profileView) {
@@ -22,12 +31,18 @@ export async function loadUserProfile(username) {
         const [account] = await SteemAPI.getAccounts([username]);
         if (!account) throw new Error('Account not found');
 
+        // Reset profile state before loading new profile
+        resetProfileState(username);
+
         const followCount = await SteemAPI.getFollowCount(username);
         const profileImage = extractProfileImage(account);
         const isFollowing = await checkIfFollowing(username);
         
         renderProfile(account, followCount, profileImage, isFollowing);
         setupProfileTabs(username);
+        
+        // Ensure UI is ready before loading posts
+        await new Promise(resolve => setTimeout(resolve, 100));
         await loadMoreProfilePosts(username, false);
         setupInfiniteScroll('profile');
 
@@ -73,12 +88,24 @@ export async function loadMoreProfilePosts(username, append = true) {
         isLoadingProfile = true;
         showProfileLoadingIndicator();
 
+        // Se non è append, resetta lo stato
+        if (!append) {
+            profileLastPost = null;
+            window.scrollTo(0, 0);
+        }
+
         const query = {
             tag: username,
             limit: 20,
             start_author: profileLastPost?.author || undefined,
             start_permlink: profileLastPost?.permlink || undefined
         };
+
+        // Se non è append, non usare i parametri start_author e start_permlink
+        if (!append) {
+            delete query.start_author;
+            delete query.start_permlink;
+        }
 
         let posts = await SteemAPI.getDiscussionsBy('blog', query);
 
@@ -100,6 +127,11 @@ export async function loadMoreProfilePosts(username, append = true) {
 
         // Update profileLastPost to the last post of the current batch
         profileLastPost = posts[posts.length - 1];
+
+        // Update scroll position if needed
+        if (!append) {
+            window.scrollTo(0, 0);
+        }
 
     } catch (error) {
         console.error('Failed to load profile posts:', error);
@@ -271,14 +303,18 @@ function updateProfileGrid(postsHTML, append) {
 }
 
 function resetProfileState(username) {
+    // Reset all state variables
     profileLastPost = null;
     isLoadingProfile = false;
     hasMoreProfilePosts = true;
-
+    
+    // Clear grid and force reflow
     const postsGrid = document.getElementById('profile-posts-grid');
+    if (postsGrid) {
+        postsGrid.innerHTML = '';
+        postsGrid.offsetHeight; // force reflow
+    }
     const blogPosts = document.getElementById('profile-blog-posts');
-    if (postsGrid) postsGrid.innerHTML = '';
     if (blogPosts) blogPosts.innerHTML = '';
 }
 
-// ... rest of profile related functions ...

@@ -318,16 +318,7 @@ body {
     background: #ccc;
 }
 
-.post-image {
-    width: 100%;
-    height: 500px;
-    background: #f0f0f0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    max-width: 100%;
-    height: auto;
-}
+
 
 .post-actions {
     padding: 1rem;
@@ -1810,26 +1801,32 @@ body {
     padding: 0 var(--spacing-lg);
     max-width: 100%;
 }
-.markdown-content table{
+
+.markdown-content table {
     width: 100%;
     border-collapse: collapse;
     margin: var(--spacing-md) 0;
 }
+
 .markdown-content table th,
 .markdown-content table td {
     border: 1px solid var(--border-color);
     padding: var(--spacing-sm);
     text-align: left;
 }
+
 .markdown-content table th {
     background: var(--secondary-color);
 }
+
 .markdown-content table tr:nth-child(even) {
     background: var(--secondary-color);
 }
+
 .markdown-content table tr:nth-child(odd) {
     background: var(--background);
 }
+
 .markdown-content img {
     max-width: 100%;
     width: 100%;
@@ -3885,7 +3882,9 @@ img {
     opacity: 0.8;
 }
 
-.comment-button ,.vote-button ,.comment-submit-btn {
+.comment-button,
+.vote-button,
+.comment-submit-btn {
     background-color: var(--background);
     color: var(--text-primary);
     border: none;
@@ -3896,6 +3895,7 @@ img {
     cursor: pointer;
     transition: background-color 0.2s;
 }
+
 /*correggi i link in dark mode*/
 a {
     color: var(--text-secondary);
@@ -3908,6 +3908,7 @@ a {
     color: #007bff;
     text-decoration: none;
 }
+
 .post-body a:hover {
     text-decoration: underline;
 }
@@ -3927,6 +3928,7 @@ a {
 .text-jutify {
     text-align: justify;
 }
+
 .vote-submit-btn {
     background-color: var(--primary-color);
     color: var(--background);
@@ -3938,6 +3940,7 @@ a {
     cursor: pointer;
     transition: background-color 0.2s;
 }
+
 #loginModal {
     position: fixed;
     top: 0;
@@ -3951,10 +3954,111 @@ a {
     z-index: 1000;
 }
 
-#loginModal > div {
+#loginModal>div {
     padding: 20px;
     border-radius: 8px;
     position: relative;
     max-width: 400px;
     width: 90%;
+}
+
+.notification-item {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+    background-color: var(--bg-secondary);
+}
+
+.notification-item.read {
+    opacity: 0.7;
+    background-color: var(--background);
+}
+
+.notification-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.notification-avatar img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.notification-details {
+    flex: 1;
+}
+
+.notification-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.notification-type-icon {
+    font-size: 1.2rem;
+}
+
+.notification-username {
+    font-weight: 600;
+    color: var (--text-primary);
+}
+
+.notification-text {
+    margin: 0.25rem 0;
+    color: var(--text-primary)
+}
+
+.notification-timestamp {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.back-button {
+    background: var(--background);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.notification-app {
+    font-size: 0.8em;
+    margin-left: auto;
+    padding-left: 8px;
+}
+
+.notification-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.notification-context-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+}
+
+.parent-post-link {
+    text-decoration: none;
+    font-size: 0.9em;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.parent-post-link:hover {
+    text-decoration: underline;
 }

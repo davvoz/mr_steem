@@ -2,7 +2,7 @@ import { handleLogin, showLoginModal, handleLogout, checkExistingLogin, steemCon
 import { loadStories } from '../services/stories/stories-service.js';
 import { updateSidebar } from '../services/sidebar/sidebar-service.js';
 import { loadSuggestions } from '../services/suggestions/suggestions-service.js';
-import { startNotificationPolling, renderNotifications, stopNotificationPolling } from '../services/notification-manager.js';
+import { startNotificationPolling, renderNotifications, stopNotificationPolling, cleanupNotificationsView } from '../services/notification-manager.js';
 import { Router } from '../routes/router.js';
 import { cleanupInfiniteScroll } from '../services/ui/infinite-scroll.js';
 import { loadPostsByTag } from '../services/tag/tag-service.js';
@@ -53,6 +53,12 @@ function setupNavigation() {
         element.addEventListener('click', (e) => {
             e.preventDefault();
             const route = e.currentTarget.dataset.route;
+            
+            // Cleanup notifications view if navigating away
+            if (!route.startsWith('/notifications')) {
+                cleanupNotificationsView();
+            }
+            
             Router.navigate(route);
             if (route.startsWith('/post/')) {
                 cleanupInfiniteScroll();

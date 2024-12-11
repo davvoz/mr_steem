@@ -29,6 +29,11 @@ export function setupInfiniteScroll(type = 'home') {
     resetLoadingState();
     cleanupInfiniteScroll();
     
+    // Reset scroll position for new profile
+    if (type === 'profile') {
+        window.scrollTo(0, 0);
+    }
+    
     // Create new optimized scroll handler based on type
     const handler = throttle(() => {
         if (loadingLock) return;
@@ -44,6 +49,8 @@ export function setupInfiniteScroll(type = 'home') {
                     
                     if (type === 'profile') {
                         const username = window.location.hash.split('/')[2];
+                        // Add a small delay to ensure proper positioning
+                        await new Promise(resolve => setTimeout(resolve, 100));
                         await loadMoreProfilePosts(username, true);
                     } else {
                         await loadSteemPosts();
@@ -65,8 +72,9 @@ export function setupInfiniteScroll(type = 'home') {
 }
 
 export function cleanupInfiniteScroll() {
-    // Reset loading state when cleaning up
+    // Reset loading state and scroll position
     resetLoadingState();
+    window.scrollTo(0, 0);
     
     // Remove all scroll handlers
     ['_homeScrollHandler', '_profileScrollHandler'].forEach(key => {

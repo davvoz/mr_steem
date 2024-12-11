@@ -1,6 +1,6 @@
 import { hideAllViews, showView } from '../utils/view-manager.js';
 import { steemConnection, showLoginModal } from '../auth/login-manager.js';
-import { renderNotifications } from '../services/notification-manager.js';
+import { renderNotifications, storeNotificationsState } from '../services/notification-manager.js';
 import { searchService } from '../services/search-service.js';
 import { loadCommunity } from '../services/community-manager.js';
 import { loadSinglePost } from '../services/posts/post-service.js';
@@ -76,11 +76,12 @@ export const routes = {
         handler: async () => {
             hideAllViews();
             showView('notifications-view');
+            await renderNotifications();
+
             const navMenu = document.querySelector('.nav-menu');
             if (window.innerWidth <= 768) {
                 navMenu.classList.remove('active');
             }
-            await renderNotifications();
         }
     },
     '/search': {
@@ -113,6 +114,45 @@ export const routes = {
             });
 
             await loadPostsByTag(params.tag);
+        }
+    },
+    '/notification/:author/:permlink': {
+        viewId: 'notification-context-view',
+        handler: async (params) => {
+            if (document.getElementById('notifications-view')?.style.display !== 'none') {
+                storeNotificationsState();
+            }
+
+            hideAllViews();
+            showView('post-view');
+            const post = await loadSinglePost(params.author, params.permlink);
+            
+            // Rimuovi la condizione che controlla il tipo di notifica
+            const contextHeader = document.createElement('div');
+            contextHeader.className = 'notification-context-header';
+            
+            // Ottieni il titolo del post originale dal post caricato
+            const parentTitle = post.parent_permlink ? 
+                `<a href="#/post/${post.parent_author}/${post.parent_permlink}" class="parent-post-link">
+                    View original post: "${post.parent_title || 'Untitled'}"
+                </a>` : '';
+            
+            contextHeader.innerHTML = `
+                <div class="notification-context-nav">
+                    <button class="back-button">
+                        <i class="fas fa-arrow-left"></i> Back to Notifications
+                    </button>
+                    ${parentTitle}
+                </div>
+            `;
+            
+            contextHeader.querySelector('.back-button').addEventListener('click', (e) => {
+                e.preventDefault();
+                window.location.hash = '/notifications';
+            });
+            
+            const postView = document.getElementById('post-view');
+            postView.insertBefore(contextHeader, postView.firstChild);
         }
     }
 };
