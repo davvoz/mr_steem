@@ -84,107 +84,90 @@ function generatePostHeader(post, avatarUrl, postDate) {
 function generatePostContent(htmlContent) {
     // Convert markdown to HTML if the `marked` library is available
     let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
-    // Process markdown-style image URLs to maintain PNG transparency
-    convertedHtml = convertedHtml.replace(
-        /!\[(.*?)\]\((.*?)\)/g,
-        (match, alt, url) => {
-            // Ensure the URL starts with "http" or "//"
-            if (!url.match(/^https?:\/\//)) url = `https://${url}`;
 
-            // Special handling for PNG files to preserve transparency
-            if (url.match(/\.png$/i)) {
-                return `<img src="${url}" 
-                    alt="${alt}"
-                    class="post-image"
-                    loading="lazy" />`;
+    // Remove any standalone file extensions that might appear after images
+    convertedHtml = convertedHtml.replace(/\.(jpe?g|png|gif|webp)\)/gi, '');
+
+    // Clean up any extra spaces before image markdown
+    convertedHtml = convertedHtml.replace(/\s+!\[/g, '![');
+
+    // First pass: handle regular links (non-media)
+    convertedHtml = convertedHtml.replace(
+        /\[([^\]]+)\]\(([^)]+)\)/g,
+        (match, text, url) => {
+            if (url.includes('steemit.com')) {
+                return `<a href="${url}" target="_blank">${text}</a>`;
             }
-
-            // Use CDN for other formats
-            const cdnUrl = `https://steemitimages.com/640x0/${url}`;
-            const cdnUrlHD = `https://steemitimages.com/1280x0/${url}`;
-
-            return `<img src="${cdnUrl}" 
-                alt="${alt}" 
-                srcset="${cdnUrl} 1x, ${cdnUrlHD} 2x"
-                class="post-image"
-                loading="lazy" />`;
+            return match;
         }
     );
 
-    // Process existing <img> tags to maintain PNG transparency
+    // Second pass: handle image markdown more aggressively
     convertedHtml = convertedHtml.replace(
-        /<img[^>]+src="([^"]+)"[^>]*>/gi,
-        (match, src) => {
-            // Ensure the URL starts with "http" or "//"
-            if (!src.match(/^https?:\/\//)) src = `https://${src}`;
-
-            // Special handling for PNG files to preserve transparency
-            if (src.match(/\.png$/i)) {
-                return `<img src="${src}" 
-                    class="post-image"
-                    loading="lazy" />`;
-            }
-
-            // Use CDN for other formats
-            const cdnUrl = `https://steemitimages.com/640x0/${src}`;
-            const cdnUrlHD = `https://steemitimages.com/1280x0/${src}`;
-
-            return `<img src="${cdnUrl}" 
-                srcset="${cdnUrl} 1x, ${cdnUrlHD} 2x"
-                class="post-image"
-                loading="lazy" />`;
+        /!\[([^\]]*)\]\(([^)]+?)(?:\.(jpe?g|png|gif|webp))?\)/gi,
+        (match, alt, url, ext) => {
+            // Clean up the URL and ensure extension is included if it exists
+            const finalUrl = ext ? `${url}.${ext}` : url;
+            return generateMediaTag(finalUrl.trim(), alt);
         }
     );
 
-    // Process additional image URLs starting with http
-    convertedHtml = convertedHtml.replace(
-        /http:\/\/([^\s]+\.(png|jpg|jpeg|gif|webp))/gi,
-        (match, url) => {
-            const fullUrl = `http://${url}`;
-
-            // Special handling for PNG files to preserve transparency
-            if (fullUrl.match(/\.png$/i)) {
-                return `<img src="${fullUrl}" 
-                    class="post-image"
-                    loading="lazy" />`;
-            }
-
-            // Use CDN for other formats
-            const cdnUrl = `https://steemitimages.com/640x0/${fullUrl}`;
-            const cdnUrlHD = `https://steemitimages.com/1280x0/${fullUrl}`;
-
-            return `<img src="${cdnUrl}" 
-                srcset="${cdnUrl} 1x, ${cdnUrlHD} 2x"
-                class="post-image"
-                loading="lazy" />`;
-        }
-    );
-    convertedHtml = convertedHtml.replace(
-        /<a[^>]+href="([^"]+\.(png|jpg|jpeg|gif|webp)(\?[^"]*)?)"[^>]*>(.*?)<\/a>/gi,
-        (match, href, extension, queryString, innerText) => {
-            // Decodifica entità HTML e pulizia dell'URL
-            let originalUrl = href.replace(/&amp;/g, '&');
-    
-            // Costruzione del prefisso Steemit CDN
-            let steemitBaseUrl = 'https://steemitimages.com';
-            let steemitUrl = `${steemitBaseUrl}/640x0/${originalUrl}`;
-            let steemitUrlHD = `${steemitBaseUrl}/1280x0/${originalUrl}`;
-    
-            // Generazione del tag `img` completo
-            return `<img 
-                src="${steemitUrl}" 
-                srcset="${steemitUrl} 1x, ${steemitUrlHD} 2x" 
-                alt="image" 
-                style="width: 100%; max-width: 100%; height: auto;"
-            />`;
-        }
-    );
-    
-    
-    // Wrap the processed HTML in a container
     return `<div class="post-content">
         <div class="post-body markdown-content">${convertedHtml}</div>
     </div>`;
+}
+
+function generateMediaTag(url, alt = 'image') {
+    // Extract the real URL from nested structures
+    const extractRealUrl = (url) => {
+        // First clean any HTML entities
+        let cleanUrl = url.replace(/&amp;/g, '&');
+        
+        // Extract URL from steemitimages.com wrapper if present
+        const steemitMatch = cleanUrl.match(/https:\/\/steemitimages\.com\/[^/]+\/(.+)/);
+        if (steemitMatch) {
+            cleanUrl = steemitMatch[1];
+        }
+
+        // Try to decode the URL, but keep original if it fails
+        try {
+            cleanUrl = decodeURIComponent(cleanUrl);
+        } catch (e) {}
+
+        // Remove everything after ? or ) or # characters
+        cleanUrl = cleanUrl.split(/[\?\)\#]/)[0];
+        
+        // Remove any remaining encoded characters
+        cleanUrl = cleanUrl
+            .replace(/%20/g, ' ')
+            .replace(/%2F/g, '/')
+            .replace(/%3A/g, ':')
+            .replace(/%2E/g, '.')
+            .trim();
+
+        // Ensure https protocol
+        if (!cleanUrl.startsWith('http')) {
+            cleanUrl = 'https://' + cleanUrl.replace(/^\/\//, '');
+        }
+
+        return cleanUrl;
+    };
+
+    const finalUrl = extractRealUrl(url);
+
+    if (finalUrl.match(/\.mp4$/i)) {
+        return `<video controls class="post-video" loading="lazy">
+            <source src="${finalUrl}" type="video/mp4">
+            Your browser does not support video playback.
+        </video>`;
+    }
+    
+    // For all images (including GIFs), use the Steemit CDN with clean URL
+    const cdnUrl = `https://steemitimages.com/640x0/${finalUrl}`;
+    return `<img src="${cdnUrl}" 
+        alt="${alt}"
+        class="post-image${finalUrl.match(/\.gif$/i) ? ' gif' : ''}"
+        loading="lazy" />`;
 }
 
 function generatePostFooter(post) {
