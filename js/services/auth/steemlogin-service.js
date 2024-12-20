@@ -1,8 +1,9 @@
 export class SteemLoginService {
     constructor() {
-        this.baseURL = 'https://steemlogin.com';
+        // Modifica l'URL di callback per includere il percorso completo con l'hash
+        this.redirectUri = window.location.origin + window.location.pathname + '#/';
         this.clientId = 'steemgram';
-        this.redirectUri = window.location.origin + window.location.pathname;
+        this.baseURL = 'https://steemlogin.com';
     }
 
     generateLoginURL() {
@@ -28,6 +29,8 @@ export class SteemLoginService {
     async initiateLogin() {
         try {
             const loginUrl = this.generateLoginURL();
+            // Salva l'URL corrente per il redirect dopo il login
+            sessionStorage.setItem('returnTo', window.location.hash || '#/');
             window.location.href = loginUrl;
         } catch (error) {
             console.error('Login initialization failed:', error);

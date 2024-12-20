@@ -270,21 +270,21 @@ export async function attemptKeychainLogin() {
 }
 
 export async function initializeLoginHandlers() {
-    // Check for hash parameters immediately when the page loads
-    if (window.location.hash) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get('access_token');
+    const username = urlParams.get('username');
+
+    if (accessToken && username) {
         try {
-            const params = new URLSearchParams(window.location.hash.substring(1));
-            const accessToken = params.get('access_token');
-            const username = params.get('username');
+            console.log('Processing login data:', { username, accessToken });
+            await handleLogin(username, null, false, accessToken);
             
-            if (accessToken && username) {
-                console.log('Found login data:', { username, accessToken });
-                await handleLogin(username, null, false, accessToken);
-                showToast('Successfully logged in!', 'success');
-                
-                // Clean URL without reloading the page
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
+            // Recupera l'URL salvato e reindirizza
+            const returnTo = sessionStorage.getItem('returnTo') || '#/';
+            sessionStorage.removeItem('returnTo');
+            window.location.hash = returnTo;
+            
+            showToast('Successfully logged in!', 'success');
         } catch (error) {
             console.error('Login callback error:', error);
             showToast('Login failed: ' + error.message, 'error');
