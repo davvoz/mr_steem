@@ -2,23 +2,26 @@ export class SteemLoginService {
     constructor() {
         this.baseURL = 'https://steemlogin.com';
         this.clientId = 'steemgram';
+        // Make sure this matches exactly what you registered in steemlogin.com
+        this.redirectUri = 'https://davvoz.github.io/mr_steem/';
     }
 
     generateLoginURL() {
         try {
-            const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname);
             const state = Math.random().toString(36).substring(7);
             sessionStorage.setItem('steemLoginState', state);
 
             const params = new URLSearchParams({
-                response_type: 'token',
                 client_id: this.clientId,
-                redirect_uri: redirectUri,
+                response_type: 'code',
+                redirect_uri: this.redirectUri,
                 scope: 'login,vote,comment,custom_json',
                 state: state
             });
 
-            return `${this.baseURL}/oauth2/authorize?${params.toString()}`;
+            const loginUrl = `${this.baseURL}/oauth2/authorize?${params.toString()}`;
+            console.log('Generated login URL:', loginUrl); // For debugging
+            return loginUrl;
         } catch (error) {
             console.error('Error generating login URL:', error);
             throw new Error('Failed to initialize login');
