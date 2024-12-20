@@ -270,21 +270,20 @@ export async function attemptKeychainLogin() {
 }
 
 export async function initializeLoginHandlers() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const accessToken = urlParams.get('access_token');
-    const username = urlParams.get('username');
+    // Verifica se siamo in un callback di login
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get('access_token');
+    const username = params.get('username');
 
     if (accessToken && username) {
         try {
-            console.log('Processing login data:', { username, accessToken });
+            console.log('Found login data:', { username, accessToken });
             await handleLogin(username, null, false, accessToken);
-            
-            // Recupera l'URL salvato e reindirizza
-            const returnTo = sessionStorage.getItem('returnTo') || '#/';
-            sessionStorage.removeItem('returnTo');
-            window.location.hash = returnTo;
-            
             showToast('Successfully logged in!', 'success');
+            
+            // Pulisci l'URL e vai alla home
+            window.history.replaceState({}, document.title, '/mr_steem/');
+            window.location.hash = '#/';
         } catch (error) {
             console.error('Login callback error:', error);
             showToast('Login failed: ' + error.message, 'error');

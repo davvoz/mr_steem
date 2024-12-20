@@ -1,25 +1,16 @@
 export class SteemLoginService {
     constructor() {
-        // Modifica l'URL di callback per includere il percorso completo con l'hash
-        this.redirectUri = window.location.origin + window.location.pathname + '#/';
-        this.clientId = 'steemgram';
         this.baseURL = 'https://steemlogin.com';
+        this.clientId = 'steemgram';
     }
 
     generateLoginURL() {
         try {
-            const state = Math.random().toString(36).substring(7);
-            sessionStorage.setItem('steemLoginState', state);
-
-            const params = new URLSearchParams({
-                client_id: this.clientId,
-                response_type: 'token',
-                redirect_uri: this.redirectUri,
-                scope: 'login,vote,comment,custom_json',
-                state: state
-            });
-
-            return `${this.baseURL}/oauth2/authorize?${params.toString()}`;
+            // Usa l'URL completo dell'app come redirect
+            const redirectUri = 'https://davvoz.github.io/mr_steem/';
+            
+            // Costruisci l'URL di login direttamente
+            return `${this.baseURL}/login-request/${redirectUri}`;
         } catch (error) {
             console.error('Error generating login URL:', error);
             throw new Error('Failed to initialize login');
@@ -29,66 +20,30 @@ export class SteemLoginService {
     async initiateLogin() {
         try {
             const loginUrl = this.generateLoginURL();
-            // Salva l'URL corrente per il redirect dopo il login
-            sessionStorage.setItem('returnTo', window.location.hash || '#/');
+            console.log('Redirecting to:', loginUrl);
             window.location.href = loginUrl;
         } catch (error) {
             console.error('Login initialization failed:', error);
-            throw new Error('Failed to start login process');
+            throw error;
         }
     }
 
     async handleCallback() {
         try {
-            // Get token from URL fragment (#)
-            const fragment = window.location.hash.substring(1);
-            const params = new URLSearchParams(fragment);
-            
-            // Get token and username directly from URL parameters
+            const params = new URLSearchParams(window.location.search);
             const accessToken = params.get('access_token');
             const username = params.get('username');
             
+            console.log('Callback params:', { accessToken, username });
+            
             if (!accessToken || !username) {
-                console.log('No token or username found in URL');
                 return null;
             }
 
-            console.log('Login data found:', { username, accessToken });
-
-            // Clear the URL without triggering a reload
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            return {
-                username: username,
-                accessToken: accessToken
-            };
+            return { username, accessToken };
         } catch (error) {
             console.error('Callback handling error:', error);
             throw error;
-        }
-    }
-
-    async getUserData(accessToken) {
-        try {
-            const response = await fetch(`${this.baseURL}/api/me`, {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch user data');
-            }
-
-            const userData = await response.json();
-            return {
-                username: userData.username || userData._id,
-                accessToken
-            };
-        } catch (error) {
-            console.error('Error fetching user data:', error);
-            throw new Error('Failed to fetch user data');
         }
     }
 }
