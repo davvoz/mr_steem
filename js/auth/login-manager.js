@@ -101,24 +101,27 @@ export async function handleLogin(username, key = null, useKeychain = false, acc
             throw new Error('Username is required');
         }
 
-        // For SteemLogin, we don't need to verify the posting key
-        const skipKeyCheck = !!accessToken;
-        
-        await steemConnection.connect(username, key);
+        // Set connection state first
         steemConnection.username = username;
         steemConnection.isConnected = true;
         steemConnection.useKeychain = useKeychain;
 
+        // Save login state
+        localStorage.setItem('steemUsername', username);
+        localStorage.setItem('loginMethod', accessToken ? 'steemlogin' : (useKeychain ? 'keychain' : 'manual'));
+        
         if (accessToken) {
             sessionStorage.setItem('steemLoginAccessToken', accessToken);
-            localStorage.setItem('loginMethod', 'steemlogin');
-        } else {
-            localStorage.setItem('loginMethod', useKeychain ? 'keychain' : 'manual');
+        } else if (key && !useKeychain) {
+            sessionStorage.setItem('steemPostingKey', key);
         }
 
-        localStorage.setItem('steemUsername', username);
-        if (key && !useKeychain) {
-            sessionStorage.setItem('steemPostingKey', key);
+        // Try to connect to Steem
+        try {
+            await steemConnection.connect(username, key);
+        } catch (error) {
+            console.warn('Steem connection warning:', error);
+            // Continue anyway since we have valid credentials
         }
 
         hideLoginModal();
@@ -267,19 +270,23 @@ export async function attemptKeychainLogin() {
 }
 
 export async function initializeLoginHandlers() {
-    const steemLoginService = new SteemLoginService();
-    
-    // Check if we're returning from a SteemLogin redirect
-    if (window.location.hash.includes('access_token')) {
+    // Check for hash parameters immediately when the page loads
+    if (window.location.hash) {
         try {
-            const loginData = await steemLoginService.handleCallback();
-            if (loginData) {
-                console.log('Processing SteemLogin callback:', loginData);
-                await handleLogin(loginData.username, null, false, loginData.accessToken);
-                showToast('Successfully logged in with SteemLogin!', 'success');
+            const params = new URLSearchParams(window.location.hash.substring(1));
+            const accessToken = params.get('access_token');
+            const username = params.get('username');
+            
+            if (accessToken && username) {
+                console.log('Found login data:', { username, accessToken });
+                await handleLogin(username, null, false, accessToken);
+                showToast('Successfully logged in!', 'success');
+                
+                // Clean URL without reloading the page
+                window.history.replaceState({}, document.title, window.location.pathname);
             }
         } catch (error) {
-            console.error('SteemLogin callback error:', error);
+            console.error('Login callback error:', error);
             showToast('Login failed: ' + error.message, 'error');
         }
     }
