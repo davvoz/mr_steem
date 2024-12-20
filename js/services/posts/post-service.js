@@ -31,7 +31,7 @@ export async function loadSinglePost(author, permlink) {
             steem.api.getContentAsync(author, permlink),
             steem.api.getAccountsAsync([author])
         ]);
-        
+
         const processedPost = {
             author: post.author,
             permlink: post.permlink,
@@ -85,33 +85,43 @@ function generatePostContent(htmlContent) {
     // Convert markdown to HTML if the `marked` library is available
     let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
 
-    // Remove any standalone file extensions that might appear after images
+    // Step 1: Remove standalone file extensions after image links
     convertedHtml = convertedHtml.replace(/\.(jpe?g|png|gif|webp)\)/gi, '');
 
-    // Clean up any extra spaces before image markdown
+    // Step 2: Clean up extra spaces before image markdown
     convertedHtml = convertedHtml.replace(/\s+!\[/g, '![');
 
-    // First pass: handle regular links (non-media)
+    // Step 3: Convert Steemit links to <a> tags
     convertedHtml = convertedHtml.replace(
         /\[([^\]]+)\]\(([^)]+)\)/g,
         (match, text, url) => {
             if (url.includes('steemit.com')) {
                 return `<a href="${url}" target="_blank">${text}</a>`;
             }
-            return match;
+            return match; // Keep the original format for non-Steemit links
         }
     );
 
-    // Second pass: handle image markdown more aggressively
+    // Step 4: Handle standalone image markdown and convert to <img> tags
     convertedHtml = convertedHtml.replace(
         /!\[([^\]]*)\]\(([^)]+?)(?:\.(jpe?g|png|gif|webp))?\)/gi,
         (match, alt, url, ext) => {
-            // Clean up the URL and ensure extension is included if it exists
             const finalUrl = ext ? `${url}.${ext}` : url;
             return generateMediaTag(finalUrl.trim(), alt);
         }
     );
 
+    // Step 5: Handle <a> wrapping around image URLs and keep only the image
+    convertedHtml = convertedHtml.replace(
+        /<a[^>]+href="([^"]+\.(?:jpg|png|jpeg|gif|webp)[^"]*)"[^>]*>.*?<\/a>/ig,
+        (match, url) => generateMediaTag(url)
+    );
+    console.log(convertedHtml);
+    // Step 6: dobbiamo convertire roba tipo <center>![C3TZR1g81UNaPs7vzNXHueW5ZM76DSHWEY7onmfLxcK2iPJL81FSnaUvBWcD5iZTFpjf9ezxs3kiupVWRKF61XuqhasvCtC1JRTK9P6Sz7YNnUaWYABNiuL.png](https://cdn.steemitimages.com/DQmRDGakkjKoaVympAAufuzPBV4RV5JAPaBNHW5UvyKR6qr/C3TZR1g81UNaPs7vzNXHueW5ZM76DSHWEY7onmfLxcK2iPJL81FSnaUvBWcD5iZTFpjf9ezxs3kiupVWRKF61XuqhasvCtC1JRTK9P6Sz7YNnUaWYABNiuL</center>
+    //in un formato tipo ;<center><img src="https://steemitimages.com/640x0/https://cdn.steemitimages.com/DQmRDGakkjKoaVympAAufuzPBV4RV5JAPaBNHW5UvyKR6qr/C3TZR1g81UNaPs7vzNXHueW5ZM76DSHWEY7onmfLxcK2iPJL81FSnaUvBWcD5iZTFpjf9ezxs3kiupVWRKF61XuqhasvCtC1JRTK9P6Sz7YNnUaWYABNiuL.png" alt="C3TZR1g81UNaPs7vzNXHueW5ZM76DSHWEY7onmfLxcK2iPJL81FSnaUvBWcD5iZTFpjf9ezxs3kiupVWRKF61XuqhasvCtC1JRTK9P6Sz7YNnUaWYABNiuL.png" srcset="https://steemitimages.com/640x0/https://cdn.steemitimages.com/DQmRDGakkjKoaVympAAufuzPBV4RV5JAPaBNHW5UvyKR6qr/C3TZR1g81UNaPs7vzNXHueW5ZM76DSHWEY7onmfLxcK2iPJL81FSnaUvBWcD5iZTFpjf9ezxs3kiupVWRKF61XuqhasvCtC1JRTK9P6Sz7YNnUaWYABNiuL.png 1x, https://steemitimages.com/1280x0/https://cdn.steemitimages.com/DQmRDGakkjKoaVympAAufuzPBV4RV5JAPaBNHW5UvyKR6qr/C3TZR1g81UNaPs7vzNXHueW5ZM76DSHWEY7onmfLxcK2iPJL81FSnaUvBWcD5iZTFpjf9ezxs3kiupVWRKF61XuqhasvCtC1JRTK9P6Sz7YNnUaWYABNiuL.png 2x"></center>
+
+
+    // Return the final HTML structure
     return `<div class="post-content">
         <div class="post-body markdown-content">${convertedHtml}</div>
     </div>`;
@@ -122,7 +132,7 @@ function generateMediaTag(url, alt = 'image') {
     const extractRealUrl = (url) => {
         // First clean any HTML entities
         let cleanUrl = url.replace(/&amp;/g, '&');
-        
+
         // Extract URL from steemitimages.com wrapper if present
         const steemitMatch = cleanUrl.match(/https:\/\/steemitimages\.com\/[^/]+\/(.+)/);
         if (steemitMatch) {
@@ -132,11 +142,11 @@ function generateMediaTag(url, alt = 'image') {
         // Try to decode the URL, but keep original if it fails
         try {
             cleanUrl = decodeURIComponent(cleanUrl);
-        } catch (e) {}
+        } catch (e) { }
 
         // Remove everything after ? or ) or # characters
         cleanUrl = cleanUrl.split(/[\?\)\#]/)[0];
-        
+
         // Remove any remaining encoded characters
         cleanUrl = cleanUrl
             .replace(/%20/g, ' ')
@@ -161,7 +171,7 @@ function generateMediaTag(url, alt = 'image') {
             Your browser does not support video playback.
         </video>`;
     }
-    
+
     // For all images (including GIFs), use the Steemit CDN with clean URL
     const cdnUrl = `https://steemitimages.com/640x0/${finalUrl}`;
     return `<img src="${cdnUrl}" 
