@@ -28,9 +28,9 @@ Hey Steemians! 👋 Check out this cool project I've been working on - it's like
 
 - Can't create new posts yet (coming soon!)
 - No image upload - have to use external image links
-- Limited to photography tag for now
+- Home is limited to photography tag for now
 - Missing some advanced Steem features like:
-  - Delegations
+  - Delegations 
   - Power up/down
   - Wallet functions
   - Multiple account support
@@ -49,9 +49,10 @@ Feel free to fork and submit PRs! The code is organized into modules:
 
 ## 🚀 Try It Out!
 
-Just visit: [SteemGram Demo](https://yourusername.github.io/steemgram)
+Just visit: [SteemGram Demo](https://davvoz.github.io/mr_steem/)
 
 Login with your Steem account to get the full experience! Don't worry, your keys never leave your browser.
+I will implement steemkeychain support soon!
 
 Let me know what you think in the comments! Would love to hear your feedback and suggestions for improvements. ❤️
 
