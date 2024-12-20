@@ -2,6 +2,7 @@ import { avatarCache } from '../utils/avatar-cache.js';
 import { stopNotificationPolling } from '../services/notification-manager.js';
 import { steemClient } from '../api/steem-client.js';
 import { KeychainLogin } from '../services/auth/keychain-service.js';
+import { SteemLoginService } from '../services/auth/steemlogin-service.js';
 
 export const steemConnection = {
     username: null,
@@ -94,7 +95,7 @@ export function hideLoginModal() {
     }
 }
 
-export async function handleLogin(username, key = null, useKeychain = false) {
+export async function handleLogin(username, key = null, useKeychain = false, accessToken = null) {
     try {
         if (!username) {
             throw new Error('Username is required');
@@ -104,6 +105,9 @@ export async function handleLogin(username, key = null, useKeychain = false) {
         steemConnection.username = username;
         steemConnection.isConnected = true;
         steemConnection.useKeychain = useKeychain;
+        if (accessToken) {
+            sessionStorage.setItem('steemLoginAccessToken', accessToken);
+        }
 
         // Save login state
         localStorage.setItem('steemUsername', username);
@@ -184,7 +188,7 @@ export async function attemptSteemLogin() {
 }
 
 function updateConnectionStatus(username) {
-   
+
 }
 
 export function isKeychainAvailable() {
@@ -208,7 +212,7 @@ export async function attemptManualLogin() {
 
     try {
         await validateUsername(username);
-        
+
         if (!key) {
             throw new Error('Private posting key is required for manual login');
         }
@@ -252,5 +256,28 @@ export async function attemptKeychainLogin() {
     } catch (error) {
         showToast(error.message, 'error');
         return false;
+    }
+}
+
+export async function initializeLoginHandlers() {
+    const steemLoginService = new SteemLoginService();
+
+    // Handle callback if present
+    try {
+        const callbackData = await steemLoginService.handleCallback();
+        if (callbackData) {
+            await handleLogin(callbackData.username, null, false, callbackData.accessToken);
+        }
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
+}
+
+export function attemptSteemLoginAuth() {
+    try {
+        const steemLoginService = new SteemLoginService();
+        steemLoginService.initiateLogin();
+    } catch (error) {
+        alert(error.message);
     }
 }

@@ -1,7 +1,11 @@
 import { Router } from './routes/router.js';
 import { setupUIEventListeners } from './components/ui-handlers.js';
 import { routes } from './routes/routes.js';
-import { checkExistingLogin } from './auth/login-manager.js';
+import { 
+    checkExistingLogin, 
+    initializeLoginHandlers,
+    attemptSteemLoginAuth 
+} from './auth/login-manager.js';
 import { startNotificationPolling } from './services/notification-manager.js';
 import { showWipNotification } from './utils/notifications.js';
 import { init as initSidebar } from './services/sidebar/sidebar-service.js';
@@ -44,7 +48,17 @@ class App {
     }
 
     async setupEventListeners() {
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeLoginHandlers();
+            
+            // Add SteemLogin button handler with proper reference
+            const steemLoginButton = document.getElementById('steemLoginButton');
+            if (steemLoginButton) {
+                steemLoginButton.addEventListener('click', () => {
+                    attemptSteemLoginAuth();
+                });
+            }
+
             setupUIEventListeners();
             this.router.handleRoute();
             initTheme();
