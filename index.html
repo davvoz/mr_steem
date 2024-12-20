@@ -98,12 +98,40 @@
     <div class="login-modal" id="loginModal" role="dialog" aria-labelledby="loginTitle">
         <div class="login-form">
             <h2 id="loginTitle">Connect to Steem Blockchain</h2>
-            <input type="text" id="steemUsername" placeholder="Steem Username" autocomplete="username" required>
-            <input type="password" id="steemKey" placeholder="Private Posting Key (optional)"
-                autocomplete="current-password">
-            <button id="loginButton" type="submit">Connect to Steem</button>
-            <div class="steem-info">
-                <small>Your private key is stored securely and never leaves your browser.</small>
+            <div class="login-options">
+                <div class="input-group">
+                    <input type="text" 
+                           id="steemUsername" 
+                           placeholder="Steem Username" 
+                           autocomplete="username" 
+                           required>
+                </div>
+                
+                <div class="login-option keychain" id="keychainLogin">
+                    <i class="fas fa-key"></i>
+                    <span>Login with Keychain</span>
+                    <small>(Recommended)</small>
+                </div>
+                
+                <div class="login-separator">
+                    <span>or</span>
+                </div>
+                
+                <div class="login-option manual">
+                    <div class="input-group">
+                        <input type="password" 
+                               id="steemKey" 
+                               placeholder="Private Posting Key" 
+                               autocomplete="current-password">
+                        <button id="loginButton" type="submit">Login Manually</button>
+                    </div>
+                    <small class="warning">Only use your private key on trusted devices</small>
+                </div>
+            </div>
+            
+            <div class="login-info">
+                <p>New to Steem? <a href="https://signup.steemit.com" target="_blank">Create an account</a></p>
+                <small>Your private key is never stored or transmitted to any server.</small>
             </div>
         </div>
     </div>

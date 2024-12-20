@@ -4,6 +4,8 @@ import { showLoadingIndicator, hideLoadingIndicator } from '../ui/loading-indica
 import { displayPosts } from '../../services/posts-manager.js';
 import { extractProfileImage } from './post-utils.js';
 import { SteemAPI } from '../common/api-wrapper.js';
+import { showToast } from '../ui/modals.js';
+
 let isLoading = false;
 let hasMore = true;
 
@@ -22,20 +24,7 @@ export async function loadSteemPosts(options = {}) {
         hideLoadingIndicator();
     }
 }
-function generateCommentStats(comment) {
-    return `
-        <div class="comment-stats">
-            <span class="comment-votes">
-                <i class="far fa-heart"></i>
-                ${comment.active_votes?.length || 0} likes
-            </span>
-            <span class="comment-replies">
-                <i class="far fa-comment"></i>
-                ${comment.children || 0} replies
-            </span>
-        </div>
-    `;
-}
+
 export async function loadSinglePost(author, permlink) {
     showLoadingIndicator();
     try {
@@ -143,81 +132,70 @@ function generatePostHeader(post, avatarUrl, postDate) {
 }
 
 function generatePostContent(htmlContent) {
-    // Convert markdown to HTML if the `marked` library is available
     let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
 
-    // Step 1: Remove standalone file extensions after image links
-    convertedHtml = convertedHtml.replace(/\.(jpe?g|png|gif|webp)\)/gi, '');
-
-    // Step 2: Clean up extra spaces before image markdown
-    convertedHtml = convertedHtml.replace(/\s+!\[/g, '![');
-
-    // Step 3: Convert Steemit links to <a> tags
+    // First, convert anchor-wrapped image URLs to image tags
     convertedHtml = convertedHtml.replace(
-        /\[([^\]]+)\]\(([^)]+)\)/g,
-        (match, text, url) => {
-            if (url.includes('steemit.com')) {
-                return `<a href="${url}" target="_blank">${text}</a>`;
-            }
-            return match; // Keep the original format for non-Steemit links
+        /<a\s+href="([^"]+\.(jpg|jpeg|png|gif))">[^<]+<\/a>/gi,
+        (match, url) => `![image](${url})`
+    );
+
+    // Handle centered images with proper formatting
+    convertedHtml = convertedHtml.replace(
+        /<center>(?:\s*<p>)?!\[(.*?)\]\((.*?)\)(?:<\/p>\s*)?<\/center>/g,
+        (match, alt, url) => {
+            const imageTag = generateMediaTag(url, alt);
+            return `<center><br>\n${imageTag}<br>\n</center>`;
         }
     );
 
-    // Step 4: Handle standalone image markdown and convert to <img> tags
+    // Clean up any remaining markdown images
     convertedHtml = convertedHtml.replace(
-        /!\[([^\]]*)\]\(([^)]+?)(?:\.(jpe?g|png|gif|webp))?\)/gi,
-        (match, alt, url, ext) => {
-            const finalUrl = ext ? `${url}.${ext}` : url;
-            return generateMediaTag(finalUrl.trim(), alt);
-        }
+        /!\[(.*?)\]\((.*?)\)/g,
+        (match, alt, url) => generateMediaTag(url, alt)
     );
 
-    // Step 5: Handle <a> wrapping around image URLs and keep only the image
-    convertedHtml = convertedHtml.replace(
-        /<a[^>]+href="([^"]+\.(?:jpg|png|jpeg|gif|webp)[^"]*)"[^>]*>.*?<\/a>/ig,
-        (match, url) => generateMediaTag(url)
-    );
-    console.log(convertedHtml);
-    // Step 6: dobbiamo convertire roba tipo <center>![C3TZR1g81UNaPs7vzNXHueW5ZM76DSHWEY7onmfLxcK2iPJL81FSnaUvBWcD5iZTFpjf9ezxs3kiupVWRKF61XuqhasvCtC1JRTK9P6Sz7YNnUaWYABNiuL.png](https://cdn.steemitimages.com/DQmRDGakkjKoaVympAAufuzPBV4RV5JAPaBNHW5UvyKR6qr/C3TZR1g81UNaPs7vzNXHueW5ZM76DSHWEY7onmfLxcK2iPJL81FSnaUvBWcD5iZTFpjf9ezxs3kiupVWRKF61XuqhasvCtC1JRTK9P6Sz7YNnUaWYABNiuL</center>
-    //in un formato tipo ;<center><img src="https://steemitimages.com/640x0/https://cdn.steemitimages.com/DQmRDGakkjKoaVympAAufuzPBV4RV5JAPaBNHW5UvyKR6qr/C3TZR1g81UNaPs7vzNXHueW5ZM76DSHWEY7onmfLxcK2iPJL81FSnaUvBWcD5iZTFpjf9ezxs3kiupVWRKF61XuqhasvCtC1JRTK9P6Sz7YNnUaWYABNiuL.png" alt="C3TZR1g81UNaPs7vzNXHueW5ZM76DSHWEY7onmfLxcK2iPJL81FSnaUvBWcD5iZTFpjf9ezxs3kiupVWRKF61XuqhasvCtC1JRTK9P6Sz7YNnUaWYABNiuL.png" srcset="https://steemitimages.com/640x0/https://cdn.steemitimages.com/DQmRDGakkjKoaVympAAufuzPBV4RV5JAPaBNHW5UvyKR6qr/C3TZR1g81UNaPs7vzNXHueW5ZM76DSHWEY7onmfLxcK2iPJL81FSnaUvBWcD5iZTFpjf9ezxs3kiupVWRKF61XuqhasvCtC1JRTK9P6Sz7YNnUaWYABNiuL.png 1x, https://steemitimages.com/1280x0/https://cdn.steemitimages.com/DQmRDGakkjKoaVympAAufuzPBV4RV5JAPaBNHW5UvyKR6qr/C3TZR1g81UNaPs7vzNXHueW5ZM76DSHWEY7onmfLxcK2iPJL81FSnaUvBWcD5iZTFpjf9ezxs3kiupVWRKF61XuqhasvCtC1JRTK9P6Sz7YNnUaWYABNiuL.png 2x"></center>
-
-
-    // Return the final HTML structure
     return `<div class="post-content">
         <div class="post-body markdown-content">${convertedHtml}</div>
     </div>`;
 }
 
-function generateMediaTag(url, alt = 'image') {
-    // Extract the real URL from nested structures
-    const extractRealUrl = (url) => {
-        // Pulisci l'URL da wrapper steemitimages.com
-        const cleanUrl = url.replace(/https:\/\/steemitimages\.com\/\d+x\d+\//g, '');
-        
-        // Gestisci gli URL di cdn.steemitimages.com
-        if (cleanUrl.includes('cdn.steemitimages.com')) {
-            // Estrai l'hash della risorsa
-            const hash = cleanUrl.split('/').pop();
-            return `https://images.hive.blog/0x0/${hash}`;
-        }
+function ensureHttps(url) {
+    if (url.startsWith('http://')) {
+        return url.replace('http://', 'https://');
+    }
+    return url;
+}
 
-        return cleanUrl;
+function generateMediaTag(url, alt = 'image') {
+    // Ensure HTTPS
+    url = ensureHttps(url);
+    
+    // Clean and prepare the URL
+    const prepareImageUrl = (url) => {
+        // Extract the full CDN path if present
+        if (url.includes('cdn.steemitimages.com')) {
+            const cdnPath = url.split('cdn.steemitimages.com/').pop();
+            return {
+                small: `https://steemitimages.com/640x0/https://cdn.steemitimages.com/${cdnPath}`,
+                large: `https://steemitimages.com/1280x0/https://cdn.steemitimages.com/${cdnPath}`
+            };
+        }
+        
+        // For regular URLs
+        return {
+            small: `https://steemitimages.com/640x0/${url}`,
+            large: `https://steemitimages.com/1280x0/${url}`
+        };
     };
 
-    const finalUrl = extractRealUrl(url);
-
-    if (finalUrl.match(/\.mp4$/i)) {
-        return `<video controls class="post-video" loading="lazy">
-            <source src="${finalUrl}" type="video/mp4">
-            Your browser does not support video playback.
-        </video>`;
-    }
-
-    // Per le immagini usa un formato più pulito
-    return `<img src="${finalUrl}" 
+    const urls = prepareImageUrl(url);
+    
+    return `<img src="${urls.small}" 
         alt="${alt}"
-        class="post-image${finalUrl.match(/\.gif$/i) ? ' gif' : ''}"
-        loading="lazy" />`;
+        class="post-image"
+        srcset="${urls.small} 1x, ${urls.large} 2x"
+        loading="lazy">`;
 }
 
 function generatePostFooter(post) {
@@ -298,30 +276,51 @@ async function fetchPosts(options) {
     const posts = await SteemAPI.getDiscussionsBy('created', query);
     return filterUniquePosts(posts);
 }
-function validateVotePermissions() {
+
+async function validateVotePermissions() {
     if (!steemConnection.isConnected || !steemConnection.username) {
-        alert('Please connect to Steem first');
+        showToast('Please connect to Steem first', 'error');
         return false;
     }
 
-    const key = sessionStorage.getItem('steemPostingKey');
-    if (!key) {
-        alert('Posting key required to vote');
-        return false;
+    if (steemConnection.useKeychain) {
+        return window.steem_keychain !== undefined;
     }
 
-    return true;
+    return !!sessionStorage.getItem('steemPostingKey');
 }
+
 export async function votePost(author, permlink, weight = 10000) {
-    if (!validateVotePermissions()) return false;
+    if (!await validateVotePermissions()) return false;
 
     try {
-        const key = sessionStorage.getItem('steemPostingKey');
-        await SteemAPI.vote(key, steemConnection.username, author, permlink, weight);
-        return true;
+        if (steemConnection.useKeychain) {
+            return new Promise((resolve) => {
+                window.steem_keychain.requestVote(
+                    steemConnection.username,
+                    permlink,
+                    author,
+                    weight,
+                    response => {
+                        if (response.success) {
+                            showToast('Vote successful!', 'success');
+                            resolve(true);
+                        } else {
+                            showToast('Failed to vote: ' + response.message, 'error');
+                            resolve(false);
+                        }
+                    }
+                );
+            });
+        } else {
+            const key = sessionStorage.getItem('steemPostingKey');
+            await SteemAPI.vote(key, steemConnection.username, author, permlink, weight);
+            showToast('Vote successful!', 'success');
+            return true;
+        }
     } catch (error) {
         console.error('Failed to vote:', error);
-        alert('Failed to vote: ' + error.message);
+        showToast('Failed to vote: ' + error.message, 'error');
         return false;
     }
 }
