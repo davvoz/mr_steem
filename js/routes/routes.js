@@ -3,7 +3,7 @@ import { steemConnection, showLoginModal } from '../auth/login-manager.js';
 import { renderNotifications, storeNotificationsState } from '../services/notification-manager.js';
 import { searchService } from '../services/search-service.js';
 import { loadCommunity } from '../services/community-manager.js';
-import { loadSinglePost } from '../services/posts/post-service.js';
+import { loadSinglePost, loadSingleComment } from '../services/posts/post-service.js';
 import { loadUserProfile } from '../services/profile/profile-service.js';
 import { loadHomeFeed, resetHomeFeed } from '../services/posts-manager.js';
 import { loadPostsByTag } from '../services/tag/tag-service.js';
@@ -160,6 +160,14 @@ export const routes = {
             } catch (error) {
                 console.error('Error loading notification content:', error);
             }
+        }
+    },
+    '/comment/:author/:permlink': {
+        viewId: 'post-view', // Usa post-view invece di comment-view
+        handler: async (params) => {
+            hideAllViews();
+            showView('post-view');
+            await loadSingleComment(params.author, params.permlink);
         }
     },
 };

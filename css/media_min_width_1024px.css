@@ -56,11 +56,23 @@
         gap: var(--spacing-md);
         padding: var(--spacing-md);
         border-radius: 8px;
-        background: var(--background);
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        /* background: var(--background); */
+        /* box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); */
         margin: 0 auto;
         width: 100%;
         max-width: 800px;
     }
 
+    .comment-stats {
+        display: flex;
+        gap: var(--spacing-md);
+        align-items: stretch;
+        justify-content: flex-start;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        margin-left: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        align-content: center;
+
+    }
 }

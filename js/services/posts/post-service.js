@@ -22,7 +22,20 @@ export async function loadSteemPosts(options = {}) {
         hideLoadingIndicator();
     }
 }
-
+function generateCommentStats(comment) {
+    return `
+        <div class="comment-stats">
+            <span class="comment-votes">
+                <i class="far fa-heart"></i>
+                ${comment.active_votes?.length || 0} likes
+            </span>
+            <span class="comment-replies">
+                <i class="far fa-comment"></i>
+                ${comment.children || 0} replies
+            </span>
+        </div>
+    `;
+}
 export async function loadSinglePost(author, permlink) {
     showLoadingIndicator();
     try {
@@ -55,6 +68,54 @@ export async function loadSinglePost(author, permlink) {
         return processedPost;
     } catch (error) {
         console.error('Error loading single post:', error);
+        throw error;
+    } finally {
+        hideLoadingIndicator();
+    }
+}
+
+export async function loadSingleComment(author, permlink) {
+    try {
+        showLoadingIndicator();
+        
+        // First get the comment data
+        const comment = await steem.api.getContentAsync(author, permlink);
+        
+        // Then get the author and parent author data
+        const [authorAccount, parentAccount] = await Promise.all([
+            steem.api.getAccountsAsync([author]),
+            steem.api.getAccountsAsync([comment.parent_author])
+        ]);
+
+        const processedComment = {
+            ...comment,
+            authorImage: authorAccount?.[0] ? extractProfileImage(authorAccount[0]) : null,
+            parentAuthorImage: parentAccount?.[0] ? extractProfileImage(parentAccount[0]) : null,
+        };
+
+        const postView = document.getElementById('post-view');
+        if (postView) {
+            postView.innerHTML = `
+                <div class="post-context-nav">
+                    <a href="#/post/${comment.parent_author}/${comment.parent_permlink}" class="back-button">
+                        <i class="fas fa-arrow-left"></i> Back to Post
+                    </a>
+                </div>
+                <div class="full-post">
+                    ${renderPostHTML({
+                        ...processedComment,
+                        title: `Comment by @${processedComment.author}`,
+                        parent_author: comment.parent_author,
+                        parent_permlink: comment.parent_permlink
+                    })}
+                    
+                </div>
+            `;
+        }
+
+        return processedComment;
+    } catch (error) {
+        console.error('Error loading comment:', error);
         throw error;
     } finally {
         hideLoadingIndicator();
@@ -130,34 +191,14 @@ function generatePostContent(htmlContent) {
 function generateMediaTag(url, alt = 'image') {
     // Extract the real URL from nested structures
     const extractRealUrl = (url) => {
-        // First clean any HTML entities
-        let cleanUrl = url.replace(/&amp;/g, '&');
-
-        // Extract URL from steemitimages.com wrapper if present
-        const steemitMatch = cleanUrl.match(/https:\/\/steemitimages\.com\/[^/]+\/(.+)/);
-        if (steemitMatch) {
-            cleanUrl = steemitMatch[1];
-        }
-
-        // Try to decode the URL, but keep original if it fails
-        try {
-            cleanUrl = decodeURIComponent(cleanUrl);
-        } catch (e) { }
-
-        // Remove everything after ? or ) or # characters
-        cleanUrl = cleanUrl.split(/[\?\)\#]/)[0];
-
-        // Remove any remaining encoded characters
-        cleanUrl = cleanUrl
-            .replace(/%20/g, ' ')
-            .replace(/%2F/g, '/')
-            .replace(/%3A/g, ':')
-            .replace(/%2E/g, '.')
-            .trim();
-
-        // Ensure https protocol
-        if (!cleanUrl.startsWith('http')) {
-            cleanUrl = 'https://' + cleanUrl.replace(/^\/\//, '');
+        // Pulisci l'URL da wrapper steemitimages.com
+        const cleanUrl = url.replace(/https:\/\/steemitimages\.com\/\d+x\d+\//g, '');
+        
+        // Gestisci gli URL di cdn.steemitimages.com
+        if (cleanUrl.includes('cdn.steemitimages.com')) {
+            // Estrai l'hash della risorsa
+            const hash = cleanUrl.split('/').pop();
+            return `https://images.hive.blog/0x0/${hash}`;
         }
 
         return cleanUrl;
@@ -172,9 +213,8 @@ function generateMediaTag(url, alt = 'image') {
         </video>`;
     }
 
-    // For all images (including GIFs), use the Steemit CDN with clean URL
-    const cdnUrl = `https://steemitimages.com/640x0/${finalUrl}`;
-    return `<img src="${cdnUrl}" 
+    // Per le immagini usa un formato più pulito
+    return `<img src="${finalUrl}" 
         alt="${alt}"
         class="post-image${finalUrl.match(/\.gif$/i) ? ' gif' : ''}"
         loading="lazy" />`;
@@ -246,7 +286,6 @@ function renderPostHTML(post) {
             ${generatePostFooter(post)}
     `;
 }
-
 
 async function fetchPosts(options) {
     const query = {

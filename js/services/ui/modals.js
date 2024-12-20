@@ -334,7 +334,6 @@ function renderCommentsList(comments) {
 
     return comments.map(comment => {
         const imageUrl = extractImageFromContent(comment);
-        // Rimuovi le immagini dal testo del commento
         const cleanBody = comment.body.replace(/!\[.*?\]\((.*?)\)/g, '').trim();
 
         const parsedBody = marked.parse(cleanBody, {
@@ -344,7 +343,9 @@ function renderCommentsList(comments) {
         });
 
         return `
-            <div class="comment-item">
+            <div class="comment-item" 
+                 data-author="${comment.author}" 
+                 data-permlink="${comment.permlink}">
                 <div class="comment-header">
                     <img src="https://steemitimages.com/u/${comment.author}/avatar" 
                          alt="@${comment.author}"
@@ -353,7 +354,7 @@ function renderCommentsList(comments) {
                     <div class="comment-info">
                         <a href="#/profile/${comment.author}" 
                            class="comment-author" 
-                           onclick="this.closest('.modal-base').remove()">@${comment.author}</a>
+                           onclick="event.stopPropagation()">@${comment.author}</a>
                         <span class="comment-date">${new Date(comment.created).toLocaleString()}</span>
                     </div>
                 </div>
@@ -364,13 +365,21 @@ function renderCommentsList(comments) {
                             <img src="${imageUrl}" 
                                  alt="Comment image" 
                                  class="comment-image-thumbnail"
-                                 onclick="window.open('${imageUrl}', '_blank')">
+                                 onclick="event.stopPropagation(); window.open('${imageUrl}', '_blank')">
                         </div>
                     ` : ''}
+                    <div class="go-to-comment">
+                        <a href="#/comment/${comment.author}/${comment.permlink}" 
+                           onclick="this.closest('.modal-base').remove()">View full comment</a>
+                    </div>
                 </div>
             </div>
         `;
     }).join('');
+    //mettiamo l'handler per rimandarci al commento completo come nelle notifiche   
+
+    
+
 }
 
 function setupCommentImages(modal) {
