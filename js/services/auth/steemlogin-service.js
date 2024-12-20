@@ -40,24 +40,28 @@ export class SteemLoginService {
 
     async handleCallback() {
         try {
-            const hash = window.location.hash.substring(1);
-            const params = new URLSearchParams(hash);
-            const accessToken = params.get('access_token');
-            const state = params.get('state');
+            // Get token from URL fragment (#)
+            const fragment = window.location.hash.substring(1);
+            const params = new URLSearchParams(fragment);
             
-            if (!accessToken || !state) {
+            // Get token and username directly from URL parameters
+            const accessToken = params.get('access_token');
+            const username = params.get('username');
+            
+            if (!accessToken || !username) {
+                console.log('No token or username found in URL');
                 return null;
             }
 
-            const savedState = sessionStorage.getItem('steemLoginState');
-            if (state !== savedState) {
-                throw new Error('Invalid state parameter');
-            }
+            console.log('Login data found:', { username, accessToken });
 
-            sessionStorage.removeItem('steemLoginState');
+            // Clear the URL without triggering a reload
             window.history.replaceState({}, document.title, window.location.pathname);
 
-            return await this.getUserData(accessToken);
+            return {
+                username: username,
+                accessToken: accessToken
+            };
         } catch (error) {
             console.error('Callback handling error:', error);
             throw error;

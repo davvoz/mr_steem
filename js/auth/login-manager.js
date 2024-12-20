@@ -101,18 +101,25 @@ export async function handleLogin(username, key = null, useKeychain = false, acc
             throw new Error('Username is required');
         }
 
+        // For SteemLogin, we don't need to verify the posting key
+        const skipKeyCheck = !!accessToken;
+        
         await steemConnection.connect(username, key);
         steemConnection.username = username;
         steemConnection.isConnected = true;
         steemConnection.useKeychain = useKeychain;
+
         if (accessToken) {
             sessionStorage.setItem('steemLoginAccessToken', accessToken);
+            localStorage.setItem('loginMethod', 'steemlogin');
+        } else {
+            localStorage.setItem('loginMethod', useKeychain ? 'keychain' : 'manual');
         }
 
-        // Save login state
         localStorage.setItem('steemUsername', username);
-        localStorage.setItem('useKeychain', useKeychain.toString());
-        if (key && !useKeychain) sessionStorage.setItem('steemPostingKey', key);
+        if (key && !useKeychain) {
+            sessionStorage.setItem('steemPostingKey', key);
+        }
 
         hideLoginModal();
         window.dispatchEvent(new CustomEvent('loginSuccess'));
@@ -261,15 +268,20 @@ export async function attemptKeychainLogin() {
 
 export async function initializeLoginHandlers() {
     const steemLoginService = new SteemLoginService();
-
-    // Handle callback if present
-    try {
-        const callbackData = await steemLoginService.handleCallback();
-        if (callbackData) {
-            await handleLogin(callbackData.username, null, false, callbackData.accessToken);
+    
+    // Check if we're returning from a SteemLogin redirect
+    if (window.location.hash.includes('access_token')) {
+        try {
+            const loginData = await steemLoginService.handleCallback();
+            if (loginData) {
+                console.log('Processing SteemLogin callback:', loginData);
+                await handleLogin(loginData.username, null, false, loginData.accessToken);
+                showToast('Successfully logged in with SteemLogin!', 'success');
+            }
+        } catch (error) {
+            console.error('SteemLogin callback error:', error);
+            showToast('Login failed: ' + error.message, 'error');
         }
-    } catch (error) {
-        showToast(error.message, 'error');
     }
 }
 
