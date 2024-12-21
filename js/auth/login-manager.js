@@ -270,22 +270,26 @@ export async function attemptKeychainLogin() {
 }
 
 export async function initializeLoginHandlers() {
-    // Verifica se siamo in un callback di login
+    // Check for authorization code in URL
     const params = new URLSearchParams(window.location.search);
-    const accessToken = params.get('access_token');
-    const username = params.get('username');
+    const code = params.get('code');
 
-    if (accessToken && username) {
+    if (code) {
         try {
-            console.log('Found login data:', { username, accessToken });
-            await handleLogin(username, null, false, accessToken);
-            showToast('Successfully logged in!', 'success');
+            const steemLoginService = new SteemLoginService();
+            const loginData = await steemLoginService.handleCallback();
             
-            // Pulisci l'URL e vai alla home
-            window.history.replaceState({}, document.title, '/mr_steem/');
-            window.location.hash = '#/';
+            if (loginData) {
+                console.log('Processing SteemLogin callback:', loginData);
+                await handleLogin(loginData.username, null, false, loginData.accessToken);
+                showToast('Successfully logged in!', 'success');
+                
+                // Clean URL and redirect to home
+                window.history.replaceState({}, document.title, '/mr_steem/');
+                window.location.hash = '#/';
+            }
         } catch (error) {
-            console.error('Login callback error:', error);
+            console.error('SteemLogin callback error:', error);
             showToast('Login failed: ' + error.message, 'error');
         }
     }
