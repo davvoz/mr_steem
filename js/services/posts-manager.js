@@ -1,8 +1,6 @@
 import { extractProfileImage, extractImageFromContent } from './posts/post-utils.js';
 import {  showLoadingIndicator, hideLoadingIndicator} from './ui/loading-indicators.js';
 
-
-
 const seenPosts = new Set(); 
 const globalPostsCache = {
     home: new Map(),
@@ -234,8 +232,11 @@ function getCurrentTagFromHash() {
 }
 
 window.handleVote = async (author, permlink, button) => {
+    //spinner
+    //showLoadingIndicator();
     const success = await votePost(author, permlink);
     if (success) {
+       // hideLoadingIndicator();
         button.classList.add('voted');
         button.disabled = true;
         const voteCount = parseInt(button.innerText.split(' ')[1]) + 1;

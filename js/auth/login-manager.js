@@ -1,9 +1,8 @@
-import { avatarCache } from '../utils/avatar-cache.js';
 import { stopNotificationPolling } from '../services/notification-manager.js';
 import { steemClient } from '../api/steem-client.js';
 import { KeychainLogin } from '../services/auth/keychain-service.js';
 import { SteemLoginService } from '../services/auth/steemlogin-service.js';
-
+import { showToast } from '../../js/services/ui/modals.js';
 export const steemConnection = {
     username: null,
     isConnected: false,
@@ -165,7 +164,6 @@ export function checkExistingLogin() {
 
 export async function attemptSteemLogin() {
     if (typeof steem === 'undefined') {
-        alert('Steem library not loaded');
         return;
     }
     const username = document.getElementById('steemUsername').value;

@@ -133,10 +133,16 @@ function generatePostHeader(post, avatarUrl, postDate) {
 
 function generatePostContent(htmlContent) {
     let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
-
-    // First, convert anchor-wrapped image URLs to image tags
+    //converti tutti queeli che hanno []()
+    //dobbiamo mettere la freccettina per far capire che è un link
     convertedHtml = convertedHtml.replace(
-        /<a\s+href="([^"]+\.(jpg|jpeg|png|gif))">[^<]+<\/a>/gi,
+        /\[([^\]]+)\]\(([^)]+)\)/g,
+        (match, text, url) => `<a href="${url}" target="_blank">${text} <i class="fas fa-external-link-alt"></i></a>`
+    );
+
+    // Only convert anchor-wrapped image URLs that actually contain images
+    convertedHtml = convertedHtml.replace(
+        /<a\s+href="([^"]+\.(jpg|jpeg|png|gif))">\s*\1\s*<\/a>/gi,
         (match, url) => `![image](${url})`
     );
 
@@ -159,6 +165,7 @@ function generatePostContent(htmlContent) {
         <div class="post-body markdown-content">${convertedHtml}</div>
     </div>`;
 }
+
 
 function ensureHttps(url) {
     if (url.startsWith('http://')) {
@@ -291,6 +298,7 @@ async function validateVotePermissions() {
 }
 
 export async function votePost(author, permlink, weight = 10000) {
+    showLoadingIndicator();
     if (!await validateVotePermissions()) return false;
 
     try {
@@ -302,6 +310,7 @@ export async function votePost(author, permlink, weight = 10000) {
                     author,
                     weight,
                     response => {
+                        hideLoadingIndicator();
                         if (response.success) {
                             showToast('Vote successful!', 'success');
                             resolve(true);
@@ -315,6 +324,7 @@ export async function votePost(author, permlink, weight = 10000) {
         } else {
             const key = sessionStorage.getItem('steemPostingKey');
             await SteemAPI.vote(key, steemConnection.username, author, permlink, weight);
+            hideLoadingIndicator();
             showToast('Vote successful!', 'success');
             return true;
         }
