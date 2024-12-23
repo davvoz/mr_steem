@@ -4080,3 +4080,9 @@ a {
     transition: all 0.2s ease;
 }
 
+.markdown-content video {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-sm) 0;
+}
