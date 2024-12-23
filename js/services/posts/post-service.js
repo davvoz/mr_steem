@@ -235,6 +235,7 @@ function generatePostFooter(post) {
 
     let tags = post.tags || [];
 
+    const isOwnPost = post.author === steemConnection?.username;
 
     return `
         <footer class="post-footer">
@@ -266,21 +267,35 @@ function generatePostFooter(post) {
                     <a href="#/tag/${tag}" class="tag">${tag}</a>
                 `).join('')}
             </div>
-            <button class="vote-button ${hasVoted ? 'voted' : ''}"
-                    data-author="${post.author}"
-                    data-permlink="${post.permlink}"
-                    ${hasVoted ? 'disabled' : ''}>
-                <span class="vote-icon">
-                    <i class="far fa-heart"></i>
-                </span>
-                <span class="vote-count">${post.active_votes?.length || 0}</span>
-            </button>
-            <button class="comment-button"  data-author="${post.author}" data-permlink="${post.permlink}">
-                <span class="comment-icon">
-                    <i class="far fa-comment"></i>
-                </span>
-                <span class="comment-count">${post.children || 0}</span>
-            </button>
+            <div class="post-actions">
+                <button class="vote-button ${hasVoted ? 'voted' : ''}"
+                        data-author="${post.author}"
+                        data-permlink="${post.permlink}"
+                        ${hasVoted ? 'disabled' : ''}>
+                    <span class="vote-icon">
+                        <i class="far fa-heart"></i>
+                    </span>
+                    <span class="vote-count">${post.active_votes?.length || 0}</span>
+                </button>
+                ${!isOwnPost ? `
+                    <button class="repost-button" 
+                            data-author="${post.author}" 
+                            data-permlink="${post.permlink}">
+                        <span class="repost-icon">
+                            <i class="fas fa-retweet"></i>
+                        </span>
+                        <span>Repost</span>
+                    </button>
+                ` : ''}
+                <button class="comment-button" 
+                        data-author="${post.author}" 
+                        data-permlink="${post.permlink}">
+                    <span class="comment-icon">
+                        <i class="far fa-comment"></i>
+                    </span>
+                    <span class="comment-count">${post.children || 0}</span>
+                </button>
+            </div>
         </footer>
     `;
 }
@@ -389,6 +404,84 @@ export async function addComment(parentAuthor, parentPermlink, commentBody) {
     } catch (error) {
         console.error('Failed to add comment:', error);
         alert('Failed to add comment: ' + error.message);
+        return false;
+    }
+}
+
+export async function repostContent(originalAuthor, originalPermlink, comment = '') {
+    if (!await validateVotePermissions()) return false;
+
+    showLoadingIndicator();
+    try {
+        const timestamp = new Date().getTime();
+        const permlink = `repost-${originalPermlink}-${timestamp}`;
+        const username = steemConnection.username;
+
+        // Ottieni il contenuto originale
+        const originalPost = await steem.api.getContentAsync(originalAuthor, originalPermlink);
+        
+        // Prepara il body del repost
+        const repostBody = `📢 Reposted from @${originalAuthor}
+
+${comment ? `My thoughts: ${comment}\n\n---\n` : ''}
+
+Original post: https://steemit.com/@${originalAuthor}/${originalPermlink}
+
+${originalPost.body}`;
+
+        if (steemConnection.useKeychain) {
+            return new Promise((resolve) => {
+                window.steem_keychain.requestPost(
+                    username,
+                    permlink,
+                    '',
+                    `[Repost] ${originalPost.title}`,
+                    repostBody,
+                    JSON.stringify({
+                        tags: ['steemgram', 'repost', ...originalPost.json_metadata?.tags || []],
+                        app: 'steemgram/1.0',
+                        originalAuthor,
+                        originalPermlink
+                    }),
+                    '',
+                    '',
+                    response => {
+                        hideLoadingIndicator();
+                        if (response.success) {
+                            showToast('Content reposted successfully!', 'success');
+                            resolve(true);
+                        } else {
+                            showToast('Failed to repost: ' + response.message, 'error');
+                            resolve(false);
+                        }
+                    }
+                );
+            });
+        } else {
+            const key = sessionStorage.getItem('steemPostingKey');
+            await SteemAPI.comment({
+                postingKey: key,
+                author: username,
+                permlink: permlink,
+                parentAuthor: '',
+                parentPermlink: 'steemgram',
+                title: `[Repost] ${originalPost.title}`,
+                body: repostBody,
+                jsonMetadata: JSON.stringify({
+                    tags: ['steemgram', 'repost', ...originalPost.json_metadata?.tags || []],
+                    app: 'steemgram/1.0',
+                    originalAuthor,
+                    originalPermlink
+                })
+            });
+            hideLoadingIndicator();
+            showToast('Content reposted successfully!', 'success');
+            return true;
+        }
+    } catch (error) {
+        console.error('Failed to repost:', error);
+        showToast('Failed to repost: ' + error.message, 'error');
+        hideLoadingIndicator();
         return false;
     }
 }

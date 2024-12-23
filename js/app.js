@@ -10,6 +10,7 @@ import { startNotificationPolling } from './services/notification-manager.js';
 import { showWipNotification } from './utils/notifications.js';
 import { init as initSidebar } from './services/sidebar/sidebar-service.js';
 import { setupPostInteractions } from './services/post/post-interactions.js';
+import { setupRepostHandlers } from './services/posts/post-interactions.js';
 
 class App {
     constructor() {
@@ -45,6 +46,9 @@ class App {
             const { loadHomeFeed } = await import('./services/posts-manager.js');
             loadHomeFeed();
         }
+
+        // Aggiungi l'inizializzazione dei gestori repost
+        setupRepostHandlers();
     }
 
     async setupEventListeners() {
