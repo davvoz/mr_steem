@@ -57,6 +57,7 @@ body {
     background: var(--secondary-color);
     color: var(--text-primary);
     line-height: 1.5;
+    overflow: auto;
 }
 
 /* Common components */
