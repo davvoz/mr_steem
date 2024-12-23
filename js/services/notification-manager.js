@@ -32,7 +32,7 @@ function sanitizeContent(text) {
 
 function throttle(func, limit) {
     let inThrottle;
-    return function(...args) {
+    return function (...args) {
         if (!inThrottle) {
             func.apply(this, args);
             inThrottle = true;
@@ -112,20 +112,44 @@ async function fetchNotifications(fromId = -1, limit = 20) {
                 const replies = await steem.api.getContentRepliesAsync(post.author, post.permlink);
                 for (const reply of replies) {
                     if (reply.author !== account) {
+                        // Check if this is a reply to a comment
+                        const isReplyToComment = reply.parent_author === account && reply.parent_permlink !== post.permlink;
+
                         newNotifications.push({
-                            id: `comment-${reply.created}-${reply.author}`,
-                            type: 'comment',
+                            id: `${isReplyToComment ? 'reply' : 'comment'}-${reply.created}-${reply.author}`,
+                            type: isReplyToComment ? 'reply' : 'comment',
                             from: reply.author,
-                            author: reply.author,     // Use reply author for comments
+                            author: reply.author,
                             permlink: reply.permlink,
-                            parentAuthor: post.author,
-                            parentPermlink: post.permlink,
+                            parentAuthor: reply.parent_author,
+                            parentPermlink: reply.parent_permlink,
                             timestamp: reply.created,
                             title: sanitizeContent(post.title || post.permlink),
                             comment: sanitizeContent(reply.body).substring(0, 100),
                             app: extractAppName(reply.json_metadata),
                             read: false
                         });
+
+                        // Fetch replies to comments
+                        const commentReplies = await steem.api.getContentRepliesAsync(reply.author, reply.permlink);
+                        for (const commentReply of commentReplies) {
+                            if (commentReply.parent_author === account) {
+                                newNotifications.push({
+                                    id: `reply-${commentReply.created}-${commentReply.author}`,
+                                    type: 'reply',
+                                    from: commentReply.author,
+                                    author: commentReply.author,
+                                    permlink: commentReply.permlink,
+                                    parentAuthor: commentReply.parent_author,
+                                    parentPermlink: commentReply.parent_permlink,
+                                    timestamp: commentReply.created,
+                                    title: sanitizeContent(post.title || post.permlink),
+                                    comment: sanitizeContent(commentReply.body).substring(0, 100),
+                                    app: extractAppName(commentReply.json_metadata),
+                                    read: false
+                                });
+                            }
+                        }
                     }
                 }
             }
@@ -176,13 +200,13 @@ function getNotificationText(notification) {
         case 'comment':
             const commentTitle = notification.title || 'your post';
             const comment = notification.comment ? `: "${sanitizeContent(notification.comment)}"` : '';
-            return `replied to ${sanitizeContent(commentTitle)}${comment}`;
+            return `commented on ${sanitizeContent(commentTitle)}${comment}`;
         case 'reply':
-            return notification.comment ? 
-                `replied to your comment: "${sanitizeContent(notification.comment)}"` : 
+            return notification.comment ?
+                `replied to your comment: "${sanitizeContent(notification.comment)}"` :
                 'replied to your comment';
         case 'comment_vote':
-            return notification.parentContent ? 
+            return notification.parentContent ?
                 `liked your comment: "${sanitizeContent(notification.parentContent)}"` :
                 'liked your comment';
         default:
@@ -241,33 +265,50 @@ async function loadMoreNotifications() {
             hasMore = false;
         }
 
-        const notificationsHTML = uniqueNotifications.map(n => `
+        const notificationsHTML = uniqueNotifications.map(n => {
+            // Choose icon and size based on vote weight
+            let icon = '💬'; // Default comment icon
+            let iconSize = '1em'; // Default size
+
+            if (n.type === 'vote') {
+                // Set heart or broken heart based on positive/negative vote
+                icon = n.weight >= 0 ? '❤️' : '💔';
+
+                // Scale icon size based on vote weight (0.8em to 1.5em range)
+                const absWeight = Math.abs(n.weight);
+                iconSize = `${0.8 + (absWeight / 100 * 0.7)}em`;
+            }
+
+            return `
             <div class="notification-item ${n.read ? 'read' : ''}" 
-                 data-id="${n.id}"
-                 data-author="${n.author || steemConnection.username}"
-                 data-permlink="${n.permlink}"
-                 data-type="${n.type}"
-                 onclick="window.location.hash='/notification/${n.author || steemConnection.username}/${n.permlink}'">
-                <div class="notification-content">
-                    <div class="notification-avatar">
-                        <img src="${avatarCache.get(n.from)}" 
-                             alt="${n.from}"
-                             onerror="this.src='https://steemitimages.com/u/${n.from}/avatar'">
-                    </div>
-                    <div class="notification-details">
-                        <div class="notification-header">
-                            <span class="notification-type-icon">
-                                ${n.type === 'vote' ? '👍' : '💬'}
-                            </span>
-                            <span class="notification-username">@${n.from}</span>
-                            <span class="notification-app">via ${n.app}</span>
-                        </div>
-                        <p class="notification-text">${getNotificationText(n)}</p>
-                        <small class="notification-timestamp">${new Date(n.timestamp).toLocaleString()}</small>
-                    </div>
+             data-id="${n.id}"
+             data-author="${n.author || steemConnection.username}"
+             data-permlink="${n.permlink}"
+             data-type="${n.type}"
+             onclick="window.location.hash='/notification/${n.author || steemConnection.username}/${n.permlink}'">
+            <div class="notification-content">
+                <div class="notification-header">
+                <div class="notification-avatar">
+                <img src="${avatarCache.get(n.from)}" 
+                     alt="${n.from}"
+                     onerror="this.src='https://steemitimages.com/u/${n.from}/avatar'">
+                </div>
+                <div class="notification-username">@${n.from}</div>
+                </div>
+                <div class="notification-details">
+                <div class="notification-header">
+                    <span class="notification-type-icon" style="font-size: ${iconSize}">
+                    ${icon}
+                    </span>
+                    
+                    <span class="notification-app">via ${n.app}</span>
+                </div>
+                <p class="notification-text">${getNotificationText(n)}</p>
+                <small class="notification-timestamp">${new Date(n.timestamp).toLocaleString()}</small>
                 </div>
             </div>
-        `).join('');
+            </div>
+        `}).join('');
 
         listContainer.insertAdjacentHTML('beforeend', notificationsHTML);
 
@@ -371,13 +412,13 @@ async function renderNotifications() {
         hasMore = true;
         totalFetched = 0;
         lastPostPermlink = null;
-        
+
         // Pulisci la lista e ricarica
         const listContainer = container.querySelector('.notifications-list');
         listContainer.innerHTML = '';
-        
+
         await loadMoreNotifications();
-        
+
         refreshButton.disabled = false;
         icon.classList.remove('fa-spin');
     });
@@ -452,7 +493,7 @@ async function markAsRead(notificationId) {
             if (element) {
                 element.classList.add('read');
             }
-            return {...n, read: true};
+            return { ...n, read: true };
         }
         return n;
     });
@@ -476,6 +517,21 @@ async function handleCommentNotification(author, permlink, parentPermlink, body)
         type: 'comment',
         from: author,
         permlink: permlink,
+        parentPermlink: parentPermlink,
+        comment: body.substring(0, 100) + (body.length > 100 ? '...' : ''),
+        timestamp: new Date().toISOString(),
+        read: false
+    };
+
+    notifications.unshift(notification);
+}
+
+async function handleReplyNotification(author, permlink, parentAuthor, parentPermlink, body) {
+    const notification = {
+        type: 'reply',
+        from: author,
+        permlink: permlink,
+        parentAuthor: parentAuthor,
         parentPermlink: parentPermlink,
         comment: body.substring(0, 100) + (body.length > 100 ? '...' : ''),
         timestamp: new Date().toISOString(),
@@ -519,6 +575,7 @@ export {
     markAsRead,
     handleVoteNotification,
     handleCommentNotification,
+    handleReplyNotification,
     renderNotifications,
     cleanupNotificationsView,
     setupNotificationsInteractions

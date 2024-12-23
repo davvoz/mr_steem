@@ -1,0 +1,81 @@
+.markdown-content video {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-sm) 0;
+}
+
+.markdown-content {
+    font-size: var(--font-size-md);
+    line-height: 1.8;
+    color: var(--text-primary);
+    padding: 0 var(--spacing-lg);
+    max-width: 100%;
+}
+
+.markdown-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--spacing-md) 0;
+}
+
+.markdown-content table th,
+.markdown-content table td {
+    border: 1px solid var(--border-color);
+    padding: var(--spacing-sm);
+    text-align: left;
+}
+
+.markdown-content table th {
+    background: var(--secondary-color);
+}
+
+.markdown-content table tr:nth-child(even) {
+    background: var(--secondary-color);
+}
+
+.markdown-content table tr:nth-child(odd) {
+    background: var(--background);
+}
+
+.markdown-content img {
+    max-width: 100%;
+    height: auto;
+    max-height: 100%;
+    border-radius: var(--radius-sm);
+}
+
+/* Per immagini piccole, mantieni dimensioni originali */
+.markdown-content img[width] {
+    width: auto;
+    max-width: 100%;
+}
+
+.markdown-content ul {
+    padding-left: var(--spacing-lg);
+    margin: var(--spacing-md);
+}
+
+.markdown-content img[height] {
+    height: auto;
+}
+.markdown-content p {
+    margin: var(--spacing-md) 0;
+}
+
+.markdown-content p img {
+    margin: 0 auto;
+}
+
+.markdown-content h6 {
+    margin: 1rem 0 0.2rem;
+    font-size: 90%;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+    margin: var(--spacing-lg) 0 var(--spacing-md);
+    color: var (--text-primary);
+}

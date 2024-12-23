@@ -1,0 +1,73 @@
+/* Dark Mode Support */
+[data-theme="dark"] .modal-base {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .modal-content {
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+}
+
+[data-theme="dark"] .modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .voter-item:hover,
+[data-theme="dark"] .comment-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+/* Dark mode adjustments */
+[data-theme="dark"] .comment-image-container {
+    background: var(--dark-surface);
+}
+
+[data-theme="dark"] .comment-image-title {
+    background: rgba(0, 0, 0, 0.8);
+}
+/* Dark mode support */
+[data-theme="dark"] .follow-button {
+    background: #0095f6;
+    color: white;
+}
+
+[data-theme="dark"] .follow-button.following {
+    background: #404040;
+    /* Grigio scuro per lo stato "following" */
+    color: #ffffff;
+    border-color: #404040;
+}
+
+[data-theme="dark"] .follow-button:hover {
+    opacity: 0.8;
+}
+/* Dark mode support */
+[data-theme="dark"] .profile-tabs {
+    border-color: var(--dark-border);
+}
+/* Dark mode support */
+[data-theme="dark"] .logout-notification.error {
+    background: #c62828;
+    color: #ffffff;
+    border-color: #ef5350;
+}
+/* Dark mode support */
+[data-theme="dark"] .follow-popup {
+    background: var(--dark-surface);
+    border: 1px solid var(--dark-border);
+}
+
+[data-theme="dark"] .follow-popup-content {
+    color: var(--dark-text);
+}
+/* Dark mode support */
+[data-theme="dark"] .loading-spinner::after {
+    border-color: var(--dark-border);
+    border-top-color: var(--primary-color);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .retry-button {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}

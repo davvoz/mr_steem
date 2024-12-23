@@ -8,15 +8,17 @@
 
     .main-container {
         margin-left: 0;
-        padding: var(--spacing-md); 
-        display: flex   ;
-        flex-direction: column;  
+        padding: var(--spacing-md);
+        display: flex;
+        flex-direction: column;
     }
+
     .user-posts-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         gap: var(--spacing-md);
     }
+
     /* Navigation */
     .navbar {
         height: var(--header-height);
@@ -296,9 +298,8 @@
         padding: var(--spacing-sm);
     }
 
-    
-    .nav-icons
-    {
+
+    .nav-icons {
         display: none;
     }
 
@@ -336,6 +337,7 @@
     .mobile-menu a:last-child {
         border-bottom: none;
     }
+
     #search-view {
         margin-top: var(--header-height);
     }
@@ -345,12 +347,14 @@
     }
 
     .search-section {
-        display: none;  /* Nascondi inizialmente tutte le sezioni */
+        display: none;
+        /* Nascondi inizialmente tutte le sezioni */
         margin-bottom: var(--spacing-md);
     }
 
     .search-section.active {
-        display: block;  /* Mostra solo la sezione attiva */
+        display: block;
+        /* Mostra solo la sezione attiva */
     }
 
     .search-tabs {
@@ -384,6 +388,7 @@
         height: 2px;
         background: var(--primary-color);
     }
+
     #search-view {
         margin-top: var(--header-height);
         padding: 0;
@@ -408,7 +413,8 @@
 
     .search-sections {
         position: relative;
-        height: calc(100vh - var(--header-height) - 48px); /* 48px è l'altezza dei tab */
+        height: calc(100vh - var(--header-height) - 48px);
+        /* 48px è l'altezza dei tab */
         overflow-y: auto;
     }
 
@@ -460,6 +466,7 @@
             opacity: 0;
             transform: translateY(10px);
         }
+
         to {
             opacity: 1;
             transform: translateY(0);
@@ -476,11 +483,109 @@
     [data-theme="dark"] .search-tab.active {
         color: var(--dark-text);
     }
+
     #post-view {
         border-radius: 8px;
         background: var(--background);
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         margin: 0 auto;
         width: 100%;
+    }
+
+    .notifications-list {
+        /* max-width: 600px; */
+        margin: 0 auto;
+        /* padding: 20px; */
+    }
+
+}
+
+/* Better dark mode for mobile */
+@media (prefers-color-scheme: dark) and (max-width: 768px) {
+    body {
+        background: var(--dark-bg);
+    }
+
+    .navbar,
+    .nav-icons {
+        background: rgba(0, 0, 0, 0.98);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-icons i {
+        color: #fff;
+    }
+
+    .nav-icons i:active {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .post,
+    .stories {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .story-avatar-inner {
+        border: 2px solid #000;
+    }
+}
+
+/* Dark mode enhancements for mobile */
+@media (prefers-color-scheme: dark) and (max-width: 768px) {
+    body {
+        background: var(--dark-bg);
+    }
+
+    .navbar,
+    .nav-icons {
+        background: rgba(0, 0, 0, 0.98);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-icons i {
+        color: #fff;
+    }
+
+    .nav-icons i:active {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .post,
+    .stories {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .story-avatar-inner {
+        border: 2px solid #000;
+    }
+}
+
+/* Dark mode enhancements for mobile */
+@media (prefers-color-scheme: dark) and (max-width: 768px) {
+    body {
+        background: var(--dark-bg);
+    }
+
+    .navbar,
+    .nav-icons {
+        background: rgba(0, 0, 0, 0.98);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-icons i {
+        color: #fff;
+    }
+
+    .nav-icons i:active {
+        background: rgba(255, 255, 0.1);
+    }
+
+    .post,
+    .stories {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .story-avatar-inner {
+        border: 2px solid #000;
     }
 }
