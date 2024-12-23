@@ -133,11 +133,22 @@ function generatePostHeader(post, avatarUrl, postDate) {
 
 function generatePostContent(htmlContent) {
     let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
-    //converti tutti queeli che hanno []()
-    //dobbiamo mettere la freccettina per far capire che è un link
+    
+    // Prima converti i video diretti
+    convertedHtml = convertedHtml.replace(
+        /<a\s+href="([^"]+\.(mp4|webm|ogg))">\s*\1\s*<\/a>/gi,
+        (match, url, type) => generateMediaTag(url)
+    );
+
+    // Poi gestisci i link normali
     convertedHtml = convertedHtml.replace(
         /\[([^\]]+)\]\(([^)]+)\)/g,
-        (match, text, url) => `<a href="${url}" target="_blank">${text} <i class="fas fa-external-link-alt"></i></a>`
+        (match, text, url) => {
+            if (url.match(/\.(mp4|webm|ogg)$/i)) {
+                return generateMediaTag(url);
+            }
+            return `<a href="${url}" target="_blank">${text} <i class="fas fa-external-link-alt"></i></a>`;
+        }
     );
 
     // Only convert anchor-wrapped image URLs that actually contain images
@@ -166,7 +177,6 @@ function generatePostContent(htmlContent) {
     </div>`;
 }
 
-
 function ensureHttps(url) {
     if (url.startsWith('http://')) {
         return url.replace('http://', 'https://');
@@ -174,11 +184,24 @@ function ensureHttps(url) {
     return url;
 }
 
-function generateMediaTag(url, alt = 'image') {
+function generateMediaTag(url, alt = '') {
     // Ensure HTTPS
     url = ensureHttps(url);
     
-    // Clean and prepare the URL
+    // Check if the URL is a video
+    const isVideo = url.match(/\.(mp4|webm|ogg)$/i);
+    
+    if (isVideo) {
+        return `
+            <div class="video-container">
+                <video controls class="post-video" preload="metadata">
+                    <source src="${url}" type="video/${isVideo[1]}">
+                    Your browser does not support the video tag.
+                </video>
+            </div>`;
+    }
+    
+    // Handle images
     const prepareImageUrl = (url) => {
         // Extract the full CDN path if present
         if (url.includes('cdn.steemitimages.com')) {
