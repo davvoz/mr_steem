@@ -75,13 +75,22 @@ export const routes = {
         viewId: 'notifications-view',
         handler: async () => {
             hideAllViews();
-            showView('notifications-view');
-            await renderNotifications();
-
+            
+            // Close mobile navigation menu
             const navMenu = document.querySelector('.nav-menu');
+            const hamburgerButton = document.querySelector('.hamburger-button');
             if (window.innerWidth <= 768) {
                 navMenu.classList.remove('active');
+                if (hamburgerButton) {
+                    hamburgerButton.classList.remove('active');
+                }
+                // Ensure body scroll is enabled
+                document.body.style.overflow = '';
+                document.documentElement.style.overflow = '';
             }
+            
+            showView('notifications-view');
+            await renderNotifications();
         }
     },
     '/search': {

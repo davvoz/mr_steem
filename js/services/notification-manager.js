@@ -65,6 +65,34 @@ function extractAppName(jsonMetadata) {
     }
 }
 
+// Add this helper function to process comments recursively
+async function processCommentThread(parentComment, account, newNotifications) {
+    const replies = await steem.api.getContentRepliesAsync(parentComment.author, parentComment.permlink);
+    
+    for (const reply of replies) {
+        // Add notification if this is a reply to our comment
+        if (reply.parent_author === account) {
+            newNotifications.push({
+                id: `reply-${reply.created}-${reply.author}`,
+                type: 'reply',
+                from: reply.author,
+                author: reply.author,
+                permlink: reply.permlink,
+                parentAuthor: reply.parent_author,
+                parentPermlink: reply.parent_permlink,
+                timestamp: reply.created,
+                title: `Re: ${sanitizeContent(parentComment.body.substring(0, 30))}...`,
+                comment: sanitizeContent(reply.body).substring(0, 100),
+                app: extractAppName(reply.json_metadata),
+                read: false
+            });
+        }
+        
+        // Recursively process replies to this comment
+        await processCommentThread(reply, account, newNotifications);
+    }
+}
+
 async function fetchNotifications(fromId = -1, limit = 20) {
     const account = steemConnection.username;
     if (!account) {

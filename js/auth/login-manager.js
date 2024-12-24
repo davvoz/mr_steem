@@ -3,6 +3,8 @@ import { steemClient } from '../api/steem-client.js';
 import { KeychainLogin } from '../services/auth/keychain-service.js';
 import { SteemLoginService } from '../services/auth/steemlogin-service.js';
 import { showToast } from '../../js/services/ui/modals.js';
+import { scrollManager } from '../utils/scroll-manager.js';
+
 export const steemConnection = {
     username: null,
     isConnected: false,
@@ -85,12 +87,16 @@ export function showLoginModal() {
     };
 
     loginModal.style.display = 'flex';
+    // Disable scroll while modal is open
+    scrollManager.disableScroll();
 }
 
 export function hideLoginModal() {
     const loginModal = document.getElementById('loginModal');
     if (loginModal) {
         loginModal.style.display = 'none';
+        // Re-enable scroll when modal closes
+        scrollManager.enableScroll();
     }
 }
 
@@ -299,5 +305,29 @@ export function attemptSteemLoginAuth() {
         steemLoginService.initiateLogin();
     } catch (error) {
         alert(error.message);
+    }
+}
+
+export async function handleManualLogin(username, postingKey) {
+    try {
+        // ...existing login logic...
+
+        // After successful login
+        const modal = document.querySelector('.login-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        
+        // Reset scroll state
+        scrollManager.resetScroll();
+        
+        // Force layout update
+        window.scrollTo(0, 0);
+        document.body.offsetHeight;
+        
+        return true;
+    } catch (error) {
+        console.error('Login failed:', error);
+        return false;
     }
 }

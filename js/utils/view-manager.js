@@ -1,15 +1,18 @@
+import { scrollManager } from './scroll-manager.js';
+
 export function hideAllViews() {
     document.querySelectorAll('.view').forEach(view => {
         view.style.display = 'none';
     });
+    scrollManager.resetScroll();
 }
 
-export function showView(templateId) {
-    const view = document.getElementById(templateId);
-    if (!view) {
-        console.error(`View ${templateId} not found`);
-        return;
+export function showView(viewId) {
+    const view = document.getElementById(viewId);
+    if (view) {
+        view.style.display = 'block';
+        scrollManager.enableScroll();
+        // Force layout recalculation
+        view.offsetHeight;
     }
-    
-    view.style.display = 'block';
 }
