@@ -9,11 +9,7 @@ export const scrollManager = {
     },
 
     disableScroll() {
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.top = '0';
-        document.body.style.width = '100%';
-        document.documentElement.style.overflow = 'hidden';
+        
     },
 
     handleModalClose() {
