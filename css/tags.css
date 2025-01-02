@@ -1,6 +1,5 @@
 /* Updated tag button styles */
 .tag-button {
-    background: var(--background);
     border: 1px solid var(--border-color);
     color: var(--text-secondary);
     border-radius: 20px;
@@ -19,7 +18,7 @@
 
 .tag-button.active {
     background: var(--primary-color);
-    color: white;
+    color: var(--background);
     border-color: var(--primary-color);
     font-weight: 500;
     transform: translateY(-1px);
@@ -74,8 +73,7 @@
 }
 
 .tag-button.active {
-    background: var(--primary-color);
-    color: white;
+    color: var(--bg-secondary);
     border-color: var(--primary-color);
 }
 

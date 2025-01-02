@@ -26,14 +26,17 @@ export class SteemLoginService {
     }
 
     async initiateLogin() {
-        try {
-            const loginUrl = this.generateLoginURL();
-            console.log('Redirecting to:', loginUrl);
-            window.location.href = loginUrl;
-        } catch (error) {
-            console.error('Login initialization error:', error);
-            throw error;
-        }
+        // try {
+        //     const loginUrl = this.generateLoginURL();
+        //     console.log('Redirecting to:', loginUrl);
+        //     window.location.href = loginUrl;
+        // } catch (error) {
+        //     console.error('Login initialization error:', error);
+        //     throw error;
+        // }
+        //facciamo un pop up che dice che non è disponibile
+        alert('SteemLogin non è disponibile al momento');
+
     }
 
     async handleCallback() {

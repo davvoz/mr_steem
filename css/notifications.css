@@ -1,17 +1,11 @@
 .notification-item {
     padding: 1rem;
-    border-bottom: 1px solid #eee;
     cursor: pointer;
     transition: background-color 0.2s;
 }
 
-.notification-item:hover {
-    background-color: var(--bg-secondary);
-}
-
 .notification-item.read {
     opacity: 0.7;
-    background-color: var(--background);
 }
 
 .notification-content {
@@ -55,15 +49,106 @@
 
 .notification-username {
     font-weight: 600;
-    color: var (--text-primary);
 }
 
 .notification-text {
     margin: 0.25rem 0;
-    color: var(--text-primary)
 }
 
 .notification-timestamp {
-    color: var(--text-secondary);
     font-size: 0.8rem;
+}
+
+.notifications-tabs {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.tab-button {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+}
+
+
+.tab-button.loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.tab-loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+}
+
+.no-notifications {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+}
+
+.no-notifications-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.no-notifications-text {
+    font-size: 1.1rem;
+}
+
+.error-message {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-error);
+}
+
+.error-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.error-text {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.retry-button {
+    padding: 0.5rem 1rem;
+    background: var(--primary-color);
+    color:var(--background);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.retry-button:hover {
+    background: var(--primary-dark);
+}
+
+.notifications-list {
+    padding: 10px;
+}
+
+/* Add loading animation for tabs */
+.tab-button.loading::after {
+    content: '';
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-left: 8px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    border-right-color: transparent;
+    animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }

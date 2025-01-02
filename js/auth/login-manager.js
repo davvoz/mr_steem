@@ -1,4 +1,3 @@
-import { stopNotificationPolling } from '../services/notification-manager.js';
 import { steemClient } from '../api/steem-client.js';
 import { KeychainLogin } from '../services/auth/keychain-service.js';
 import { SteemLoginService } from '../services/auth/steemlogin-service.js';
@@ -148,8 +147,6 @@ export function handleLogout() {
     localStorage.removeItem('steemUsername');
     localStorage.removeItem('useKeychain');
     sessionStorage.removeItem('steemPostingKey');
-
-    stopNotificationPolling();
 
     window.dispatchEvent(new CustomEvent('logoutSuccess'));
     window.location.hash = '/';
@@ -310,24 +307,11 @@ export function attemptSteemLoginAuth() {
 
 export async function handleManualLogin(username, postingKey) {
     try {
-        // ...existing login logic...
-
-        // After successful login
-        const modal = document.querySelector('.login-modal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        
-        // Reset scroll state
-        scrollManager.resetScroll();
-        
-        // Force layout update
-        window.scrollTo(0, 0);
-        document.body.offsetHeight;
-        
+        await validateUsername(username);
+        await handleLogin(username, postingKey, false);
         return true;
     } catch (error) {
-        console.error('Login failed:', error);
-        return false;
+        console.error('Manual login error:', error);
+        throw error;
     }
 }

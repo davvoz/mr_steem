@@ -2,7 +2,7 @@ import { handleLogin, showLoginModal, handleLogout, checkExistingLogin, steemCon
 import { loadStories } from '../services/stories/stories-service.js';
 import { updateSidebar } from '../services/sidebar/sidebar-service.js';
 import { loadSuggestions } from '../services/suggestions/suggestions-service.js';
-import { startNotificationPolling, renderNotifications, stopNotificationPolling, cleanupNotificationsView } from '../services/notification-manager.js';
+import {  renderNotifications,  cleanupNotificationsView } from '../services/notification-manager.js';
 import { Router } from '../routes/router.js';
 import { cleanupInfiniteScroll } from '../services/ui/infinite-scroll.js';
 import { loadPostsByTag } from '../services/tag/tag-service.js';
@@ -82,7 +82,6 @@ function setupAuthUI() {
             });
 
             // Avvia immediatamente il polling delle notifiche
-            await startNotificationPolling();
 
             // Carica subito le notifiche
             const notificationsView = document.getElementById('notifications-view');
@@ -284,7 +283,6 @@ function setupAuthUI() {
 async function resetAppState() {
     try {
         // Stop all active processes
-        await stopNotificationPolling();
         clearAllIntervals();
 
         // Clear UI state
@@ -399,7 +397,6 @@ function updateNavigationUI() {
 
             // Aggiorna immediatamente il badge delle notifiche se necessario
             if (item.id === 'notifications-link' && isLoggedIn) {
-                startNotificationPolling();
             }
         }
     });

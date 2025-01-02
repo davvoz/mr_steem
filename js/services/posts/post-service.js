@@ -132,78 +132,103 @@ function generatePostHeader(post, avatarUrl, postDate) {
 }
 
 function generatePostContent(htmlContent) {
+    if (typeof marked !== 'undefined') {
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            headerIds: false
+        });
+    }
+    console.log(htmlContent);
     let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
     
-    // Prima converti i video diretti
+    // Stack per tenere traccia dei tag annidati
+    let stack = [];
+    
+    // Fase 1: Proteggi tutto il contenuto dentro i tag center
     convertedHtml = convertedHtml.replace(
-        /<a\s+href="([^"]+\.(mp4|webm|ogg))">\s*\1\s*<\/a>/gi,
-        (match, url, type) => generateMediaTag(url)
-    );
-
-    // Poi gestisci i link normali
-    convertedHtml = convertedHtml.replace(
-        /\[([^\]]+)\]\(([^)]+)\)/g,
-        (match, text, url) => {
-            if (url.match(/\.(mp4|webm|ogg)$/i)) {
-                return generateMediaTag(url);
-            }
-            return `<a href="${url}" target="_blank">${text} <i class="fas fa-external-link-alt"></i></a>`;
+        /<center>([\s\S]*?)<\/center>/gi,
+        (match, content) => {
+            stack.push(content);
+            return `__CENTER_${stack.length - 1}__`;
         }
     );
 
-    // Only convert anchor-wrapped image URLs that actually contain images
+    // Fase 2: Gestisci le immagini con link
     convertedHtml = convertedHtml.replace(
-        /<a\s+href="([^"]+\.(jpg|jpeg|png|gif))">\s*\1\s*<\/a>/gi,
-        (match, url) => `![image](${url})`
+        /\[!\[(.*?)\]\((.*?)\)\]\((.*?)\)/g,
+        (match, alt, imgUrl, linkUrl) => 
+            `<a href="${linkUrl}" target="_blank">${generateMediaTag(imgUrl, alt)}</a>`
     );
 
-    // Handle centered images with proper formatting
-    convertedHtml = convertedHtml.replace(
-        /<center>(?:\s*<p>)?!\[(.*?)\]\((.*?)\)(?:<\/p>\s*)?<\/center>/g,
-        (match, alt, url) => {
-            const imageTag = generateMediaTag(url, alt);
-            return `<center><br>\n${imageTag}<br>\n</center>`;
-        }
-    );
-
-    // Clean up any remaining markdown images
+    // Fase 3: Gestisci immagini semplici
     convertedHtml = convertedHtml.replace(
         /!\[(.*?)\]\((.*?)\)/g,
         (match, alt, url) => generateMediaTag(url, alt)
     );
+
+    // Fase 4: Prima di ripristinare i center, processa la formattazione markdown nel loro contenuto
+    stack = stack.map(content => {
+        // Processa immagini dentro center
+        content = content.replace(
+            /!\[(.*?)\]\((.*?)\)/g,
+            (match, alt, url) => generateMediaTag(url, alt)
+        );
+        
+        // Processa asterischi e underscore per formattazione
+        content = content
+            .replace(/\*\*\*([\s\S]*?)\*\*\*/g, '<strong><em>$1</em></strong>')
+            .replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*([\s\S]*?)\*/g, '<em>$1</em>')
+            .replace(/_{3}([\s\S]*?)_{3}/g, '<strong><em>$1</em></strong>')
+            .replace(/_{2}([\s\S]*?)_{2}/g, '<strong>$1</strong>')
+            .replace(/_([\s\S]*?)_/g, '<em>$1</em>');
+            
+        return content;
+    });
+
+    // Fase 5: Ripristina i center con il contenuto processato
+    stack.forEach((content, index) => {
+        convertedHtml = convertedHtml.replace(
+            `__CENTER_${index}__`,
+            `<div class="text-center">${content}</div>`
+        );
+    });
+
+    // Fase 6: Processa la formattazione markdown nel contenuto principale
+    convertedHtml = convertedHtml
+        .replace(/\*\*\*([\s\S]*?)\*\*\*/g, '<div class="text-center"><em>$1</em></div>')
+        .replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([\s\S]*?)\*/g, '<em>$1</em>')
+        .replace(/_{3}([\s\S]*?)_{3}/g, '<strong><em>$1</em></strong>')
+        .replace(/_{2}([\s\S]*?)_{2}/g, '<strong>$1</strong>')
+        .replace(/_([\s\S]*?)_/g, '<em>$1</em>');
+
+    // Fase 7: Pulizia finale
+    convertedHtml = convertedHtml
+        // Rimuovi paragrafi vuoti
+        .replace(/<p>\s*<\/p>/g, '')
+        // Normalizza gli spazi nei br
+        .replace(/(<br\s*\/?>\s*){2,}/g, '<br><br>')
+        // Correggi header con center
+        .replace(/<h([1-6])><div class="text-center">(.*?)<\/div><\/h\1>/g, '<h$1 class="text-center">$2</h$1>')
+        // Rimuovi underscore singoli non usati per formattazione
+        .replace(/(?<![a-zA-Z])_(?![a-zA-Z])/g, '');
 
     return `<div class="post-content">
         <div class="post-body markdown-content">${convertedHtml}</div>
     </div>`;
 }
 
-function ensureHttps(url) {
-    if (url.startsWith('http://')) {
-        return url.replace('http://', 'https://');
-    }
-    return url;
-}
-
 function generateMediaTag(url, alt = '') {
-    // Ensure HTTPS
+    if (!url) return '';
     url = ensureHttps(url);
     
-    // Check if the URL is a video
-    const isVideo = url.match(/\.(mp4|webm|ogg)$/i);
-    
-    if (isVideo) {
-        return `
-            <div class="video-container">
-                <video controls class="post-video" preload="metadata">
-                    <source src="${url}" type="video/${isVideo[1]}">
-                    Your browser does not support the video tag.
-                </video>
-            </div>`;
+    if (url.includes('i.imgur.com')) {
+        return `<img src="${url}" alt="${alt || ''}" class="post-image">`;
     }
     
-    // Handle images
     const prepareImageUrl = (url) => {
-        // Extract the full CDN path if present
         if (url.includes('cdn.steemitimages.com')) {
             const cdnPath = url.split('cdn.steemitimages.com/').pop();
             return {
@@ -211,8 +236,6 @@ function generateMediaTag(url, alt = '') {
                 large: `https://steemitimages.com/1280x0/https://cdn.steemitimages.com/${cdnPath}`
             };
         }
-        
-        // For regular URLs
         return {
             small: `https://steemitimages.com/640x0/${url}`,
             large: `https://steemitimages.com/1280x0/${url}`
@@ -220,12 +243,18 @@ function generateMediaTag(url, alt = '') {
     };
 
     const urls = prepareImageUrl(url);
-    
-    return `<img src="${urls.small}" 
-        alt="${alt}"
-        class="post-image"
-        srcset="${urls.small} 1x, ${urls.large} 2x"
-        loading="lazy">`;
+    return `<img src="${urls.small}" alt="${alt || ''}" class="post-image" srcset="${urls.small} 1x, ${urls.large} 2x" loading="lazy">`;
+}
+
+function ensureHttps(url) {
+    if (!url) return '';
+    if (url.startsWith('http://')) {
+        return url.replace('http://', 'https://');
+    }
+    if (!url.startsWith('https://')) {
+        return 'https://' + url;
+    }
+    return url;
 }
 
 function generatePostFooter(post) {
@@ -363,7 +392,7 @@ export async function votePost(author, permlink, weight = 10000) {
             const key = sessionStorage.getItem('steemPostingKey');
             await SteemAPI.vote(key, steemConnection.username, author, permlink, weight);
             hideLoadingIndicator();
-            showToast('Vote successful!', 'success');
+            //owToast('Vote successful!', 'success');
             return true;
         }
     } catch (error) {

@@ -2,14 +2,18 @@ import { steemConnection } from '../auth/login-manager.js';
 import { avatarCache } from '../utils/avatar-cache.js';
 import { showNotificationLoadingIndicator, hideNotificationLoadingIndicator } from './ui/loading-indicators.js';
 
+const NOTIFICATION_TABS = {
+    ALL: 'all',
+    REPLIES: 'replies',
+    MENTIONS: 'mentions',
+    UPVOTES: 'upvotes',
+    RESTEEMS: 'resteems'
+};
+
 let notifications = [];
-let isPolling = false;
-let isLoading = false;
-let lastId = -1;
-let lastPostPermlink = null;
-let hasMore = true;
-let pollingIntervalId = null;
-let totalFetched = 0;
+let cachedNotifications = null;
+let isInitialLoading = false;
+let currentTab = NOTIFICATION_TABS.ALL;
 
 // Private functions
 function decodeText(text) {
@@ -65,7 +69,7 @@ function extractAppName(jsonMetadata) {
     }
 }
 
-// Add this helper function to process comments recursively
+// Update the processCommentThread function to include more context
 async function processCommentThread(parentComment, account, newNotifications) {
     const replies = await steem.api.getContentRepliesAsync(parentComment.author, parentComment.permlink);
     
@@ -80,6 +84,7 @@ async function processCommentThread(parentComment, account, newNotifications) {
                 permlink: reply.permlink,
                 parentAuthor: reply.parent_author,
                 parentPermlink: reply.parent_permlink,
+                parentComment: parentComment.body, // Add parent comment context
                 timestamp: reply.created,
                 title: `Re: ${sanitizeContent(parentComment.body.substring(0, 30))}...`,
                 comment: sanitizeContent(reply.body).substring(0, 100),
@@ -93,7 +98,7 @@ async function processCommentThread(parentComment, account, newNotifications) {
     }
 }
 
-async function fetchNotifications(fromId = -1, limit = 20) {
+async function fetchNotifications(limit = 50) {
     const account = steemConnection.username;
     if (!account) {
         console.error('No account found for notification fetching');
@@ -104,16 +109,46 @@ async function fetchNotifications(fromId = -1, limit = 20) {
     const newNotifications = [];
 
     try {
+        // Get account history with correct limit (max 20)
+        const history = await steem.api.getAccountHistoryAsync(account, -1, 20);
+        
+        // Process post votes and comments from history
+        for (const [id, transaction] of history || []) {
+            const op = transaction.op;
+            
+            if (op[0] === 'vote' && op[1].author === account) {
+                try {
+                    const content = await steem.api.getContentAsync(op[1].author, op[1].permlink);
+                    
+                    if (content) {
+                        const isComment = content.parent_author !== '';
+                        newNotifications.push({
+                            id: `${isComment ? 'comment_vote' : 'vote'}-${transaction.timestamp}-${op[1].voter}`,
+                            type: isComment ? 'comment_vote' : 'vote',
+                            from: op[1].voter,
+                            author: op[1].author,
+                            permlink: op[1].permlink,
+                            parentContent: isComment ? sanitizeContent(content.body).substring(0, 100) : null,
+                            weight: op[1].weight / 100,
+                            timestamp: transaction.timestamp,
+                            title: content.title || (isComment ? 'comment' : content.permlink),
+                            app: extractAppName(content.json_metadata),
+                            read: false
+                        });
+                    }
+                } catch (error) {
+                    console.warn('Could not fetch content for vote:', error);
+                    continue;
+                }
+            }
+        }
+
+        // Get recent posts and their interactions (limit to 10 for better performance)
         const posts = await steem.api.getDiscussionsByBlogAsync({
             tag: account,
-            limit: 30,
-            start_author: fromId === -1 ? undefined : account,
-            start_permlink: lastPostPermlink || undefined
+            limit: 10,
+            start_author: account
         });
-
-        if (posts && posts.length > 0) {
-            lastPostPermlink = posts[posts.length - 1].permlink;
-        }
 
         for (const post of posts || []) {
             if (post.author === account) {
@@ -183,39 +218,13 @@ async function fetchNotifications(fromId = -1, limit = 20) {
             }
         }
 
-        const history = await steem.api.getAccountHistoryAsync(account, -1, 20);
-
-        for (const [id, transaction] of history || []) {
-            const op = transaction.op;
-
-            if (op[0] === 'vote' && op[1].author === account) {
-                const post = await steem.api.getContentAsync(op[1].author, op[1].permlink);
-
-                newNotifications.push({
-                    id: `vote-${transaction.timestamp}-${op[1].voter}`,
-                    type: 'vote',
-                    from: op[1].voter,
-                    author: op[1].author,      // aggiungiamo l'autore del post
-                    permlink: op[1].permlink,
-                    weight: op[1].weight / 100,
-                    timestamp: transaction.timestamp,
-                    title: post ? sanitizeContent(post.title || post.permlink) : 'a post',
-                    read: false
-                });
-            }
-        }
-
-        totalFetched += newNotifications.length;
-        hasMore = posts && posts.length >= 20 && totalFetched < 100;
-
         return removeDuplicates(newNotifications)
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
             .slice(0, limit);
 
     } catch (error) {
         console.error('Error fetching notifications:', error);
-        console.error('Query parameters:', { account, fromId, limit });
-        hasMore = false;
+        console.error('Query parameters:', { account, limit });
         return [];
     }
 }
@@ -230,9 +239,10 @@ function getNotificationText(notification) {
             const comment = notification.comment ? `: "${sanitizeContent(notification.comment)}"` : '';
             return `commented on ${sanitizeContent(commentTitle)}${comment}`;
         case 'reply':
-            return notification.comment ?
-                `replied to your comment: "${sanitizeContent(notification.comment)}"` :
-                'replied to your comment';
+            const parentContext = notification.parentComment ? 
+                ` "${sanitizeContent(notification.parentComment).substring(0, 30)}..."` : 
+                '';
+            return `@${notification.from} replied to your comment${parentContext}: "${sanitizeContent(notification.comment)}"`;
         case 'comment_vote':
             return notification.parentContent ?
                 `liked your comment: "${sanitizeContent(notification.parentContent)}"` :
@@ -242,71 +252,67 @@ function getNotificationText(notification) {
     }
 }
 
-async function loadMoreNotifications() {
-    if (isLoading || !hasMore) {
-        console.log('Loading state:', { isLoading, hasMore, totalFetched });
-        return;
+function getNotificationIcon(notification) {
+    switch (notification.type) {
+        case 'vote':
+        case 'comment_vote':
+            const weight = notification.weight || 0;
+            return {
+                icon: weight >= 0 ? '❤️' : '💔',
+                size: `${0.8 + (Math.abs(weight) / 100 * 0.7)}em`
+            };
+        case 'comment':
+        case 'reply':
+            return { icon: '💬', size: '1em' };
+        default:
+            return { icon: '🔔', size: '1em' };
     }
+}
 
+function filterNotificationsByTab(notifications, tab) {
+    switch(tab) {
+        case NOTIFICATION_TABS.REPLIES:
+            return notifications.filter(n => n.type === 'reply' || n.type === 'comment');
+        case NOTIFICATION_TABS.MENTIONS:
+            return notifications.filter(n => n.type === 'mention');
+        case NOTIFICATION_TABS.UPVOTES:
+            return notifications.filter(n => n.type === 'vote' || n.type === 'comment_vote');
+        case NOTIFICATION_TABS.RESTEEMS:
+            return notifications.filter(n => n.type === 'reblog');
+        default:
+            return notifications;
+    }
+}
+
+async function loadNotifications(isInitialLoad = false) {
     const container = document.getElementById('notifications-view');
     if (!container) return;
 
     const listContainer = container.querySelector('.notifications-list');
+    if (!listContainer) return;
 
     try {
-        isLoading = true;
-        showNotificationLoadingIndicator();
+        if (isInitialLoad) {
+            isInitialLoading = true;
+            showNotificationLoadingIndicator();
+            cachedNotifications = await fetchNotifications();
+        }
 
-        const newNotifications = await fetchNotifications(lastId);
-
-        console.log('Fetched notifications:', {
-            count: newNotifications?.length,
-            totalFetched,
-            hasMore,
-            lastPostPermlink
-        });
-
-        if (!newNotifications || newNotifications.length === 0) {
-            hasMore = false;
-            if (listContainer.children.length === 0) {
-                listContainer.innerHTML = '<div class="no-notifications">No notifications yet</div>';
-            }
-            hideNotificationLoadingIndicator();
+        // Se abbiamo già le notifiche in cache, filtriamo solo quelle
+        const filteredNotifications = filterNotificationsByTab(cachedNotifications || [], currentTab);
+        
+        if (!filteredNotifications || filteredNotifications.length === 0) {
+            listContainer.innerHTML = `
+                <div class="no-notifications">
+                    <div class="no-notifications-icon">📭</div>
+                    <div class="no-notifications-text">No ${currentTab} notifications</div>
+                </div>`;
             return;
         }
 
-        const existingIds = Array.from(listContainer.children).map(el => el.dataset.id);
-        const uniqueNotifications = newNotifications.filter(n => !existingIds.includes(n.id));
-
-        if (uniqueNotifications.length === 0) {
-            hasMore = false;
-            hideNotificationLoadingIndicator();
-            return;
-        }
-
-        const lastPost = newNotifications[newNotifications.length - 1];
-        if (lastPost && lastPost.permlink) {
-            lastId = lastPost.permlink;
-            hasMore = newNotifications.length >= 10;
-            console.log('Updated lastId:', lastId, 'hasMore:', hasMore);
-        } else {
-            hasMore = false;
-        }
-
-        const notificationsHTML = uniqueNotifications.map(n => {
-            // Choose icon and size based on vote weight
-            let icon = '💬'; // Default comment icon
-            let iconSize = '1em'; // Default size
-
-            if (n.type === 'vote') {
-                // Set heart or broken heart based on positive/negative vote
-                icon = n.weight >= 0 ? '❤️' : '💔';
-
-                // Scale icon size based on vote weight (0.8em to 1.5em range)
-                const absWeight = Math.abs(n.weight);
-                iconSize = `${0.8 + (absWeight / 100 * 0.7)}em`;
-            }
-
+        const notificationsHTML = filteredNotifications.map(n => {
+            const { icon, size } = getNotificationIcon(n);
+            
             return `
             <div class="notification-item ${n.read ? 'read' : ''}" 
              data-id="${n.id}"
@@ -325,7 +331,7 @@ async function loadMoreNotifications() {
                 </div>
                 <div class="notification-details">
                 <div class="notification-header">
-                    <span class="notification-type-icon" style="font-size: ${iconSize}">
+                    <span class="notification-type-icon" style="font-size: ${size}">
                     ${icon}
                     </span>
                     
@@ -338,71 +344,42 @@ async function loadMoreNotifications() {
             </div>
         `}).join('');
 
-        listContainer.insertAdjacentHTML('beforeend', notificationsHTML);
+        listContainer.innerHTML = notificationsHTML;
 
-        const newItems = Array.from(listContainer.children).slice(-uniqueNotifications.length);
-        newItems.forEach(item => {
-            item.onclick = async () => {
-                const notificationId = item.dataset.id;
-                const author = item.dataset.author;
-                const permlink = item.dataset.permlink;
-                await markAsRead(notificationId);
-                window.location.hash = `/notification/${author}/${permlink}`;
-            };
-        });
+        setupNotificationItems(listContainer);
 
     } catch (error) {
-        console.error('Error loading more notifications:', error);
-        hasMore = totalFetched >= 100;
+        console.error('Error loading notifications:', error);
+        listContainer.innerHTML = `
+            <div class="error-message">
+                <div class="error-icon">❌</div>
+                <div class="error-text">Failed to load notifications</div>
+                <button onclick="location.reload()" class="retry-button">Retry</button>
+            </div>`;
     } finally {
-        isLoading = false;
+        isInitialLoading = false;
         hideNotificationLoadingIndicator();
     }
 }
 
-async function startNotificationPolling() {
-    if (!steemConnection.username || isPolling) return;
+function updateTabsLoadingState(loading) {
+    const container = document.getElementById('notifications-view');
+    if (!container) return;
 
-    isPolling = true;
-    console.log('Starting notification polling');
+    const tabs = container.querySelectorAll('.tab-button');
+    tabs.forEach(tab => {
+        if (loading) {
+            tab.disabled = true;
+            tab.classList.add('loading');
+        } else {
+            tab.disabled = false;
+            tab.classList.remove('loading');
+        }
+    });
 
-    await checkNotifications();
-
-    if (!pollingIntervalId) {
-        pollingIntervalId = setInterval(checkNotifications, 30000);
-    }
-}
-
-function stopNotificationPolling() {
-    if (pollingIntervalId) {
-        clearInterval(pollingIntervalId);
-        pollingIntervalId = null;
-    }
-
-    isPolling = false;
-    notifications = [];
-    isLoading = false;
-    lastId = -1;
-    hasMore = true;
-
-    const notificationsView = document.getElementById('notifications-view');
-    if (notificationsView) {
-        notificationsView.innerHTML = '';
-    }
-}
-
-async function checkNotifications() {
-    if (!steemConnection.username) {
-        console.log('No user logged in');
-        return;
-    }
-
-    try {
-        const newNotifications = await fetchNotifications();
-        console.log('Fetched notifications:', newNotifications);
-        return newNotifications;
-    } catch (error) {
-        console.error('Error checking notifications:', error);
+    const refreshButton = container.querySelector('#refresh-notifications');
+    if (refreshButton) {
+        refreshButton.disabled = loading;
     }
 }
 
@@ -413,10 +390,6 @@ async function renderNotifications() {
         return;
     }
 
-    if (await restoreNotificationsState()) {
-        return;
-    }
-
     container.innerHTML = `
         <div class="notifications-header">
             <h2>Notifications</h2>
@@ -424,94 +397,85 @@ async function renderNotifications() {
                 <i class="fas fa-sync-alt"></i>
             </button>
         </div>
+        <div class="notifications-tabs">
+            <button class="tab-button active" data-tab="${NOTIFICATION_TABS.ALL}">All</button>
+            <button class="tab-button" data-tab="${NOTIFICATION_TABS.REPLIES}">Replies</button>
+            <button class="tab-button" data-tab="${NOTIFICATION_TABS.MENTIONS}">Mentions</button>
+            <button class="tab-button" data-tab="${NOTIFICATION_TABS.UPVOTES}">Upvotes</button>
+            <button class="tab-button" data-tab="${NOTIFICATION_TABS.RESTEEMS}">Resteems</button>
+        </div>
         <div class="notifications-list"></div>
     `;
 
-    // Aggiungi il gestore per il bottone refresh
-    const refreshButton = container.querySelector('#refresh-notifications');
-    refreshButton.addEventListener('click', async () => {
-        const icon = refreshButton.querySelector('i');
-        if (icon) {
-            refreshButton.disabled = true;
-            icon.classList.add('fa-spin');
-        }
-        // Reset dello stato
-        lastId = -1;
-        hasMore = true;
-        totalFetched = 0;
-        lastPostPermlink = null;
+    setupTabHandlers(container);
+    setupRefreshButton(container);
 
-        // Pulisci la lista e ricarica
-        const listContainer = container.querySelector('.notifications-list');
-        listContainer.innerHTML = '';
+    // Initial load with fetch
+    await loadNotifications(true);
+}
 
-        await loadMoreNotifications();
+function setupTabHandlers(container) {
+    container.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', () => {
+            if (isInitialLoading) return;
 
-        refreshButton.disabled = false;
-        icon.classList.remove('fa-spin');
+            // Update active tab
+            container.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            
+            currentTab = button.dataset.tab;
+            
+            // Reload notifications with current tab filter (no fetch needed)
+            loadNotifications(false);
+        });
     });
+}
 
-    // Reset state
-    isLoading = false;
-    hasMore = true;
-    lastId = -1;
-    totalFetched = 0;
-    lastPostPermlink = null;
-
-    // Setup scroll handler
-    const scrollHandler = throttle(() => {
-        if (document.documentElement.scrollHeight <= window.innerHeight) {
-            // If content doesn't fill the viewport, load more
-            if (!isLoading && hasMore) {
-                loadMoreNotifications();
+function setupRefreshButton(container) {
+    const refreshButton = container.querySelector('#refresh-notifications');
+    if (refreshButton) {
+        refreshButton.addEventListener('click', async () => {
+            const icon = refreshButton.querySelector('i');
+            try {
+                if (icon) {
+                    refreshButton.disabled = true;
+                    icon.classList.add('fa-spin');
+                }
+                
+                // Reset cache and reload everything
+                cachedNotifications = null;
+                await loadNotifications(true);
+            } catch (error) {
+                console.error('Error refreshing notifications:', error);
+            } finally {
+                if (icon) {
+                    refreshButton.disabled = false;
+                    icon.classList.remove('fa-spin');
+                }
             }
-            return;
-        }
-
-        const scrollPosition = window.innerHeight + window.pageYOffset;
-        const threshold = document.documentElement.scrollHeight - (window.innerHeight * 1.5);
-
-        if (scrollPosition >= threshold && !isLoading && hasMore) {
-            console.log('Loading more notifications...', {
-                scrollPosition,
-                threshold,
-                isLoading,
-                hasMore,
-                totalFetched
-            });
-            loadMoreNotifications();
-        }
-    }, 150);
-
-    // Remove any existing scroll handler
-    if (container._notificationScrollHandler) {
-        window.removeEventListener('scroll', container._notificationScrollHandler);
+        });
     }
+}
 
-    // Add new scroll handler
-    window.addEventListener('scroll', scrollHandler, { passive: true });
-    container._notificationScrollHandler = scrollHandler;
-
-    // Initial load
-    await loadMoreNotifications();
-
-    // Check if we need to load more content if the initial content doesn't fill the viewport
-    if (document.documentElement.scrollHeight <= window.innerHeight && !isLoading && hasMore) {
-        await loadMoreNotifications();
-    }
-
-    console.log('Notifications rendered with infinite scroll');
+function setupNotificationItems(container) {
+    container.querySelectorAll('.notification-item').forEach(item => {
+        item.onclick = async () => {
+            const notificationId = item.dataset.id;
+            const author = item.dataset.author;
+            const permlink = item.dataset.permlink;
+            await markAsRead(notificationId);
+            window.location.hash = `/notification/${author}/${permlink}`;
+        };
+    });
 }
 
 function cleanupNotificationsView() {
     const container = document.getElementById('notifications-view');
-    if (container && container._notificationScrollHandler) {
-        window.removeEventListener('scroll', container._notificationScrollHandler);
+    if (container) {
         container._notificationScrollHandler = null;
     }
-    isLoading = false;
-    lastPostPermlink = null;
-    totalFetched = 0;
+    isInitialLoading = false;
+    cachedNotifications = null;
 }
 
 async function markAsRead(notificationId) {
@@ -569,44 +533,14 @@ async function handleReplyNotification(author, permlink, parentAuthor, parentPer
     notifications.unshift(notification);
 }
 
-function setupNotificationsInteractions() {
-    const container = document.getElementById('notifications-view');
-    if (!container) return;
-
-    const scrollHandler = throttle(() => {
-        const scrollPosition = window.innerHeight + window.pageYOffset;
-        const threshold = document.documentElement.scrollHeight - (window.innerHeight * 1.5);
-
-        if (scrollPosition >= threshold && !isLoading && hasMore) {
-            loadMoreNotifications();
-        }
-    }, 150);
-
-    window.addEventListener('scroll', scrollHandler, { passive: true });
-    container._notificationScrollHandler = scrollHandler;
-
-    container.querySelectorAll('.notification-item').forEach(item => {
-        item.onclick = async () => {
-            const notificationId = item.dataset.id;
-            const author = item.dataset.author;
-            const permlink = item.dataset.permlink;
-            await markAsRead(notificationId);
-            window.location.hash = `/notification/${author}/${permlink}`;
-        };
-    });
-}
-
 export {
-    startNotificationPolling,
-    stopNotificationPolling,
-    checkNotifications,
     markAsRead,
     handleVoteNotification,
     handleCommentNotification,
     handleReplyNotification,
     renderNotifications,
     cleanupNotificationsView,
-    setupNotificationsInteractions
+    loadNotifications
 };
 
 export function storeNotificationsState() {
@@ -614,37 +548,9 @@ export function storeNotificationsState() {
     if (container) {
         const state = {
             html: container.innerHTML,
-            lastId: lastId,
-            hasMore: hasMore,
-            totalFetched: totalFetched,
-            lastPostPermlink: lastPostPermlink
+            currentTab: currentTab,
+            cachedNotifications: cachedNotifications
         };
         sessionStorage.setItem('notificationsState', JSON.stringify(state));
     }
 }
-
-async function restoreNotificationsState() {
-    try {
-        const storedState = sessionStorage.getItem('notificationsState');
-        if (!storedState) return false;
-
-        const state = JSON.parse(storedState);
-        const container = document.getElementById('notifications-view');
-
-        if (container) {
-            container.innerHTML = state.html;
-            lastId = state.lastId;
-            hasMore = state.hasMore;
-            totalFetched = state.totalFetched;
-            lastPostPermlink = state.lastPostPermlink;
-
-            setupNotificationsInteractions();
-            sessionStorage.removeItem('notificationsState');
-            return true;
-        }
-    } catch (error) {
-        console.error('Error restoring notifications state:', error);
-    }
-    return false;
-}
-

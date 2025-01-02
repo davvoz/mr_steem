@@ -1,16 +1,16 @@
 import { Router } from './routes/router.js';
 import { setupUIEventListeners } from './components/ui-handlers.js';
 import { routes } from './routes/routes.js';
-import { 
-    checkExistingLogin, 
+import {
+    checkExistingLogin,
     initializeLoginHandlers,
-    attemptSteemLoginAuth 
+    attemptSteemLoginAuth
 } from './auth/login-manager.js';
-import { startNotificationPolling } from './services/notification-manager.js';
 import { showWipNotification } from './utils/notifications.js';
 import { init as initSidebar } from './services/sidebar/sidebar-service.js';
 import { setupPostInteractions } from './services/post/post-interactions.js';
 import { setupRepostHandlers } from './services/posts/post-interactions.js';
+import { loadStories } from './services/stories/stories-service.js';
 
 class App {
     constructor() {
@@ -22,11 +22,11 @@ class App {
     async init() {
         // Initialize router as singleton
         this.router = new Router(routes, this.basePath);
-        
+
         // Controlla il login esistente prima di tutto
         const isLoggedIn = checkExistingLogin();
         console.log('Login check:', isLoggedIn ? 'User logged in' : 'No existing login');
-        
+
         await this.setupEventListeners();
         this.checkSteemAvailability();
 
@@ -35,7 +35,11 @@ class App {
 
         // Start notification polling if user is logged in
         if (checkExistingLogin()) {
-            await startNotificationPolling();
+            Promise.all([
+                loadStories(),
+            ]).catch(error => {
+                console.error('Error loading secondary content:', error);
+            });
         }
 
         // Initialize sidebar module
@@ -54,7 +58,7 @@ class App {
     async setupEventListeners() {
         document.addEventListener('DOMContentLoaded', async () => {
             await initializeLoginHandlers();
-            
+
             // Add SteemLogin button handler with proper reference
             const steemLoginButton = document.getElementById('steemLoginButton');
             if (steemLoginButton) {
@@ -66,11 +70,11 @@ class App {
             setupUIEventListeners();
             this.router.handleRoute();
             initTheme();
-            
+
             // Add hamburger menu functionality
             const hamburger = document.querySelector('.hamburger-menu');
             const navMenu = document.querySelector('.nav-menu');
-            
+
             hamburger.addEventListener('click', () => {
                 navMenu.classList.toggle('active');
             });
@@ -122,7 +126,7 @@ class App {
         fallbackScript.src = 'https://unpkg.com/steem/dist/steem.min.js';
         fallbackScript.onerror = () => {
             console.error('All Steem CDN sources failed');
-                   };
+        };
         document.head.appendChild(fallbackScript);
     }
 
@@ -149,7 +153,7 @@ function initTheme() {
 function toggleTheme() {
     const current = document.documentElement.getAttribute('data-theme');
     const target = current === 'light' ? 'dark' : 'light';
-    
+
     document.documentElement.setAttribute('data-theme', target);
     localStorage.setItem('theme', target);
     updateThemeIcon(target);
