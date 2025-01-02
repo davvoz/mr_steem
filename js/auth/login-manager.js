@@ -4,6 +4,37 @@ import { SteemLoginService } from '../services/auth/steemlogin-service.js';
 import { showToast } from '../../js/services/ui/modals.js';
 import { scrollManager } from '../utils/scroll-manager.js';
 
+// Initial connection state
+const initialConnectionState = {
+    isConnected: false,
+    username: null,
+    useKeychain: false
+};
+
+// Add new function to save connection state
+function saveConnectionState() {
+    const state = {
+        isConnected: steemConnection.isConnected,
+        username: steemConnection.username,
+        useKeychain: steemConnection.useKeychain
+    };
+    localStorage.setItem('steemConnectionState', JSON.stringify(state));
+}
+
+// Add new function to restore connection state
+function restoreConnectionState() {
+    const savedState = localStorage.getItem('steemConnectionState');
+    if (savedState) {
+        const state = JSON.parse(savedState);
+        steemConnection = {
+            ...steemConnection,
+            ...state
+        };
+        return true;
+    }
+    return false;
+}
+
 export const steemConnection = {
     username: null,
     isConnected: false,
@@ -139,28 +170,29 @@ export async function handleLogin(username, key = null, useKeychain = false, acc
 }
 
 export function handleLogout() {
-    steemConnection.isConnected = false;
-    steemConnection.username = null;
-    steemConnection.privateKey = null;
-    steemConnection.useKeychain = false;
-
-    localStorage.removeItem('steemUsername');
-    localStorage.removeItem('useKeychain');
-    sessionStorage.removeItem('steemPostingKey');
-
-    window.dispatchEvent(new CustomEvent('logoutSuccess'));
-    window.location.hash = '/';
+    clearLoginState();
+    window.location.reload();
 }
 
 export function checkExistingLogin() {
-    const username = localStorage.getItem('steemUsername');
-    const useKeychain = localStorage.getItem('useKeychain') === 'true';
-
-    if (username) {
-        steemConnection.username = username;
-        steemConnection.isConnected = true;
-        steemConnection.useKeychain = useKeychain;
-        return true;
+    // First check saved connection state
+    if (restoreConnectionState()) {
+        // If keychain was used, verify it's still available
+        if (steemConnection.useKeychain) {
+            if (window.steem_keychain) {
+                return true;
+            } else {
+                // If keychain is no longer available, clear the saved state
+                clearLoginState();
+                return false;
+            }
+        }
+        // If using posting key, verify it exists in sessionStorage
+        if (sessionStorage.getItem('steemPostingKey')) {
+            return true;
+        }
+        // If neither condition is met, clear the saved state
+        clearLoginState();
     }
     return false;
 }
@@ -315,3 +347,15 @@ export async function handleManualLogin(username, postingKey) {
         throw error;
     }
 }
+
+// Add new function to clear login state
+export function clearLoginState() {
+    steemConnection = {
+        isConnected: false,
+        username: null,
+        useKeychain: false
+    };
+    localStorage.removeItem('steemConnectionState');
+    sessionStorage.removeItem('steemPostingKey');
+}
+

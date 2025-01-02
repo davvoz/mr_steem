@@ -20,18 +20,30 @@ class App {
     }
 
     async init() {
+        // Check for existing login before router initialization
+        const isLoggedIn = checkExistingLogin();
+        
         // Initialize router as singleton
         this.router = new Router(routes, this.basePath);
 
-        // Controlla il login esistente prima di tutto
-        const isLoggedIn = checkExistingLogin();
-        console.log('Login check:', isLoggedIn ? 'User logged in' : 'No existing login');
+        if (isLoggedIn) {
+            // If logged in, immediately start loading content
+            Promise.all([
+                loadStories(),
+                // Add other initialization tasks here
+            ]).catch(error => {
+                console.error('Error loading user content:', error);
+            });
+        }
 
+        // Continue with rest of initialization
         await this.setupEventListeners();
         this.checkSteemAvailability();
 
-        // Show loading state when app starts
-        this.showInitialLoading();
+        // Only show loading state if we're not already logged in
+        if (!isLoggedIn) {
+            this.showInitialLoading();
+        }
 
         // Start notification polling if user is logged in
         if (checkExistingLogin()) {

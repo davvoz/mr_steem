@@ -80,16 +80,19 @@ export const routes = {
             const navMenu = document.querySelector('.nav-menu');
             const hamburgerButton = document.querySelector('.hamburger-button');
             if (window.innerWidth <= 768) {
-                navMenu.classList.remove('active');
-                if (hamburgerButton) {
-                    hamburgerButton.classList.remove('active');
-                }
-                // Ensure body scroll is enabled
+                navMenu?.classList.remove('active');
+                hamburgerButton?.classList.remove('active');
                 document.body.style.overflow = '';
                 document.documentElement.style.overflow = '';
             }
             
             showView('notifications-view');
+            
+            // Se c'è stato salvato, non pulire la vista
+            if (!localStorage.getItem('notifications_state')) {
+                cleanupNotificationsView();
+            }
+            
             await renderNotifications();
         }
     },
