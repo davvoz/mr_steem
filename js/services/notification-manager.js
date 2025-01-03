@@ -397,12 +397,14 @@ async function renderNotifications() {
                 <i class="fas fa-sync-alt"></i>
             </button>
         </div>
-        <div class="notifications-tabs">
-            <button class="tab-button active" data-tab="${NOTIFICATION_TABS.ALL}">All</button>
-            <button class="tab-button" data-tab="${NOTIFICATION_TABS.REPLIES}">Replies</button>
-            <button class="tab-button" data-tab="${NOTIFICATION_TABS.MENTIONS}">Mentions</button>
-            <button class="tab-button" data-tab="${NOTIFICATION_TABS.UPVOTES}">Upvotes</button>
-            <button class="tab-button" data-tab="${NOTIFICATION_TABS.RESTEEMS}">Resteems</button>
+        <div class="tag-filter">
+            <div class="tag-scroll">
+                <button class="tab-button tag-button active" data-tab="${NOTIFICATION_TABS.ALL}">All</button>
+                <button class="tab-button tag-button" data-tab="${NOTIFICATION_TABS.REPLIES}">Replies</button>
+                <button class="tab-button tag-button" data-tab="${NOTIFICATION_TABS.MENTIONS}">Mentions</button>
+                <button class="tab-button tag-button" data-tab="${NOTIFICATION_TABS.UPVOTES}">Upvotes</button>
+                <button class="tab-button tag-button" data-tab="${NOTIFICATION_TABS.RESTEEMS}">Resteems</button>
+            </div>
         </div>
         <div class="notifications-list"></div>
     `;

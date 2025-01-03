@@ -161,6 +161,8 @@ export async function displayPosts(posts, containerId = 'posts-container', appen
     for (const post of filteredPosts) {
         try {
             const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
+            //se l'autore è udabeu sbattiamolo fuori
+            if (post.author === 'udabeu') continue;
             const postImage = extractImageFromContent(post);
             let authorImage;
             

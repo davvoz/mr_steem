@@ -66,10 +66,10 @@ export async function loadSinglePost(author, permlink) {
 export async function loadSingleComment(author, permlink) {
     try {
         showLoadingIndicator();
-        
+
         // First get the comment data
         const comment = await steem.api.getContentAsync(author, permlink);
-        
+
         // Then get the author and parent author data
         const [authorAccount, parentAccount] = await Promise.all([
             steem.api.getAccountsAsync([author]),
@@ -92,11 +92,11 @@ export async function loadSingleComment(author, permlink) {
                 </div>
                 <div class="full-post">
                     ${renderPostHTML({
-                        ...processedComment,
-                        title: `Comment by @${processedComment.author}`,
-                        parent_author: comment.parent_author,
-                        parent_permlink: comment.parent_permlink
-                    })}
+                ...processedComment,
+                title: `Comment by @${processedComment.author}`,
+                parent_author: comment.parent_author,
+                parent_permlink: comment.parent_permlink
+            })}
                     
                 </div>
             `;
@@ -132,17 +132,92 @@ function generatePostHeader(post, avatarUrl, postDate) {
 }
 
 function generatePostContent(htmlContent) {
+    console.log(htmlContent);
     let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
+    console.log(convertedHtml);
+    // Funzione di utilità per dividere e pulire le celle
+    function parseCells(row) {
+        return row.split('|')
+            .map(cell => cell.trim())
+            .filter(cell => cell.length > 0);
+    }
 
-    // Prima converti i video diretti
+    // Funzione per determinare se una riga è un separatore
+    function isSeparatorRow(row) {
+        return row.replace(/[|\s-]/g, '').length === 0;
+    }
+    // Gestisce link Discord/media che contengono l'URL come testo e href è un immagine
+    //tipo : <p><a href="https://media.discordapp.net/attachments/897071013135785995/1277925228227330099/PUSS_Banner1.png?ex=66d38d5d&is=66d23bdd&hm=56a37e1b7cb886768f201e28532dbc17653e275d601b4f96321ece2fc137dd36&=&format=webp&quality=lossless&width=1177&height=662">https://media.discordapp.net/attachments/897071013135785995/1277925228227330099/PUSS_Banner1.png?ex=66d38d5d&amp;is=66d23bdd&amp;hm=56a37e1b7cb886768f201e28532dbc17653e275d601b4f96321ece2fc137dd36&amp;=&amp;format=webp&amp;quality=lossless&amp;width=1177&amp;height=662</a></p>
+  
+
+    // Parser scalabile per tabelle markdown
+    convertedHtml = convertedHtml.replace(
+        /([^\n]+\|[^\n]+)(\n[-|\s]+\n)([^\n]*\|[^\n]*\n?)+/g,
+        (match) => {
+            try {
+                // Dividi le righe e rimuovi righe vuote
+                const rows = match.split('\n').filter(row => row.trim());
+
+                // Se non abbiamo abbastanza righe per una tabella valida, ritorna il testo originale
+                if (rows.length < 3) return match;
+
+                let tableHtml = ['<table class="markdown-table">'];
+                let headerProcessed = false;
+
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+
+                    // Salta le righe separatore
+                    if (isSeparatorRow(row)) continue;
+
+                    const cells = parseCells(row);
+
+                    if (!headerProcessed) {
+                        // Processa l'header
+                        tableHtml.push('<thead><tr>');
+                        cells.forEach(cell => {
+                            tableHtml.push(`<th>${cell}</th>`);
+                        });
+                        tableHtml.push('</tr></thead><tbody>');
+                        headerProcessed = true;
+                    } else {
+                        // Processa le righe dati
+                        tableHtml.push('<tr>');
+                        cells.forEach(cell => {
+                            tableHtml.push(`<td>${cell}</td>`);
+                        });
+                        tableHtml.push('</tr>');
+                    }
+                }
+
+                tableHtml.push('</tbody></table>');
+                return tableHtml.join('');
+            } catch (error) {
+                console.error('Error parsing table:', error);
+                return match;
+            }
+        }
+    );
+
+    // Resto delle trasformazioni
+    convertedHtml = convertedHtml.replace(
+        /<center>\s*\*([^\*]+)\*\s*<\/center>/g,
+        (_, text) => `<center><strong>${text}</strong></center>`
+    );
+
     convertedHtml = convertedHtml.replace(
         /<a\s+href="([^"]+\.(mp4|webm|ogg))">\s*\1\s*<\/a>/gi,
-        (match, url, type) => generateMediaTag(url)
+        (_, url) => generateMediaTag(url)
     );
-    // Poi gestisci i link normali
+
+    convertedHtml = convertedHtml.replace(
+        /\*\*([^\*]+)\*\*/g,
+        (_, text) => `<strong>${text}</strong>`
+    );
+
     convertedHtml = convertedHtml.replace(
         /\[([^\]]+)\]\(([^)]+)\)/g,
-        (match, text, url) => {
+        (_, text, url) => {
             if (url.match(/\.(mp4|webm|ogg)$/i)) {
                 return generateMediaTag(url);
             }
@@ -150,24 +225,22 @@ function generatePostContent(htmlContent) {
         }
     );
 
-    // Only convert anchor-wrapped image URLs that actually contain images
     convertedHtml = convertedHtml.replace(
         /<a\s+href="([^"]+\.(jpg|jpeg|png|gif))">\s*\1\s*<\/a>/gi,
-        (match, url) => `![image](${url})`
+        (_, url) => `![image](${url})`
     );
 
-    // Handle centered images with proper formatting
     convertedHtml = convertedHtml.replace(
         /<center>(?:\s*<p>)?!\[(.*?)\]\((.*?)\)(?:<\/p>\s*)?<\/center>/g,
-        (match, alt, url) => {
+        (_, alt, url) => {
             const imageTag = generateMediaTag(url, alt);
             return `<center><br>\n${imageTag}<br>\n</center>`;
         }
     );
-    // Clean up any remaining markdown images
+
     convertedHtml = convertedHtml.replace(
         /!\[(.*?)\]\((.*?)\)/g,
-        (match, alt, url) => generateMediaTag(url, alt)
+        (_, alt, url) => generateMediaTag(url, alt)
     );
 
     return `<div class="post-content">
@@ -187,7 +260,7 @@ function generateMediaTag(url, alt = '') {
 
     // Check if the URL is a video
     const isVideo = url.match(/\.(mp4|webm|ogg)$/i);
-    
+
     if (isVideo) {
         return `
             <div class="video-container">
@@ -208,7 +281,7 @@ function generateMediaTag(url, alt = '') {
                 large: `https://steemitimages.com/1280x0/https://cdn.steemitimages.com/${cdnPath}`
             };
         }
-        
+
         // For regular URLs
         return {
             small: `https://steemitimages.com/640x0/${url}`,
@@ -217,7 +290,7 @@ function generateMediaTag(url, alt = '') {
     };
 
     const urls = prepareImageUrl(url);
-    
+
     return `<img src="${urls.small}" 
         alt="${alt}"
         class="post-image"
@@ -416,7 +489,7 @@ export async function repostContent(originalAuthor, originalPermlink, comment = 
 
         // Ottieni il contenuto originale
         const originalPost = await steem.api.getContentAsync(originalAuthor, originalPermlink);
-        
+
         // Prepara il body del repost
         const repostBody = `📢 Reposted from @${originalAuthor}
 
