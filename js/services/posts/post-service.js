@@ -133,6 +133,14 @@ function generatePostHeader(post, avatarUrl, postDate) {
 
 function generatePostContent(htmlContent) {
     console.log(htmlContent);
+    
+    // Add this at the very beginning of the function, before any other transformations
+    // Handle raw image URLs first
+    htmlContent = htmlContent.replace(
+        /(https?:\/\/(?:[a-z0-9-]+\.)*(?:postimg\.cc|imgur\.com|ibb\.co)[^\s<>"']+\.(?:jpg|jpeg|png|gif|webp))(?:\s|$)/gi,
+        (match, url) => `<img src="${url}" alt="image" class="content-image">`
+    );
+    
     let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
     console.log(convertedHtml);
 
