@@ -65,3 +65,11 @@
     height: auto;
     border-radius: 8px;
 }
+
+.broken-image {
+    border: 2px solid #ff0000;
+    opacity: 0.5;
+    min-height: 200px;
+    background: #f8f8f8 url('/images/broken-image.png') center no-repeat;
+    background-size: 64px;
+}

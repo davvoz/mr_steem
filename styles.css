@@ -1647,8 +1647,7 @@ ul {
 }
 
 .notifications-header {
-    display: flex
-;
+    display: flex;
     padding: 20px 0;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 20px;
@@ -3020,3 +3019,5 @@ a {
     cursor: pointer;
     transition: all 0.2s ease;
 }
+/*tutti gli hr nel markdown devono andare a capo
+*/
