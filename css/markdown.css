@@ -54,6 +54,8 @@
 .markdown-content ul {
     padding-left: var(--spacing-lg);
     margin: var(--spacing-md);
+    /* list-style-type: disc; */
+    list-style: disc;
 }
 
 .markdown-content img[height] {
@@ -78,4 +80,10 @@
 .markdown-content h4 {
     margin: var(--spacing-lg) 0 var(--spacing-md);
     color: var (--text-primary);
+}
+
+.markdown-content hr {
+    border: 0;
+    border-top: 1px solid var(--border-color);
+    margin: var(--spacing-lg) 0;
 }
