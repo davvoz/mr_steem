@@ -131,14 +131,50 @@ function generatePostHeader(post, avatarUrl, postDate) {
     `;
 }
 
+function transformSteemitLinks(html) {
+    // Transform steemit.com links with community tags to our app format
+    return html.replace(
+        /https:\/\/steemit\.com\/[^\/]+\/@([^\/]+)\/([^\/\s"']+)/gi,
+        (match, author, permlink) => {
+            if (author && permlink) {
+                return `#/post/${author}/${permlink}`;
+            }
+            return match;
+        }
+    ).replace(
+        /https:\/\/steemit\.com\/@([^\/\s"']+)/gi,
+        (match, username) => {
+            // Transform profile links
+            return `#/profile/${username}`;
+        }
+    );
+}
+
 function generatePostContent(htmlContent) {
     console.log(htmlContent);
+    
+    // Transform Steemit links before any other transformations
+    htmlContent = transformSteemitLinks(htmlContent);
     
     // Add this at the very beginning of the function, before any other transformations
     // Handle raw image URLs first
     htmlContent = htmlContent.replace(
         /(https?:\/\/(?:[a-z0-9-]+\.)*(?:postimg\.cc|imgur\.com|ibb\.co)[^\s<>"']+\.(?:jpg|jpeg|png|gif|webp))(?:\s|$)/gi,
         (match, url) => `<img src="${url}" alt="image" class="content-image">`
+    );
+
+    // Add this near the beginning of the function, after the initial transformations
+    
+    // Handle nested CDN image links first
+    htmlContent = htmlContent.replace(
+        /<a[^>]*href="(https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\/\d+x\d+\/[^"]+)"[^>]*>[^<]*<\/a>/gi,
+        (match, url) => generateMediaTag(url)
+    );
+
+    // Handle any remaining direct image links
+    htmlContent = htmlContent.replace(
+        /https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\/\d+x\d+\/[^\s<>"']+/gi,
+        url => generateMediaTag(url)
     );
     
     let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
@@ -158,11 +194,23 @@ function generatePostContent(htmlContent) {
         // Decode URL to handle encoded characters
         let decodedUrl = decodeURIComponent(url);
 
-        // Handle nested Steem CDN URLs
-        const cdnRegex = /https:\/\/cdn\.steemitimages\.com\/\d+x\d+\/(https:\/\/cdn\.steemitimages\.com\/[^"]+)/;
-        const match = decodedUrl.match(cdnRegex);
+        // Handle nested Steem CDN URLs with dimensions
+        const nestedCdnRegex = /https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\/(?:\d+x\d+\/)?(?:https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\/[^"]+)/;
+        const match = decodedUrl.match(nestedCdnRegex);
         if (match) {
-            decodedUrl = decodeURIComponent(match[1]);
+            // Extract the base URL by removing any dimension specifications
+            decodedUrl = decodedUrl.replace(/https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\/(?:\d+x\d+\/)?/, '');
+            // If it starts with another CDN URL, clean that up too
+            decodedUrl = decodedUrl.replace(/^https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\//, '');
+            // Add back the CDN prefix
+            decodedUrl = 'https://cdn.steemitimages.com/' + decodedUrl;
+        }
+
+        // Handle simple dimension-only URLs
+        const dimensionRegex = /https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\/\d+x\d+\/([^"]+)/;
+        const dimensionMatch = decodedUrl.match(dimensionRegex);
+        if (dimensionMatch) {
+            decodedUrl = 'https://cdn.steemitimages.com/' + dimensionMatch[1];
         }
 
         if (decodedUrl.match(/\.(mp4|webm|ogg)$/i)) {
@@ -524,6 +572,10 @@ function generatePostContent(htmlContent) {
             </table>`;
         }
     );
+
+    // Transform links in the final converted HTML again
+    // This catches any links that might have been generated during markdown conversion
+    convertedHtml = transformSteemitLinks(convertedHtml);
 
     return `<div class="post-content">
         <div class="post-body markdown-content">${convertedHtml}</div>
