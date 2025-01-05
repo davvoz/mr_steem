@@ -84,4 +84,14 @@ export class SteemAPI {
             jsonMetadata
         );
     }
+
+    static async getAuthorComments(username, startPermlink, limit) {
+        // Utilizziamo getDiscussionsByCommentsAsync invece di getDiscussionsByAuthorBeforeDateAsync
+        const query = {
+            start_author: username,
+            start_permlink: startPermlink || '',
+            limit: limit || 20
+        };
+        return steem.api.getDiscussionsByCommentsAsync(query);
+    }
 }

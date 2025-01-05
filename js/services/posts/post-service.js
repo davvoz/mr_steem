@@ -612,6 +612,18 @@ function renderPostHTML(post) {
     `;
 }
 
+function filterUniquePosts(posts) {
+    const seen = new Set();
+    return posts.filter(post => {
+        const key = `${post.author}_${post.permlink}`;
+        if (seen.has(key)) {
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
+}
+
 async function fetchPosts(options) {
     const query = {
         tag: 'photography',

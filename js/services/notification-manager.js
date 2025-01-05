@@ -98,47 +98,41 @@ async function processCommentThread(parentComment, account, newNotifications) {
     }
 }
 
+// Modifica la funzione fetchNotifications per includere lo stato read
 async function fetchNotifications(limit = 50) {
     const account = steemConnection.username;
-    if (!account) {
-        console.error('No account found for notification fetching');
-        return [];
-    }
+    if (!account) return [];
 
     console.log(`Fetching notifications for ${account}`);
     const newNotifications = [];
 
     try {
-        // Get account history with correct limit (max 20)
-        const history = await steem.api.getAccountHistoryAsync(account, -1, 20);
+        // Ottieni la cronologia dell'account con un limite più alto per avere più dati
+        const history = await steem.api.getAccountHistoryAsync(account, -1, 100);
         
-        // Process post votes and comments from history
+        console.log('Account history:', history); // Debug
+
         for (const [id, transaction] of history || []) {
             const op = transaction.op;
             
             if (op[0] === 'vote' && op[1].author === account) {
-                try {
-                    const content = await steem.api.getContentAsync(op[1].author, op[1].permlink);
-                    
-                    if (content) {
-                        const isComment = content.parent_author !== '';
-                        newNotifications.push({
-                            id: `${isComment ? 'comment_vote' : 'vote'}-${transaction.timestamp}-${op[1].voter}`,
-                            type: isComment ? 'comment_vote' : 'vote',
-                            from: op[1].voter,
-                            author: op[1].author,
-                            permlink: op[1].permlink,
-                            parentContent: isComment ? sanitizeContent(content.body).substring(0, 100) : null,
-                            weight: op[1].weight / 100,
-                            timestamp: transaction.timestamp,
-                            title: content.title || (isComment ? 'comment' : content.permlink),
-                            app: extractAppName(content.json_metadata),
-                            read: false
-                        });
-                    }
-                } catch (error) {
-                    console.warn('Could not fetch content for vote:', error);
-                    continue;
+                const content = await steem.api.getContentAsync(op[1].author, op[1].permlink);
+                if (content) {
+                    // Usiamo la proprietà 'new' del contenuto per determinare se è stato letto
+                    const isComment = content.parent_author !== '';
+                    newNotifications.push({
+                        id: `${isComment ? 'comment_vote' : 'vote'}-${transaction.timestamp}-${op[1].voter}`,
+                        type: isComment ? 'comment_vote' : 'vote',
+                        from: op[1].voter,
+                        author: op[1].author,
+                        permlink: op[1].permlink,
+                        parentContent: isComment ? sanitizeContent(content.body).substring(0, 100) : null,
+                        weight: op[1].weight / 100,
+                        timestamp: transaction.timestamp,
+                        title: content.title || (isComment ? 'comment' : content.permlink),
+                        app: extractAppName(content.json_metadata),
+                        read: !content.new // Usa la proprietà 'new' del contenuto
+                    });
                 }
             }
         }
@@ -165,7 +159,7 @@ async function fetchNotifications(limit = 50) {
                             timestamp: vote.time,
                             title: sanitizeContent(post.title || post.permlink),
                             app: extractAppName(post.json_metadata),
-                            read: false
+                            read: !post.new // Usa la proprietà 'new' del contenuto
                         });
                     }
                 }
@@ -190,7 +184,7 @@ async function fetchNotifications(limit = 50) {
                             title: sanitizeContent(post.title || post.permlink),
                             comment: sanitizeContent(reply.body).substring(0, 100),
                             app: extractAppName(reply.json_metadata),
-                            read: false
+                            read: !reply.new // Usa la proprietà 'new' del contenuto
                         });
 
                         // Fetch replies to comments
@@ -209,7 +203,7 @@ async function fetchNotifications(limit = 50) {
                                     title: sanitizeContent(post.title || post.permlink),
                                     comment: sanitizeContent(commentReply.body).substring(0, 100),
                                     app: extractAppName(commentReply.json_metadata),
-                                    read: false
+                                    read: !commentReply.new // Usa la proprietà 'new' del contenuto
                                 });
                             }
                         }
@@ -219,6 +213,10 @@ async function fetchNotifications(limit = 50) {
         }
 
         return removeDuplicates(newNotifications)
+            .map(notification => ({
+                ...notification,
+                read: !notification.new // Usa la proprietà 'new' del contenuto
+            }))
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
             .slice(0, limit);
 
@@ -296,6 +294,7 @@ async function loadNotifications(isInitialLoad = false) {
             isInitialLoading = true;
             showNotificationLoadingIndicator();
             cachedNotifications = await fetchNotifications();
+            updateNotificationBadge(); // Aggiorna il badge dopo il caricamento
         }
 
         // Se abbiamo già le notifiche in cache, filtriamo solo quelle
@@ -480,17 +479,36 @@ function cleanupNotificationsView() {
     cachedNotifications = null;
 }
 
+// Modifica la funzione markAsRead per usare l'API di Steem
 async function markAsRead(notificationId) {
-    notifications = notifications.map(n => {
-        if (n.id === notificationId) {
+    if (!cachedNotifications || !steemConnection.isConnected) return;
+
+    try {
+        // Chiama l'API di Steem per segnare la notifica come letta
+        await steem.api.mark_notifications_as_read(steemConnection.username, [notificationId], (err, result) => {
+            if (err) {
+                console.error('Error marking notification as read:', err);
+                return;
+            }
+            
+            // Aggiorna lo stato locale solo se la chiamata API ha successo
+            cachedNotifications = cachedNotifications.map(n => {
+                if (n.id === notificationId) {
+                    return { ...n, read: true };
+                }
+                return n;
+            });
+
+            updateNotificationBadge();
+            
             const element = document.querySelector(`[data-id="${notificationId}"]`);
             if (element) {
                 element.classList.add('read');
             }
-            return { ...n, read: true };
-        }
-        return n;
-    });
+        });
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+    }
 }
 
 async function handleVoteNotification(voter, author, permlink, weight) {
@@ -533,6 +551,32 @@ async function handleReplyNotification(author, permlink, parentAuthor, parentPer
     };
 
     notifications.unshift(notification);
+}
+
+// Modifica la funzione updateNotificationBadge per contare solo le notifiche non lette
+function updateNotificationBadge() {
+    const notificationLink = document.querySelector('#notifications-link');
+    if (!notificationLink) return;
+
+    // Conta le notifiche che hanno la proprietà new = true
+    const unreadCount = (cachedNotifications || []).filter(notification => {
+        return !notification.read;
+    }).length;
+    
+    const existingBadge = notificationLink.querySelector('.notification-badge');
+    if (existingBadge) {
+        existingBadge.remove();
+    }
+
+    if (unreadCount > 0) {
+        const badge = document.createElement('span');
+        badge.className = 'notification-badge';
+        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        const navContent = notificationLink.querySelector('.nav-contento');
+        if (navContent) {
+            navContent.appendChild(badge);
+        }
+    }
 }
 
 export {
