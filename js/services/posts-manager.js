@@ -133,10 +133,12 @@ export async function displayPosts(posts, containerId = 'posts-container', appen
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Filter posts based on current tag if we're in tag view
+    // Solo filtra per tag se NON stiamo visualizzando il feed following
     const currentTag = getCurrentTagFromHash();
-    const filteredPosts = currentTag ? 
-        posts.filter(post => {
+    let filteredPosts = posts;
+    
+    if (currentTag && currentTag !== 'following') {
+        filteredPosts = posts.filter(post => {
             try {
                 const metadata = JSON.parse(post.json_metadata);
                 return metadata.tags && metadata.tags.includes(currentTag);
@@ -144,15 +146,16 @@ export async function displayPosts(posts, containerId = 'posts-container', appen
                 console.warn('Failed to parse post metadata:', error);
                 return false;
             }
-        }) : posts;
+        });
+    }
 
     if (filteredPosts.length === 0) {
-        container.innerHTML = `
-            <div class="no-posts-message">
-                ${currentTag ? 
-                    `No posts found with tag #${currentTag}` : 
-                    'No posts available'}
-            </div>`;
+        if (currentTag !== 'following') {  // Non mostrare questo messaggio per il feed following
+            container.innerHTML = `
+                <div class="no-posts-message">
+                    No posts found ${currentTag ? `with tag #${currentTag}` : ''}
+                </div>`;
+        }
         return;
     }
 

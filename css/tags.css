@@ -138,6 +138,29 @@
     background: var(--dark-surface);
 }
 
+.special-tag {
+    background: linear-gradient(45deg, #405de6, #5851db, #833ab4, #c13584, #e1306c, #fd1d1d);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.special-tag i {
+    font-size: 0.9em;
+}
+
+.special-tag:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+[data-theme='dark'] .special-tag {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 .tag-actions {
     display: flex;
     gap: var(--spacing-md);
@@ -169,4 +192,47 @@
 .try-tags-button:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow-sm);
+}
+
+.no-posts-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.no-posts-message i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: var(--primary-color);
+}
+
+.no-posts-message h3 {
+    margin: 10px 0;
+    font-size: 24px;
+    color: var(--text-primary);
+}
+
+.no-posts-message p {
+    margin-bottom: 20px;
+    color: var(--text-secondary);
+}
+
+.no-posts-message .explore-button,
+.no-posts-message .connect-button {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    transition: transform 0.2s ease;
+}
+
+.no-posts-message .explore-button:hover,
+.no-posts-message .connect-button:hover {
+    transform: translateY(-2px);
 }
