@@ -2,25 +2,27 @@ import { repostContent } from './post-service.js';
 import { showToast } from '../ui/modals.js';
 
 function createRepostModal() {
-    const modal = document.createElement('div');
-    modal.className = 'repost-modal';
-    modal.innerHTML = `
-        <div class="repost-modal-content">
-            <div class="repost-modal-header">
-                <h3>Repost this content</h3>
-                <button class="repost-modal-close">&times;</button>
-            </div>
-            <textarea class="repost-textarea" 
-                      placeholder="Add your thoughts about this post (optional)..."
-                      maxlength="500"></textarea>
-            <div class="repost-modal-actions">
-                <button class="repost-cancel">Cancel</button>
-                <button class="repost-submit">Repost</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    return modal;
+    // const modal = document.createElement('div');
+    // modal.className = 'repost-modal';
+    // modal.innerHTML = `
+    //     <div class="repost-modal-content">
+    //         <div class="repost-modal-header">
+    //             <h3>Repost this content</h3>
+    //             <button class="repost-modal-close">&times;</button>
+    //         </div>
+    //         <textarea class="repost-textarea" 
+    //                   placeholder="Add your thoughts about this post (optional)..."
+    //                   maxlength="500"></textarea>
+    //         <div class="repost-modal-actions">
+    //             <button class="repost-cancel">Cancel</button>
+    //             <button class="repost-submit">Repost</button>
+    //         </div>
+    //     </div>
+    // `;
+    // document.body.appendChild(modal);
+    // return modal;
+    //scrivamo  che non è ancora stato implementato
+    alert('Not implemented yet');
 }
 
 function showRepostModal(author, permlink, callback) {
