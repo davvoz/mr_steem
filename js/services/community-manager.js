@@ -1,4 +1,5 @@
 import { extractImageFromContent } from '../services/posts/post-utils.js';
+import { nodes } from '../utils/config.js';
 
 async function withTimeout(promise, timeout = 10000) {
     let timer;
@@ -17,14 +18,8 @@ async function withTimeout(promise, timeout = 10000) {
 }
 
 async function retryWithFallback(fn, retries = 3) {
-    const fallbackNodes = [
-        'https://api.steemit.com',
-        'https://api.steemitdev.com',
-        'https://api.steemzzang.com'
-    ];
-
     for (let i = 0; i < retries; i++) {
-        for (const node of fallbackNodes) {
+        for (const node of nodes) {
             try {
                 steem.api.setOptions({ url: node });
                 return await withTimeout(fn());

@@ -1,5 +1,6 @@
 import { extractProfileImage, extractImageFromContent } from './posts/post-utils.js';
 import {  showLoadingIndicator, hideLoadingIndicator} from './ui/loading-indicators.js';
+import { nodes } from '../utils/config.js';
 
 const seenPosts = new Set(); 
 const globalPostsCache = {
@@ -11,28 +12,18 @@ const globalPostsCache = {
 let lastPost = null;
 let isLoading = false;
 let hasMore = true;
-
-const STEEM_API_URLS = [
-    'https://api.moecki.online',
-    'https://api.steemit.com',
-    'https://api.hive.blog',
-    'https://api.hivekings.com',
-    'https://anyx.io',
-    'https://api.openhive.network'
-];
-
 let currentApiUrl = 0;
 
 async function initSteemConnection() {
-    while (currentApiUrl < STEEM_API_URLS.length) {
+    while (currentApiUrl < nodes.length) {
         try {
-            steem.api.setOptions({ url: STEEM_API_URLS[currentApiUrl] });
+            steem.api.setOptions({ url: nodes[currentApiUrl] });
             // Test the connection
             await steem.api.getDynamicGlobalPropertiesAsync();
-            console.log('Connected to Steem API:', STEEM_API_URLS[currentApiUrl]);
+            console.log('Connected to Steem API:', nodes[currentApiUrl]);
             return true;
         } catch (error) {
-            console.warn(`Failed to connect to ${STEEM_API_URLS[currentApiUrl]}, trying next...`);
+            console.warn(`Failed to connect to ${nodes[currentApiUrl]}, trying next...`);
             currentApiUrl++;
         }
     }
@@ -88,7 +79,7 @@ export async function loadHomeFeed(append = false) {
         console.error('Error loading home feed:', error);
         // Try to reconnect using a different API endpoint
         currentApiUrl++;
-        if (currentApiUrl < STEEM_API_URLS.length) {
+        if (currentApiUrl < nodes.length) {
             console.log('Attempting to reconnect with different API endpoint...');
             await loadHomeFeed(append);
         } else {
