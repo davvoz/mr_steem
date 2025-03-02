@@ -5,6 +5,7 @@ import { displayPosts } from '../../services/posts-manager.js';
 import { extractProfileImage } from './post-utils.js';
 import { SteemAPI } from '../common/api-wrapper.js';
 import { showToast } from '../ui/modals.js';
+import { generatePostContent } from './generatePostContent.js';
 
 let isLoading = false;
 let hasMore = true;
@@ -28,32 +29,8 @@ export async function loadSteemPosts(options = {}) {
 export async function loadSinglePost(author, permlink) {
     showLoadingIndicator();
     try {
-        // Get post and author data
-        const [post, [authorAccount]] = await Promise.all([
-            steem.api.getContentAsync(author, permlink),
-            steem.api.getAccountsAsync([author])
-        ]);
-
-        const processedPost = {
-            author: post.author,
-            permlink: post.permlink,
-            title: post.title,
-            body: post.body,
-            image: extractImageFromContent(post.body),
-            authorImage: authorAccount ? extractProfileImage(authorAccount) : null,
-            created: post.created,
-            active_votes: post.active_votes,
-            children: post.children,
-            pending_payout_value: post.pending_payout_value,
-            tags: post.json_metadata ? JSON.parse(post.json_metadata).tags : []
-        };
-
-        // Use the same rendering function with slight modifications for single post view
-        const postView = document.getElementById('post-view');
-        if (postView) {
-            postView.innerHTML = renderPostHTML(processedPost);
-        }
-
+        const processedPost = await fetchAndProcessPost(author, permlink);
+        await renderSinglePost(processedPost);
         return processedPost;
     } catch (error) {
         console.error('Error loading single post:', error);
@@ -63,45 +40,48 @@ export async function loadSinglePost(author, permlink) {
     }
 }
 
+async function fetchAndProcessPost(author, permlink) {
+    const [post, [authorAccount]] = await Promise.all([
+        steem.api.getContentAsync(author, permlink),
+        steem.api.getAccountsAsync([author])
+    ]);
+
+    return {
+        author: post.author,
+        permlink: post.permlink,
+        title: post.title,
+        body: post.body,
+        image: extractImageFromContent(post.body),
+        authorImage: authorAccount ? extractProfileImage(authorAccount) : null,
+        created: post.created,
+        active_votes: post.active_votes,
+        children: post.children,
+        pending_payout_value: post.pending_payout_value,
+        tags: extractTags(post.json_metadata)
+    };
+}
+
+function extractTags(jsonMetadata) {
+    try {
+        return jsonMetadata ? JSON.parse(jsonMetadata).tags : [];
+    } catch {
+        return [];
+    }
+}
+
+async function renderSinglePost(post) {
+    const postView = document.getElementById('post-view');
+    if (postView) {
+        postView.innerHTML = renderPostHTML(post);
+    }
+}
+
 export async function loadSingleComment(author, permlink) {
     try {
         showLoadingIndicator();
-
-        // First get the comment data
-        const comment = await steem.api.getContentAsync(author, permlink);
-
-        // Then get the author and parent author data
-        const [authorAccount, parentAccount] = await Promise.all([
-            steem.api.getAccountsAsync([author]),
-            steem.api.getAccountsAsync([comment.parent_author])
-        ]);
-
-        const processedComment = {
-            ...comment,
-            authorImage: authorAccount?.[0] ? extractProfileImage(authorAccount[0]) : null,
-            parentAuthorImage: parentAccount?.[0] ? extractProfileImage(parentAccount[0]) : null,
-        };
-
-        const postView = document.getElementById('post-view');
-        if (postView) {
-            postView.innerHTML = `
-                <div class="post-context-nav">
-                    <a href="#/post/${comment.parent_author}/${comment.parent_permlink}" class="back-button">
-                        <i class="fas fa-arrow-left"></i> Back to Post
-                    </a>
-                </div>
-                <div class="full-post">
-                    ${renderPostHTML({
-                ...processedComment,
-                title: `Comment by @${processedComment.author}`,
-                parent_author: comment.parent_author,
-                parent_permlink: comment.parent_permlink
-            })}
-                    
-                </div>
-            `;
-        }
-
+        const comment = await fetchCommentData(author, permlink);
+        const processedComment = await enrichCommentWithAuthorData(comment);
+        await renderCommentView(processedComment);
         return processedComment;
     } catch (error) {
         console.error('Error loading comment:', error);
@@ -111,547 +91,284 @@ export async function loadSingleComment(author, permlink) {
     }
 }
 
+async function fetchCommentData(author, permlink) {
+    return steem.api.getContentAsync(author, permlink);
+}
+
+async function enrichCommentWithAuthorData(comment) {
+    const [authorAccount, parentAccount] = await Promise.all([
+        steem.api.getAccountsAsync([comment.author]),
+        steem.api.getAccountsAsync([comment.parent_author])
+    ]);
+
+    return {
+        ...comment,
+        authorImage: authorAccount?.[0] ? extractProfileImage(authorAccount[0]) : null,
+        parentAuthorImage: parentAccount?.[0] ? extractProfileImage(parentAccount[0]) : null,
+    };
+}
+
+async function renderCommentView(comment) {
+    const postView = document.getElementById('post-view');
+    if (!postView) return;
+
+    postView.textContent = '';
+    const contextNav = createContextNav(comment);
+    const fullPost = createFullPost(comment);
+    
+    postView.append(contextNav, fullPost);
+}
+
+function createContextNav(comment) {
+    const contextNav = document.createElement('div');
+    contextNav.className = 'post-context-nav';
+
+    const backButton = document.createElement('a');
+    backButton.href = `#/post/${comment.parent_author}/${comment.parent_permlink}`;
+    backButton.className = 'back-button';
+
+    const backIcon = document.createElement('i');
+    backIcon.className = 'fas fa-arrow-left';
+    backButton.append(backIcon, ' Back to Post');
+
+    contextNav.appendChild(backButton);
+    return contextNav;
+}
+
+function createFullPost(comment) {
+    const fullPost = document.createElement('div');
+    fullPost.className = 'full-post';
+
+    const postData = {
+        ...comment,
+        title: `Comment by @${comment.author}`,
+        parent_author: comment.parent_author,
+        parent_permlink: comment.parent_permlink
+    };
+
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = renderPostHTML(postData);
+    
+    while (tempDiv.firstChild) {
+        fullPost.appendChild(tempDiv.firstChild);
+    }
+
+    return fullPost;
+}
+
 function generatePostHeader(post, avatarUrl, postDate) {
-    return `
-        <header class="post-header-all">
-        <h1 class="post-title" style="font-size: 2.6rem;font-weight: 300;">${post.title}</h1>
-        <div class="post-header">
-            <div class="author-info">
-                <img src="${avatarUrl}" 
-                     alt="${post.author}" 
-                     class="author-avatar"
-                     onerror="this.src='https://steemitimages.com/u/${post.author}/avatar'">
-                <div class="author-details">
-                    <a href="#/profile/${post.author}" class="author-name">@${post.author}</a>
-                    <span class="post-date">${postDate}</span>
-                </div>
-            </div>
-            </div>
-        </header>
-    `;
+    const header = createHeaderElement();
+    const title = createTitleElement(post.title);
+    const headerDiv = createHeaderContainer();
+    const authorInfo = createAuthorInfo(post, avatarUrl, postDate);
+
+    headerDiv.appendChild(authorInfo);
+    header.append(title, headerDiv);
+
+    return header.outerHTML;
 }
 
-function transformSteemitLinks(html) {
-    // Transform steemit.com links with community tags to our app format
-    return html.replace(
-        /https:\/\/steemit\.com\/[^\/]+\/@([^\/]+)\/([^\/\s"']+)/gi,
-        (match, author, permlink) => {
-            if (author && permlink) {
-                return `#/post/${author}/${permlink}`;
-            }
-            return match;
-        }
-    ).replace(
-        /https:\/\/steemit\.com\/@([^\/\s"']+)/gi,
-        (match, username) => {
-            // Transform profile links
-            return `#/profile/${username}`;
-        }
-    );
+function createHeaderElement() {
+    const header = document.createElement('header');
+    header.className = 'post-header-all';
+    return header;
 }
 
-function generatePostContent(htmlContent) {
-    console.log(htmlContent);
-    
-    // Transform Steemit links before any other transformations
-    htmlContent = transformSteemitLinks(htmlContent);
-    
-    // Add this at the very beginning of the function, before any other transformations
-    // Handle raw image URLs first
-    htmlContent = htmlContent.replace(
-        /(https?:\/\/(?:[a-z0-9-]+\.)*(?:postimg\.cc|imgur\.com|ibb\.co)[^\s<>"']+\.(?:jpg|jpeg|png|gif|webp))(?:\s|$)/gi,
-        (match, url) => `<img src="${url}" alt="image" class="content-image">`
-    );
-
-    // Add this near the beginning of the function, after the initial transformations
-    
-    // Handle nested CDN image links first
-    htmlContent = htmlContent.replace(
-        /<a[^>]*href="(https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\/\d+x\d+\/[^"]+)"[^>]*>[^<]*<\/a>/gi,
-        (match, url) => generateMediaTag(url)
-    );
-
-    // Handle any remaining direct image links
-    htmlContent = htmlContent.replace(
-        /https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\/\d+x\d+\/[^\s<>"']+/gi,
-        url => generateMediaTag(url)
-    );
-    
-    let convertedHtml = typeof marked !== 'undefined' ? marked.parse(htmlContent) : htmlContent;
-    console.log(convertedHtml);
-
-    function parseCells(row) {
-        return row.split('|')
-            .map(cell => cell.trim())
-            .filter(cell => cell.length > 0);
-    }
-
-    function isSeparatorRow(row) {
-        return row.replace(/[|\s-]/g, '').length === 0;
-    }
-
-    function generateMediaTag(url, alt = '') {
-        // Decode URL to handle encoded characters
-        let decodedUrl = decodeURIComponent(url);
-
-        // Handle nested Steem CDN URLs with dimensions
-        const nestedCdnRegex = /https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\/(?:\d+x\d+\/)?(?:https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\/[^"]+)/;
-        const match = decodedUrl.match(nestedCdnRegex);
-        if (match) {
-            // Extract the base URL by removing any dimension specifications
-            decodedUrl = decodedUrl.replace(/https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\/(?:\d+x\d+\/)?/, '');
-            // If it starts with another CDN URL, clean that up too
-            decodedUrl = decodedUrl.replace(/^https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\//, '');
-            // Add back the CDN prefix
-            decodedUrl = 'https://cdn.steemitimages.com/' + decodedUrl;
-        }
-
-        // Handle simple dimension-only URLs
-        const dimensionRegex = /https:\/\/(?:steemitimages\.com|cdn\.steemitimages\.com)\/\d+x\d+\/([^"]+)/;
-        const dimensionMatch = decodedUrl.match(dimensionRegex);
-        if (dimensionMatch) {
-            decodedUrl = 'https://cdn.steemitimages.com/' + dimensionMatch[1];
-        }
-
-        if (decodedUrl.match(/\.(mp4|webm|ogg)$/i)) {
-            return `<video controls><source src="${decodedUrl}" type="video/${decodedUrl.split('.').pop()}">Your browser does not support the video tag.</video>`;
-        } else if (decodedUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-            return `<img src="${decodedUrl}" 
-                        alt="${alt || 'image'}" 
-                        class="content-image"
-                        onerror="this.onerror=null; this.src='/images/broken-image.png'; this.classList.add('broken-image');">`;
-        }
-        return `<a href="${decodedUrl}" target="_blank">${decodedUrl}</a>`;
-    }
-
-    // First, handle all image patterns - BEFORE any other transformations
-
-    // 1. Handle centered images first
-    convertedHtml = convertedHtml.replace(
-        /<center>!\[([^\]]*)\]\(([^)]+)\)<\/center>/g,
-        (_, alt, url) => {
-            if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-                return `<center><img src="${url}" alt="${alt || 'image'}" class="content-image"></center>`;
-            }
-            return `<center>${generateMediaTag(url, alt)}</center>`;
-        }
-    );
-
-    // 2. Handle non-centered images with CDN resize URL pattern
-    convertedHtml = convertedHtml.replace(
-        /!\[([^\]]*)\]\((https:\/\/cdn\.steemitimages\.com\/\d+x\d+\/[^)]+)\)/g,
-        (_, alt, url) => {
-            if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-                return `<img src="${url}" alt="${alt || 'image'}" class="content-image">`;
-            }
-            return generateMediaTag(url, alt);
-        }
-    );
-
-    // 3. Handle regular images
-    convertedHtml = convertedHtml.replace(
-        /!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g,
-        (_, alt, url) => {
-            if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-                return `<img src="${url}" alt="${alt || 'image'}" class="content-image">`;
-            }
-            return generateMediaTag(url, alt);
-        }
-    );
-
-    // Handle standalone CDN URLs and text formatting at the start
-    convertedHtml = convertedHtml.replace(
-        /(<div[^>]*>)?\s*(https:\/\/cdn\.steemitimages\.com\/[^\s<>"]+?\.(?:jpg|jpeg|png|gif|webp|mp4|webm|ogg))(?:\s|$)/gi,
-        (match, divTag, url) => {
-            const mediaTag = generateMediaTag(url);
-            if (divTag) {
-                // If URL was in a div, keep the div
-                return `${divTag}${mediaTag}`;
-            }
-            return mediaTag;
-        }
-    );
-
-    // Handle text with pull-left/pull-right classes
-    convertedHtml = convertedHtml.replace(
-        /<div\s+class=["']?pull-(left|right)["']?>(https:\/\/cdn\.steemitimages\.com\/[^\s<>"]+?\.(?:jpg|jpeg|png|gif|webp|mp4|webm|ogg))<\/div>/gi,
-        (match, position, url) => {
-            return `<div class="pull-${position}">${generateMediaTag(url)}</div>`;
-        }
-    );
-
-    // Handle centered markdown images with proper alt text
-    convertedHtml = convertedHtml.replace(
-        /<center>!\[([^\]]+)\]\((https:\/\/cdn\.steemitimages\.com\/[^\s<>"]+?\.(?:jpg|jpeg|png|gif|webp|mp4|webm|ogg))\)<\/center>/gi,
-        (match, alt, url) => {
-            return `<center>${generateMediaTag(url, alt)}</center>`;
-        }
-    );
-
-    // Handle text with sup tags in center
-    convertedHtml = convertedHtml.replace(
-        /<center><sup>\*\*([^*]+)\*\*<\/sup><\/center>/g,
-        (_, text) => `<center><sup><strong>${text}</strong></sup></center>`
-    );
-
-    // Then handle all other transformations
-
-    // Handle special case of centered div with class followed by table marker
-    convertedHtml = convertedHtml.replace(
-        /<center><div class=([^>]+)>([^<]+)<\/div><\/center>\s*\|\s*-\s*\|/g,
-        (_, className, content) => {
-            return `<table class="markdown-table">
-                <thead>
-                    <tr>
-                        <th><div class=${className}>${content}</div></th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>`;
-        }
-    );
-    //se troviamo | |- dopo un center allora dobbiamo trasformare il tutto in una tabella con una sola colonna e una riga
-    //bonifichiamo precedentemente il | |- da eventuali end line
-    
-
-    // Handle special case of centered text followed by table marker
-    convertedHtml = convertedHtml.replace(
-        /<center>([^<]+)<\/center>\s*\|\s*-\s*\|/g,
-        (_, content) => {
-            return `<table class="markdown-table">
-                <thead>
-                    <tr>
-                        <th><center>${content}</center></th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>`;
-        }
-    );
-
-    // Clean up newlines between center and table markers
-    convertedHtml = convertedHtml.replace(
-        /(<center>.*?<\/center>)\s*\|\s*-\s*\|/g,
-        '$1|-|'
-    );
-
-    // Transform centered content followed by table markers into a single-column table
-    convertedHtml = convertedHtml.replace(
-        /(<center>(.*?)<\/center>)\|-\|/g,
-        (match, centerTag, content) => {
-            return `<table class="markdown-table">
-                <thead>
-                    <tr>
-                        <th>${content}</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>`;
-        }
-    );
-
-    // First clean up and normalize table markers after centered content
-    convertedHtml = convertedHtml.replace(
-        /(<center>.*?<\/center>)\s*\|\s*-+\s*\|/g,
-        (match, centerContent) => {
-            // Extract the content from center tags
-            const content = centerContent.replace(/<\/?center>/g, '').trim();
-            return `<table class="markdown-table">
-                <thead>
-                    <tr>
-                        <th>${content}</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>`;
-        }
-    );
-
-    // Handle specific case of centered content followed by table markers with newline
-    convertedHtml = convertedHtml.replace(
-        /(<center>([^<]+)<\/center>)\s*\|\s*\n\s*-/g,
-        (_, centerTag, content) => {
-            return `<table class="markdown-table">
-                <thead>
-                    <tr>
-                        <th>${content}</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>`;
-        }
-    );
-
-    // Remove any remaining pipe/dash markers
-    convertedHtml = convertedHtml.replace(/\|\s*\n\s*-/g, '');
-
-    // Handle any remaining regular tables
-    convertedHtml = convertedHtml.replace(
-        /([^\n]+\|[^\n]+)(\n[-|\s]+\n)([^\n]*\|[^\n]*\n?)+/g,
-        (match) => {
-            try {
-                const rows = match.split('\n').filter(row => row.trim());
-                if (rows.length < 3) return match;
-
-                let tableHtml = ['<table class="markdown-table">'];
-                let headerProcessed = false;
-
-                for (let i = 0; i < rows.length; i++) {
-                    const row = rows[i];
-                    if (isSeparatorRow(row)) continue;
-
-                    const cells = parseCells(row);
-
-                    if (!headerProcessed) {
-                        tableHtml.push('<thead><tr>');
-                        cells.forEach(cell => {
-                            tableHtml.push(`<th>${cell}</th>`);
-                        });
-                        tableHtml.push('</tr></thead><tbody>');
-                        headerProcessed = true;
-                    } else {
-                        tableHtml.push('<tr>');
-                        cells.forEach(cell => {
-                            // First, clean up any existing partial conversions
-                            let cleanCell = cell.replace(/<a[^>]*><img[^>]*><\/a>/g, '');
-
-                            // Process CDN URLs in the cell
-                            cleanCell = cleanCell.replace(
-                                /(https:\/\/cdn\.steemitimages\.com\/(?:\d+x\d+\/)?[^\s]+?\.(?:jpg|jpeg|png|gif|webp|mp4|webm|ogg))(?:\s+|$)/gi,
-                                (match, url) => generateMediaTag(url) + ' '
-                            );
-
-                            tableHtml.push(`<td>${cleanCell.trim()}</td>`);
-                        });
-                        tableHtml.push('</tr>');
-                    }
-                }
-
-                tableHtml.push('</tbody></table>');
-                return tableHtml.join('');
-            } catch (error) {
-                console.error('Error parsing table:', error);
-                return match;
-            }
-        }
-    );
-
-    // Other transformations
-    convertedHtml = convertedHtml.replace(
-        /<center>\s*\*([^\*]+)\*\s*<\/center>/g,
-        (_, text) => `<center><strong>${text}</strong></center>`
-    );
-
-    convertedHtml = convertedHtml.replace(
-        /<a\s+href="([^"]+\.(mp4|webm|ogg))">\s*\1\s*<\/a>/gi,
-        (_, url) => generateMediaTag(url)
-    );
-
-    convertedHtml = convertedHtml.replace(
-        /\*\*([^\*]+)\*\*/g,
-        (_, text) => `<strong>${text}</strong>`
-    );
-    //convertiamo il center che precede un <center>SPUNTI DI RIFLESSIONE</center> |
-    //|-
-    //in una tabella con una sola colonna e una riga
-
-
-
-
-
-    convertedHtml = convertedHtml.replace(
-        /\[([^\]]+)\]\(([^)]+)\)/g,
-        (_, text, url) => {
-            if (url.match(/\.(mp4|webm|ogg)$/i)) {
-                return generateMediaTag(url);
-            }
-            return `<a href="${url}" target="_blank">${text} <i class="fas fa-external-link-alt"></i></a>`;
-        }
-    );
-
-    //per tutti i link a che sono immagini o video convertirli in tag img o video
-    //sono cose del genere : <center><a href="https://cdn.steemitimages.com/DQmaaNuF8gaoBCnFXZ2atqX8RbaceziqKXatioiUEQZHMMm/Progetto senza titolo (10" target="_blank">https://cdn.steemitimages.com/DQmaaNuF8gaoBCnFXZ2atqX8RbaceziqKXatioiUEQZHMMm/Progetto senza titolo (10</a>.jpg)</center>
-    //fai attenzione ai doppi apici
-
-    // Handle direct links to media files that are broken across elements
-    convertedHtml = convertedHtml.replace(
-        /<center>(?:<a[^>]+>)?(https:\/\/cdn\.steemitimages\.com\/[^<]+)<\/a>([^<]*\.(?:jpg|jpeg|png|gif|webp|mp4|webm|ogg))<\/center>/gi,
-        (match, url, extension) => {
-            const fullUrl = url + extension;
-            return `<center>${generateMediaTag(fullUrl)}</center>`;
-        }
-    );
-
-    // Also handle non-centered media links
-    convertedHtml = convertedHtml.replace(
-        /(?:<a[^>]+>)?(https:\/\/cdn\.steemitimages\.com\/[^<]+)<\/a>([^<]*\.(?:jpg|jpeg|png|gif|webp|mp4|webm|ogg))/gi,
-        (match, url, extension) => {
-            const fullUrl = url + extension;
-            return generateMediaTag(fullUrl);
-        }
-    );
-
-    function replaceLinInMediaTag(match, url) {
-        return generateMediaTag(url);
-    }
-
-    // Handle direct links to media files that are broken across elements
-    convertedHtml = convertedHtml.replace(
-        /<center>(?:<a[^>]+>)?([^<]+)<\/a>([^<]*\.(?:jpg|jpeg|png|gif|webp|mp4|webm|ogg))<\/center>/gi,
-        replaceLinInMediaTag
-    );
-
-    // Also handle non-centered media links
-    convertedHtml = convertedHtml.replace(
-        /(?:<a[^>]+>)?([^<]+)<\/a>([^<]*\.(?:jpg|jpeg|png|gif|webp|mp4|webm|ogg))/gi,
-        replaceLinInMediaTag
-    );
-
-    // Handle URLs within paragraph tags
-    convertedHtml = convertedHtml.replace(
-        /<p><a[^>]*>(https:\/\/cdn\.steemitimages\.com\/[^<]+?\.(?:jpg|jpeg|png|gif|webp|mp4|webm|ogg))<\/a><\/p>/gi,
-        (match, url) => `<p>${generateMediaTag(url)}</p>`
-    );
-
-    // Handle URLs followed by centered captions
-    convertedHtml = convertedHtml.replace(
-        /(<p>(?:<a[^>]*>)?https:\/\/cdn\.steemitimages\.com\/[^<]+?\.(?:jpg|jpeg|png|gif|webp|mp4|webm|ogg)(?:<\/a>)?<\/p>)\s*<center><sup><strong>([^<]+)<\/strong><\/sup><\/center>/gi,
-        (match, imgPart, caption) => {
-            const url = imgPart.replace(/<\/?[^>]+(>|$)/g, '');
-            return `<figure>
-                ${generateMediaTag(url)}
-                <figcaption><center><sup><strong>${caption}</strong></sup></center></figcaption>
-            </figure>`;
-        }
-    );
-
-    // Handle URLs in pull-left/right divs without anchor tags
-    convertedHtml = convertedHtml.replace(
-        /<div\s+class=["']?pull-(left|right)["']?>\s*(https:\/\/cdn\.steemitimages\.com\/[^<\s]+?\.(?:jpg|jpeg|png|gif|webp|mp4|webm|ogg))\s*<\/div>/gi,
-        (match, position, url) => `<div class="pull-${position}">${generateMediaTag(url)}</div>`
-    );
-
-    // Handle markdown images in center tags (without creating nested tags)
-    convertedHtml = convertedHtml.replace(
-        /<center>!\[[^\]]*\]\((https:\/\/cdn\.steemitimages\.com\/[^)]+)\)<\/center>/gi,
-        (match, url) => `<center>${generateMediaTag(url)}</center>`
-    );
-
-    // Handle text-justify div wrapper
-    convertedHtml = convertedHtml.replace(
-        /<div class="text-justify">([\s\S]*?)<\/div>/gi,
-        (match, content) => `<div class="text-justify">${content}</div>`
-    );
-
-    // Handle <a> tags where href and text content are the same CDN URL
-    convertedHtml = convertedHtml.replace(
-        /<a\s+href="(https:\/\/cdn\.steemitimages\.com\/[^"]+)">[^<]*?cdn\.steemitimages\.com\/[^<]+<\/a>/gi,
-        (_, url) => generateMediaTag(url)
-    );
-
-    // More aggressive URL matching inside <a> tags
-    convertedHtml = convertedHtml.replace(
-        /<a[^>]*>(https:\/\/cdn\.steemitimages\.com\/[^<]+)<\/a>/gi,
-        (_, url) => generateMediaTag(url)
-    );
-
-    //il center che precedede un | |- deve essere una tabella con una sola colonna e una riga
-
-    // Final pass: Convert content followed by | and - markers
-    convertedHtml = convertedHtml.replace(
-        /(<center>[^<]+<\/center>)\s*\|\s*\n\s*-/g,
-        (match, centerContent) => {
-            // Clean the center content and convert to table
-            return `<table class="markdown-table">
-                <thead>
-                    <tr>
-                        <th>${centerContent}</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>`;
-        }
-    );
-
-    // Transform links in the final converted HTML again
-    // This catches any links that might have been generated during markdown conversion
-    convertedHtml = transformSteemitLinks(convertedHtml);
-
-    return `<div class="post-content">
-        <div class="post-body markdown-content">${convertedHtml}</div>
-    </div>`;
+function createTitleElement(titleText) {
+    const title = document.createElement('h1');
+    title.className = 'post-title';
+    title.style.fontSize = '2.6rem';
+    title.style.fontWeight = '300';
+    title.textContent = titleText;
+    return title;
 }
+
+function createHeaderContainer() {
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'post-header';
+    return headerDiv;
+}
+
+function createAuthorInfo(post, avatarUrl, postDate) {
+    const authorInfo = document.createElement('div');
+    authorInfo.className = 'author-info';
+
+    const avatar = createAvatar(post.author, avatarUrl);
+    const authorDetails = createAuthorDetails(post.author, postDate);
+
+    authorInfo.append(avatar, authorDetails);
+    return authorInfo;
+}
+
+function createAvatar(author, avatarUrl) {
+    const avatar = document.createElement('img');
+    avatar.src = avatarUrl;
+    avatar.alt = author;
+    avatar.className = 'author-avatar';
+    avatar.onerror = () => { avatar.src = `https://steemitimages.com/u/${author}/avatar`; };
+    return avatar;
+}
+
+function createAuthorDetails(author, postDate) {
+    const authorDetails = document.createElement('div');
+    authorDetails.className = 'author-details';
+
+    const authorLink = createAuthorLink(author);
+    const dateSpan = createDateSpan(postDate);
+
+    authorDetails.append(authorLink, dateSpan);
+    return authorDetails;
+}
+
+function createAuthorLink(author) {
+    const authorLink = document.createElement('a');
+    authorLink.href = `#/profile/${author}`;
+    authorLink.className = 'author-name';
+    authorLink.textContent = `@${author}`;
+    return authorLink;
+}
+
+function createDateSpan(postDate) {
+    const dateSpan = document.createElement('span');
+    dateSpan.className = 'post-date';
+    dateSpan.textContent = postDate;
+    return dateSpan;
+}
+
 
 function generatePostFooter(post) {
-    const hasVoted = post.active_votes?.some(vote =>
-        vote.voter === steemConnection?.username
+    const { author, active_votes: activeVotes = [], tags = [] } = post;
+    const hasVoted = activeVotes.some(vote => vote.voter === steemConnection?.username);
+    const isOwnPost = author === steemConnection?.username;
+    
+    const footerElement = createFooterElement();
+    
+    footerElement.append(
+        createStatsSection(post),
+        createTagsSection(tags),
+        createActionsSection(post, hasVoted, isOwnPost)
     );
 
-    let tags = post.tags || [];
+    return footerElement.outerHTML;
+}
 
-    const isOwnPost = post.author === steemConnection?.username;
+function createFooterElement() {
+    const footer = document.createElement('footer');
+    footer.className = 'post-footer';
+    return footer;
+}
 
-    return `
-        <footer class="post-footer">
-            <div class="post-stats">
-                <span class="net_votes clickable" 
-                      data-post-author="${post.author}" 
-                      data-post-permlink="${post.permlink}"
-                      style="cursor: pointer;">
-                    <i class="far fa-heart"></i>
-                    ${post.active_votes?.length || 0} likes
-                </span>
-                <span class="comments-count"
-                      data-post-author="${post.author}" 
-                      data-post-permlink="${post.permlink}"
-                      style="cursor: pointer;">
-                    <i class="far fa-comment"></i>
-                    ${post.children || 0} comments
-                </span>
-                <span class="payout-value clickable"
-                      data-post-author="${post.author}" 
-                      data-post-permlink="${post.permlink}"
-                      style="cursor: pointer;">
-                    <i class="fas fa-dollar-sign"></i>
-                    ${parseFloat(post.pending_payout_value || 0).toFixed(2)}
-                </span>
-            </div>
-            <div class="post-tags">
-                ${tags.map(tag => `
-                    <a href="#/tag/${tag}" class="tag">${tag}</a>
-                `).join('')}
-            </div>
-            <div class="post-actions">
-                <button class="vote-button ${hasVoted ? 'voted' : ''}"
-                        data-author="${post.author}"
-                        data-permlink="${post.permlink}"
-                        ${hasVoted ? 'disabled' : ''}>
-                    <span class="vote-icon">
-                        <i class="far fa-heart"></i>
-                    </span>
-                    <span class="vote-count">${post.active_votes?.length || 0}</span>
-                </button>
-                ${!isOwnPost ? `
-                    <button class="repost-button" 
-                            data-author="${post.author}" 
-                            data-permlink="${post.permlink}">
-                        <span class="repost-icon">
-                            <i class="fas fa-retweet"></i>
-                        </span>
-                        <span>Repost</span>
-                    </button>
-                ` : ''}
-                <button class="comment-button" 
-                        data-author="${post.author}" 
-                        data-permlink="${post.permlink}">
-                    <span class="comment-icon">
-                        <i class="far fa-comment"></i>
-                    </span>
-                    <span class="comment-count">${post.children || 0}</span>
-                </button>
-            </div>
-        </footer>
-    `;
+function createStatsSection(post) {
+    const statsDiv = document.createElement('div');
+    statsDiv.className = 'post-stats';
+    
+    const stats = [
+        { icon: 'far fa-heart', text: `${post.active_votes?.length || 0} likes` },
+        { icon: 'far fa-comment', text: `${post.children || 0} comments` },
+        { icon: 'fas fa-dollar-sign', text: `${parseFloat(post.pending_payout_value || 0).toFixed(2)}` }
+    ];
+
+    stats.forEach(stat => {
+        statsDiv.appendChild(createStatsSpan(stat.icon, stat.text, post));
+    });
+
+    return statsDiv;
+}
+
+function createTagsSection(tags) {
+    const tagsDiv = document.createElement('div');
+    tagsDiv.className = 'post-tags';
+
+    tags.forEach(tag => {
+        const tagLink = document.createElement('a');
+        tagLink.href = `#/tag/${tag}`;
+        tagLink.className = 'tag';
+        tagLink.textContent = tag;
+        tagsDiv.appendChild(tagLink);
+    });
+
+    return tagsDiv;
+}
+
+function createActionsSection(post, hasVoted, isOwnPost) {
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'post-actions';
+
+    const buttons = [
+        createVoteButton(post, hasVoted),
+        !isOwnPost && createRepostButton(post),
+        createCommentButton(post)
+    ].filter(Boolean);
+
+    buttons.forEach(button => actionsDiv.appendChild(button));
+
+    return actionsDiv;
+}
+
+function createVoteButton(post, hasVoted) {
+    const button = createActionButton('vote-button', 'far fa-heart', post.active_votes?.length || 0, hasVoted);
+    button.dataset.author = post.author;
+    button.dataset.permlink = post.permlink;
+    if (hasVoted) button.disabled = true;
+    return button;
+}
+
+function createRepostButton(post) {
+    const button = createActionButton('repost-button', 'fas fa-retweet', null, false, 'Repost');
+    button.dataset.author = post.author;
+    button.dataset.permlink = post.permlink;
+    return button;
+}
+
+function createCommentButton(post) {
+    const button = createActionButton('comment-button', 'far fa-comment', post.children || 0);
+    button.dataset.author = post.author;
+    button.dataset.permlink = post.permlink;
+    return button;
+}
+
+function createStatsSpan(iconClass, text, post) {
+    const span = document.createElement('span');
+    span.className = 'clickable';
+    span.style.cursor = 'pointer';
+    span.dataset.postAuthor = post.author;
+    span.dataset.postPermlink = post.permlink;
+
+    const icon = document.createElement('i');
+    icon.className = iconClass;
+    
+    span.appendChild(icon);
+    span.append(` ${text}`);
+    return span;
+}
+
+function createActionButton(className, iconClass, count, isActive = false, text = null) {
+    const button = document.createElement('button');
+    button.className = className + (isActive ? ' voted' : '');
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = className.replace('-button', '-icon');
+    
+    const icon = document.createElement('i');
+    icon.className = iconClass;
+    iconSpan.appendChild(icon);
+    
+    button.appendChild(iconSpan);
+
+    if (count !== null) {
+        const countSpan = document.createElement('span');
+        countSpan.className = className.replace('-button', '-count');
+        countSpan.textContent = count;
+        button.appendChild(countSpan);
+    }
+
+    if (text) {
+        const textSpan = document.createElement('span');
+        textSpan.textContent = text;
+        button.appendChild(textSpan);
+    }
+
+    return button;
 }
 
 function renderPostHTML(post) {
@@ -703,153 +420,224 @@ async function validateVotePermissions() {
 
 export async function votePost(author, permlink, weight = 10000) {
     showLoadingIndicator();
-    if (!await validateVotePermissions()) return false;
-
     try {
-        if (steemConnection.useKeychain) {
-            return new Promise((resolve) => {
-                window.steem_keychain.requestVote(
-                    steemConnection.username,
-                    permlink,
-                    author,
-                    weight,
-                    response => {
-                        hideLoadingIndicator();
-                        if (response.success) {
-                            showToast('Vote successful!', 'success');
-                            resolve(true);
-                        } else {
-                            showToast('Failed to vote: ' + response.message, 'error');
-                            resolve(false);
-                        }
-                    }
-                );
-            });
-        } else {
-            const key = sessionStorage.getItem('steemPostingKey');
-            await SteemAPI.vote(key, steemConnection.username, author, permlink, weight);
-            hideLoadingIndicator();
-            //owToast('Vote successful!', 'success');
-            return true;
+        if (!await validateVotePermissions()) {
+            return false;
         }
+        return await executeVote(author, permlink, weight);
     } catch (error) {
-        console.error('Failed to vote:', error);
-        showToast('Failed to vote: ' + error.message, 'error');
+        handleVoteError(error);
         return false;
+    } finally {
+        hideLoadingIndicator();
     }
+}
+
+async function executeVote(author, permlink, weight) {
+    if (steemConnection.useKeychain) {
+        return executeKeychainVote(author, permlink, weight);
+    }
+    return executeDirectVote(author, permlink, weight);
+}
+
+async function executeKeychainVote(author, permlink, weight) {
+    return new Promise((resolve) => {
+        window.steem_keychain.requestVote(
+            steemConnection.username,
+            permlink,
+            author,
+            weight,
+            response => handleVoteResponse(response, resolve)
+        );
+    });
+}
+
+async function executeDirectVote(author, permlink, weight) {
+    const key = sessionStorage.getItem('steemPostingKey');
+    await SteemAPI.vote(key, steemConnection.username, author, permlink, weight);
+    showToast('Vote successful!', 'success');
+    return true;
+}
+
+function handleVoteResponse(response, resolve) {
+    if (response.success) {
+        showToast('Vote successful!', 'success');
+        resolve(true);
+    } else {
+        showToast(`Failed to vote: ${response.message}`, 'error');
+        resolve(false);
+    }
+}
+
+function handleVoteError(error) {
+    console.error('Failed to vote:', error);
+    showToast(`Failed to vote: ${error.message}`, 'error');
 }
 
 export async function addComment(parentAuthor, parentPermlink, commentBody) {
-    if (!validateVotePermissions()) return false;
-
     try {
-        const key = sessionStorage.getItem('steemPostingKey');
-        const username = steemConnection.username;
+        if (!await validateCommentParams(parentAuthor, parentPermlink, commentBody)) {
+            return false;
+        }
 
-        // Create a valid permlink (only lowercase alphanumeric characters and hyphens)
-        const sanitizedParentAuthor = parentAuthor.toLowerCase().replace(/[^a-z0-9-]/g, '');
-        const timestamp = new Date().getTime();
-        const permlink = `re-${sanitizedParentAuthor}-${timestamp}`.toLowerCase();
-
-        const commentParams = {
-            postingKey: key,
-            author: username,
-            permlink: permlink,
-            parentAuthor: parentAuthor,
-            parentPermlink: parentPermlink,
-            title: '',
-            body: commentBody,
-            jsonMetadata: JSON.stringify({
-                tags: ['steemgram'],
-                app: 'steemgram/1.0'
-            })
-        };
-
+        const commentParams = await prepareCommentParams(parentAuthor, parentPermlink, commentBody);
         await SteemAPI.comment(commentParams);
         return true;
     } catch (error) {
-        console.error('Failed to add comment:', error);
-        alert('Failed to add comment: ' + error.message);
+        handleCommentError(error);
         return false;
     }
 }
 
+async function validateCommentParams(parentAuthor, parentPermlink, commentBody) {
+    if (!parentAuthor || !parentPermlink || !commentBody) {
+        showToast('Invalid comment parameters', 'error');
+        return false;
+    }
+    
+    return await validateVotePermissions();
+}
+
+async function prepareCommentParams(parentAuthor, parentPermlink, commentBody) {
+    const username = steemConnection.username;
+    const permlink = generateCommentPermlink(parentAuthor);
+    const metadata = createCommentMetadata();
+
+    return {
+        postingKey: sessionStorage.getItem('steemPostingKey'),
+        author: username,
+        permlink,
+        parentAuthor,
+        parentPermlink,
+        title: '',
+        body: commentBody,
+        jsonMetadata: metadata
+    };
+}
+
+function generateCommentPermlink(parentAuthor) {
+    const sanitizedParentAuthor = parentAuthor.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    const timestamp = new Date().getTime();
+    return `re-${sanitizedParentAuthor}-${timestamp}`.toLowerCase();
+}
+
+function createCommentMetadata() {
+    return JSON.stringify({
+        tags: ['steemgram'],
+        app: 'steemgram/1.0'
+    });
+}
+
+function handleCommentError(error) {
+    console.error('Failed to add comment:', error);
+    showToast(`Failed to add comment: ${error.message}`, 'error');
+}
+
 export async function repostContent(originalAuthor, originalPermlink, comment = '') {
-    if (!await validateVotePermissions()) return false;
+    //REPOST IS ILLEGAL DO NOT USE !!!
+    if (!await validateVotePermissions()) {
+        return false;
+    }
 
     showLoadingIndicator();
     try {
-        const timestamp = new Date().getTime();
-        const permlink = `repost-${originalPermlink}-${timestamp}`;
-        const username = steemConnection.username;
+        const repostData = await prepareRepostData(originalAuthor, originalPermlink, comment);
+        const result = await executeRepost(repostData);
+        showToast('Content reposted successfully!', 'success');
+        return result;
+    } catch (error) {
+        handleRepostError(error);
+        return false;
+    } finally {
+        hideLoadingIndicator();
+    }
+}
 
-        // Ottieni il contenuto originale
-        const originalPost = await steem.api.getContentAsync(originalAuthor, originalPermlink);
+async function prepareRepostData(originalAuthor, originalPermlink, comment) {
+    const timestamp = new Date().getTime();
+    const username = steemConnection.username;
+    const permlink = `repost-${originalPermlink}-${timestamp}`;
+    const originalPost = await steem.api.getContentAsync(originalAuthor, originalPermlink);
+    
+    return {
+        username,
+        permlink,
+        originalPost,
+        body: createRepostBody(originalAuthor, originalPermlink, originalPost.body, comment),
+        title: `[Repost] ${originalPost.title}`,
+        metadata: createRepostMetadata(originalPost, originalAuthor, originalPermlink)
+    };
+}
 
-        // Prepara il body del repost
-        const repostBody = `📢 Reposted from @${originalAuthor}
+function createRepostBody(originalAuthor, originalPermlink, originalBody, comment) {
+    const commentSection = comment ? `My thoughts: ${comment}\n\n---\n` : '';
+    return `📢 Reposted from @${originalAuthor}
 
-${comment ? `My thoughts: ${comment}\n\n---\n` : ''}
-
+${commentSection}
 Original post: https://steemit.com/@${originalAuthor}/${originalPermlink}
 
-${originalPost.body}`;
+${originalBody}`;
+}
 
-        if (steemConnection.useKeychain) {
-            return new Promise((resolve) => {
-                window.steem_keychain.requestPost(
-                    username,
-                    permlink,
-                    '',
-                    `[Repost] ${originalPost.title}`,
-                    repostBody,
-                    JSON.stringify({
-                        tags: ['steemgram', 'repost', ...originalPost.json_metadata?.tags || []],
-                        app: 'steemgram/1.0',
-                        originalAuthor,
-                        originalPermlink
-                    }),
-                    '',
-                    '',
-                    response => {
-                        hideLoadingIndicator();
-                        if (response.success) {
-                            showToast('Content reposted successfully!', 'success');
-                            resolve(true);
-                        } else {
-                            showToast('Failed to repost: ' + response.message, 'error');
-                            resolve(false);
-                        }
-                    }
-                );
-            });
-        } else {
-            const key = sessionStorage.getItem('steemPostingKey');
-            await SteemAPI.comment({
-                postingKey: key,
-                author: username,
-                permlink: permlink,
-                parentAuthor: '',
-                parentPermlink: 'steemgram',
-                title: `[Repost] ${originalPost.title}`,
-                body: repostBody,
-                jsonMetadata: JSON.stringify({
-                    tags: ['steemgram', 'repost', ...originalPost.json_metadata?.tags || []],
-                    app: 'steemgram/1.0',
-                    originalAuthor,
-                    originalPermlink
-                })
-            });
-            hideLoadingIndicator();
-            showToast('Content reposted successfully!', 'success');
-            return true;
-        }
-    } catch (error) {
-        console.error('Failed to repost:', error);
-        showToast('Failed to repost: ' + error.message);
-        hideLoadingIndicator();
-        return false;
+function createRepostMetadata(originalPost, originalAuthor, originalPermlink) {
+    return JSON.stringify({
+        tags: ['steemgram', 'repost', ...(originalPost.json_metadata?.tags || [])],
+        app: 'steemgram/1.0',
+        originalAuthor,
+        originalPermlink
+    });
+}
+
+async function executeRepost(repostData) {
+    if (steemConnection.useKeychain) {
+        return executeKeychainRepost(repostData);
     }
+    return executeDirectRepost(repostData);
+}
+
+function executeKeychainRepost(repostData) {
+    return new Promise((resolve) => {
+        window.steem_keychain.requestPost(
+            repostData.username,
+            repostData.permlink,
+            '',
+            repostData.title,
+            repostData.body,
+            repostData.metadata,
+            '',
+            '',
+            response => handleKeychainResponse(response, resolve)
+        );
+    });
+}
+
+async function executeDirectRepost(repostData) {
+    const key = sessionStorage.getItem('steemPostingKey');
+    await SteemAPI.comment({
+        postingKey: key,
+        author: repostData.username,
+        permlink: repostData.permlink,
+        parentAuthor: '',
+        parentPermlink: 'steemgram',
+        title: repostData.title,
+        body: repostData.body,
+        jsonMetadata: repostData.metadata
+    });
+    return true;
+}
+
+function handleKeychainResponse(response, resolve) {
+    if (response.success) {
+        resolve(true);
+    } else {
+        showToast(`Failed to repost: ${response.message}`, 'error');
+        resolve(false);
+    }
+}
+
+function handleRepostError(error) {
+    console.error('Failed to repost:', error);
+    showToast(`Failed to repost: ${error.message}`, 'error');
 }
 
 // Add marked library if not already included

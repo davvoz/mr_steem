@@ -1,7 +1,12 @@
 import { extractProfileImage, extractImageFromContent } from './posts/post-utils.js';
-import {  showLoadingIndicator, hideLoadingIndicator} from './ui/loading-indicators.js';
+import { showLoadingIndicator, hideLoadingIndicator } from './ui/loading-indicators.js';
+import { loadSteemPosts, loadSinglePost, votePost } from './posts/post-service.js';
+import { showVotersModal } from './modals/voters-modal.js';
+import { showCommentsModal } from './modals/comments-modal.js';
+import { loadUserProfile } from './profile/profile-service.js';
+import { updateSidebar } from './sidebar/sidebar-service.js';
 
-const seenPosts = new Set(); 
+const seenPosts = new Set();
 const globalPostsCache = {
     home: new Map(),
     profile: new Map()
@@ -15,10 +20,14 @@ let hasMore = true;
 const STEEM_API_URLS = [
     'https://api.moecki.online',
     'https://api.steemit.com',
-    'https://api.hive.blog',
-    'https://api.hivekings.com',
-    'https://anyx.io',
-    'https://api.openhive.network'
+    'https://api.steemitdev.com',
+    'https://api.steemitstage.com',
+    'https://api.justyy.com',
+    'https://steemd.privex.io',
+    'https://api.steem.house',
+    'https://steemd.minnowsupportproject.org',
+    'https://rpc.buildteam.io',
+    'https://steemd.pevo.science'
 ];
 
 let currentApiUrl = 0;
@@ -41,7 +50,7 @@ async function initSteemConnection() {
 
 export async function loadHomeFeed(append = false) {
     if (isLoading || !hasMore) return;
-    
+
     try {
         isLoading = true;
         showLoadingIndicator();
@@ -61,7 +70,7 @@ export async function loadHomeFeed(append = false) {
 
         // Use getDiscussionsByCreated instead of getDiscussionsByFeed for more reliable results
         const posts = await steem.api.getDiscussionsByCreatedAsync(query);
-        
+
         if (!posts || posts.length === 0) {
             hasMore = false;
             return;
@@ -69,7 +78,7 @@ export async function loadHomeFeed(append = false) {
 
         // Remove first post if this isn't the first load to avoid duplicates
         const postsToProcess = lastPost ? posts.slice(1) : posts;
-        
+
         if (postsToProcess.length === 0) {
             hasMore = false;
             return;
@@ -92,7 +101,7 @@ export async function loadHomeFeed(append = false) {
             console.log('Attempting to reconnect with different API endpoint...');
             await loadHomeFeed(append);
         } else {
-            document.getElementById('posts-container').innerHTML += 
+            document.getElementById('posts-container').innerHTML +=
                 '<div class="error-message">Failed to load posts. <button onclick="window.location.reload()">Retry</button></div>';
         }
     } finally {
@@ -119,7 +128,7 @@ export function resetHomeFeed() {
     hasMore = true;
     seenPosts.clear();
     globalPostsCache.home.clear();
-    
+
     if (window._homeScrollHandler) {
         window.removeEventListener('scroll', window._homeScrollHandler);
         window._homeScrollHandler = null;
@@ -133,101 +142,203 @@ export async function displayPosts(posts, containerId = 'posts-container', appen
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Solo filtra per tag se NON stiamo visualizzando il feed following
     const currentTag = getCurrentTagFromHash();
-    let filteredPosts = posts;
-    
-    if (currentTag && currentTag !== 'following') {
-        filteredPosts = posts.filter(post => {
-            try {
-                const metadata = JSON.parse(post.json_metadata);
-                return metadata.tags && metadata.tags.includes(currentTag);
-            } catch (error) {
-                console.warn('Failed to parse post metadata:', error);
-                return false;
-            }
-        });
-    }
+    const filteredPosts = filterPostsByTag(posts, currentTag);
 
     if (filteredPosts.length === 0) {
-        if (currentTag !== 'following') {  // Non mostrare questo messaggio per il feed following
-            container.innerHTML = `
-                <div class="no-posts-message">
-                    No posts found ${currentTag ? `with tag #${currentTag}` : ''}
-                </div>`;
-        }
+        displayNoPostsMessage(container, currentTag);
         return;
     }
 
-    let postsHTML = '';
+    const postsHTML = await generatePostsHTML(filteredPosts);
+    updateContainer(container, postsHTML, append);
+}
 
-    for (const post of filteredPosts) {
+function filterPostsByTag(posts, currentTag) {
+    if (!currentTag || currentTag === 'following') {
+        return posts;
+    }
+
+    return posts.filter(post => {
         try {
-            const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
-            //se l'autore è udabeu sbattiamolo fuori
-            if (post.author === 'udabeu') continue;
-            const postImage = extractImageFromContent(post);
-            let authorImage;
-            
-            try {
-                authorImage = authorAccount ? extractProfileImage(authorAccount) : null;
-            } catch (error) {
-                console.warn('Failed to parse profile metadata:', error);
-                authorImage = null;
-            }
-            
-            // Fix avatar URL template string
-            const avatarUrl = authorImage || 
-                `https://steemitimages.com/u/${post.author}/avatar`;
+            const metadata = JSON.parse(post.json_metadata);
+            return metadata.tags?.includes(currentTag);
+        } catch (error) {
+            console.warn('Failed to parse post metadata:', error);
+            return false;
+        }
+    });
+}
 
-            // Ensure post title exists
-            const safeTitle = post.title || 'Untitled';
+function displayNoPostsMessage(container, currentTag) {
+    if (currentTag !== 'following') {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'no-posts-message';
+        messageDiv.textContent = `No posts found ${currentTag ? `with tag #${currentTag}` : ''}`;
+        container.replaceChildren(messageDiv);
+    }
+}
 
-            const postHTML = `
-                <article class="post" data-permlink="${post.permlink}" data-author="${post.author}">
-                    <header class="post-header">
-                        <div class="author-avatar-container">
-                            <img src="${avatarUrl}" 
-                                 alt="${post.author}" 
-                                 class="author-avatar"
-                                 onerror="this.src='https://steemitimages.com/u/${post.author}/avatar'">
-                        </div>
-                        <a href="#/profile/${post.author}" class="author-name">@${post.author}</a>
-                    </header>
-                    <div class="post-contento" onclick="window.location.hash='#/post/${post.author}/${post.permlink}'">
-                        ${postImage ? `
-                            <div class="post-image-container">
-                                <img src="${postImage}" 
-                                     alt="Post content"
-                                     onerror="this.parentElement.style.display='none'">
-                            </div>
-                            <div class="post-title">
-                                <h3>${safeTitle}</h3>
-                            </div>
-                        ` : `
-                            <div class="post-title">
-                                <h3>${safeTitle}</h3>
-                            </div>
-                        `}
-                    </div>
-                    <footer class="post-actions" onclick="event.stopPropagation()">
-                        <span class="post-stat">${parseInt(post.active_votes?.length || 0)} likes</span>
-                        <span class="post-stat">${parseInt(post.children || 0)} comments</span>
-                    </footer>
-                </article>
-            `;
+async function generatePostsHTML(posts) {
+    const htmlParts = [];
 
-            postsHTML += postHTML;
+    for (const post of posts) {
+        if (post.author === 'udabeu') continue;
+
+        try {
+            const postData = await createPostData(post);
+            const article = createPostElement(postData);
+            //mettiamo l'evento onclick sull'articolo
+            article.onclick = () => {
+                window.location.hash = `#/post/${postData.author}/${postData.permlink}`;
+            };
+            htmlParts.push(article.outerHTML);
         } catch (error) {
             console.error(`Error processing post from ${post.author}:`, error);
-            continue;
         }
     }
 
+    return htmlParts.join('');
+}
+
+async function createPostData(post) {
+    const [authorAccount] = await steem.api.getAccountsAsync([post.author]);
+    const postImage = extractImageFromContent(post);
+    const authorImage = getAuthorImage(authorAccount);
+
+    return {
+        permlink: post.permlink,
+        author: post.author,
+        avatarUrl: authorImage || `https://steemitimages.com/u/${post.author}/avatar`,
+        title: post.title || 'Untitled',
+        image: postImage,
+        stats: {
+            likes: parseInt(post.active_votes?.length || 0, 10),
+            comments: parseInt(post.children || 0, 10)
+        }
+    };
+}
+
+function createPostElement(postData) {
+    const article = document.createElement('article');
+    article.className = 'post';
+    article.dataset.permlink = postData.permlink;
+    article.dataset.author = postData.author;
+
+    article.append(
+        createPostHeader(postData),
+        createPostContent(postData),
+        createPostFooter(postData)
+    );
+
+    return article;
+}
+
+function createPostHeader(postData) {
+    const header = document.createElement('header');
+    header.className = 'post-header';
+
+    const avatarContainer = createAvatarContainer(postData);
+    const authorLink = createAuthorLink(postData);
+
+    header.append(avatarContainer, authorLink);
+    return header;
+}
+
+function createAvatarContainer(postData) {
+    const container = document.createElement('div');
+    container.className = 'author-avatar-container';
+
+    const img = document.createElement('img');
+    img.src = postData.avatarUrl;
+    img.alt = postData.author;
+    img.className = 'author-avatar';
+    img.onerror = () => {
+        img.src = `https://steemitimages.com/u/${postData.author}/avatar`;
+    };
+
+    container.appendChild(img);
+    return container;
+}
+
+function createAuthorLink(postData) {
+    const link = document.createElement('a');
+    link.href = `#/profile/${postData.author}`;
+    link.className = 'author-name';
+    link.textContent = `@${postData.author}`;
+    return link;
+}
+
+function createPostContent(postData) {
+    const content = document.createElement('div');
+    content.className = 'post-contento';
+   
+    const titleDiv = createTitleDiv(postData.title);
+    const elements = postData.image ?
+        [createImageContainer(postData.image), titleDiv] :
+        [titleDiv];
+    // su entrambi mettiamo l'evednto onclick
+    for (const element of elements) {
+        element.onclick = () => {
+            window.location.hash = `#/post/${postData.author}/${postData.permlink}`;
+        };
+    }
+
+    content.append(...elements);
+    return content;
+}
+
+function createTitleDiv(title) {
+    const div = document.createElement('div');
+    div.className = 'post-title';
+    const h3 = document.createElement('h3');
+    h3.textContent = title;
+    div.appendChild(h3);
+    return div;
+}
+
+function createImageContainer(imageUrl) {
+    const container = document.createElement('div');
+    container.className = 'post-image-container';
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.alt = 'Post content';
+    img.onerror = () => container.style.display = 'none';
+    container.appendChild(img);
+    return container;
+}
+
+function createPostFooter(postData) {
+    const footer = document.createElement('footer');
+    footer.className = 'post-actions';
+    footer.onclick = (e) => e.stopPropagation();
+
+    const likesSpan = document.createElement('span');
+    likesSpan.className = 'post-stat';
+    likesSpan.textContent = `${postData.stats.likes} likes`;
+
+    const commentsSpan = document.createElement('span');
+    commentsSpan.className = 'post-stat';
+    commentsSpan.textContent = `${postData.stats.comments} comments`;
+
+    footer.append(likesSpan, commentsSpan);
+    return footer;
+}
+
+function getAuthorImage(authorAccount) {
+    try {
+        return authorAccount ? extractProfileImage(authorAccount) : null;
+    } catch (error) {
+        console.warn('Failed to parse profile metadata:', error);
+        return null;
+    }
+}
+
+function updateContainer(container, html, append) {
     if (append) {
-        container.insertAdjacentHTML('beforeend', postsHTML);
+        container.insertAdjacentHTML('beforeend', html);
     } else {
-        container.innerHTML = postsHTML;
+        container.innerHTML = html;
     }
 }
 
@@ -241,7 +352,7 @@ window.handleVote = async (author, permlink, button) => {
     //showLoadingIndicator();
     const success = await votePost(author, permlink);
     if (success) {
-       // hideLoadingIndicator();
+        // hideLoadingIndicator();
         button.classList.add('voted');
         button.disabled = true;
         const voteCount = parseInt(button.innerText.split(' ')[1]) + 1;
@@ -249,11 +360,7 @@ window.handleVote = async (author, permlink, button) => {
     }
 };
 
-import { loadSteemPosts, loadSinglePost, votePost } from './posts/post-service.js';
-import { showVotersModal } from './modals/voters-modal.js';
-import { showCommentsModal } from './modals/comments-modal.js';
-import { loadUserProfile } from './profile/profile-service.js';
-import { updateSidebar } from './sidebar/sidebar-service.js';
+
 
 export {
     loadSteemPosts,
