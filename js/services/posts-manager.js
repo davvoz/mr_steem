@@ -48,6 +48,65 @@ async function initSteemConnection() {
     throw new Error('Failed to connect to any Steem API endpoint');
 }
 
+async function fetchSteemPosts(query) {
+    await initSteemConnection();
+    return await steem.api.getDiscussionsByCreatedAsync(query);
+}
+
+function buildPostQuery(lastPost) {
+    const query = {
+        tag: 'photography',
+        limit: 20,
+    };
+
+    if (lastPost) {
+        query.start_author = lastPost.author;
+        query.start_permlink = lastPost.permlink;
+    }
+
+    return query;
+}
+
+function handleLoadError(error) {
+    console.error('Error loading home feed:', error);
+    const container = document.getElementById('posts-container');
+    
+    if (currentApiUrl < STEEM_API_URLS.length) {
+        console.log('Attempting to reconnect with different API endpoint...');
+        currentApiUrl++;
+        return true;
+    }
+
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message';
+    errorDiv.textContent = 'Failed to load posts. ';
+
+    const retryButton = document.createElement('button');
+    retryButton.textContent = 'Retry';
+    retryButton.onclick = () => window.location.reload();
+
+    errorDiv.appendChild(retryButton);
+    container.appendChild(errorDiv);
+    
+    return false;
+}
+
+function processPostsResponse(posts, isFirstLoad) {
+    if (!posts?.length) {
+        hasMore = false;
+        return null;
+    }
+
+    const postsToProcess = isFirstLoad ? posts : posts.slice(1);
+    if (!postsToProcess.length) {
+        hasMore = false;
+        return null;
+    }
+
+    lastPost = posts[posts.length - 1];
+    return postsToProcess;
+}
+
 export async function loadHomeFeed(append = false) {
     if (isLoading || !hasMore) return;
 
@@ -55,54 +114,19 @@ export async function loadHomeFeed(append = false) {
         isLoading = true;
         showLoadingIndicator();
 
-        // Ensure Steem connection is initialized
-        await initSteemConnection();
+        const query = buildPostQuery(lastPost);
+        const posts = await fetchSteemPosts(query);
+        const processedPosts = processPostsResponse(posts, !lastPost);
 
-        const query = {
-            tag: 'photography', // Default tag if not logged in
-            limit: 20,
-        };
-
-        if (lastPost) {
-            query.start_author = lastPost.author;
-            query.start_permlink = lastPost.permlink;
+        if (processedPosts) {
+            await displayPosts(processedPosts, 'posts-container', append);
+            setupInfiniteScroll();
         }
-
-        // Use getDiscussionsByCreated instead of getDiscussionsByFeed for more reliable results
-        const posts = await steem.api.getDiscussionsByCreatedAsync(query);
-
-        if (!posts || posts.length === 0) {
-            hasMore = false;
-            return;
-        }
-
-        // Remove first post if this isn't the first load to avoid duplicates
-        const postsToProcess = lastPost ? posts.slice(1) : posts;
-
-        if (postsToProcess.length === 0) {
-            hasMore = false;
-            return;
-        }
-
-        // Update last post reference
-        lastPost = posts[posts.length - 1];
-
-        // Process and display posts
-        await displayPosts(postsToProcess, 'posts-container', append);
-
-        // Setup infinite scroll if not already set
-        setupInfiniteScroll();
 
     } catch (error) {
-        console.error('Error loading home feed:', error);
-        // Try to reconnect using a different API endpoint
-        currentApiUrl++;
-        if (currentApiUrl < STEEM_API_URLS.length) {
-            console.log('Attempting to reconnect with different API endpoint...');
+        const shouldRetry = handleLoadError(error);
+        if (shouldRetry) {
             await loadHomeFeed(append);
-        } else {
-            document.getElementById('posts-container').innerHTML +=
-                '<div class="error-message">Failed to load posts. <button onclick="window.location.reload()">Retry</button></div>';
         }
     } finally {
         isLoading = false;
@@ -140,7 +164,9 @@ export function resetHomeFeed() {
 
 export async function displayPosts(posts, containerId = 'posts-container', append = false) {
     const container = document.getElementById(containerId);
-    if (!container) return;
+    if (!container) {
+        return;
+    }
 
     const currentTag = getCurrentTagFromHash();
     const filteredPosts = filterPostsByTag(posts, currentTag);
@@ -150,8 +176,35 @@ export async function displayPosts(posts, containerId = 'posts-container', appen
         return;
     }
 
-    const postsHTML = await generatePostsHTML(filteredPosts);
-    updateContainer(container, postsHTML, append);
+    const fragment = await createPostsFragment(filteredPosts);
+
+    if (append) {
+        container.appendChild(fragment);
+    } else {
+        container.replaceChildren(fragment);
+    }
+}
+
+async function createPostsFragment(posts) {
+    const fragment = document.createDocumentFragment();
+    
+    const processedPosts = await Promise.all(posts
+        .filter(post => post.author !== 'udabeu')
+        .map(async post => {
+            try {
+                const postData = await createPostData(post);
+                return createPostElement(postData);
+            } catch (error) {
+                console.error(`Error processing post from ${post.author}:`, error);
+                return null;
+            }
+        }));
+
+    processedPosts
+        .filter(Boolean)
+        .forEach(article => fragment.appendChild(article));
+
+    return fragment;
 }
 
 function filterPostsByTag(posts, currentTag) {
@@ -177,29 +230,6 @@ function displayNoPostsMessage(container, currentTag) {
         messageDiv.textContent = `No posts found ${currentTag ? `with tag #${currentTag}` : ''}`;
         container.replaceChildren(messageDiv);
     }
-}
-
-async function generatePostsHTML(posts) {
-    const htmlParts = [];
-
-    for (const post of posts) {
-        if (post.author === 'udabeu') continue;
-
-        try {
-            const postData = await createPostData(post);
-            const article = createPostElement(postData);
-            //mettiamo l'evento onclick sull'articolo
-            article.onclick = () => {
-                window.location.hash = `#/post/${postData.author}/${postData.permlink}`;
-                alert('ciao');
-            };
-            htmlParts.push(article.outerHTML);
-        } catch (error) {
-            console.error(`Error processing post from ${post.author}:`, error);
-        }
-    }
-
-    return htmlParts.join('');
 }
 
 async function createPostData(post) {
@@ -305,7 +335,6 @@ function createImageContainer(imageUrl) {
     img.src = imageUrl;
     img.alt = 'Post content';
     img.onerror = () => container.style.display = 'none';
-    img.onclick = (e) => alert('ciao');
     container.appendChild(img);
     return container;
 }
@@ -333,14 +362,6 @@ function getAuthorImage(authorAccount) {
     } catch (error) {
         console.warn('Failed to parse profile metadata:', error);
         return null;
-    }
-}
-
-function updateContainer(container, html, append) {
-    if (append) {
-        container.insertAdjacentHTML('beforeend', html);
-    } else {
-        container.innerHTML = html;
     }
 }
 
