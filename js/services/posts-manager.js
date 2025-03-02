@@ -191,6 +191,7 @@ async function generatePostsHTML(posts) {
             //mettiamo l'evento onclick sull'articolo
             article.onclick = () => {
                 window.location.hash = `#/post/${postData.author}/${postData.permlink}`;
+                alert('ciao');
             };
             htmlParts.push(article.outerHTML);
         } catch (error) {
@@ -304,6 +305,7 @@ function createImageContainer(imageUrl) {
     img.src = imageUrl;
     img.alt = 'Post content';
     img.onerror = () => container.style.display = 'none';
+    img.onclick = (e) => alert('ciao');
     container.appendChild(img);
     return container;
 }

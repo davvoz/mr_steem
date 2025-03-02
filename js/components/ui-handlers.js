@@ -2,26 +2,22 @@ import { handleLogin, showLoginModal, handleLogout, checkExistingLogin, steemCon
 import { loadStories } from '../services/stories/stories-service.js';
 import { updateSidebar } from '../services/sidebar/sidebar-service.js';
 import { loadSuggestions } from '../services/suggestions/suggestions-service.js';
-import {  renderNotifications,  cleanupNotificationsView } from '../services/notification-manager.js';
+import { renderNotifications, cleanupNotificationsView } from '../services/notification-manager.js';
 import { Router } from '../routes/router.js';
 import { cleanupInfiniteScroll } from '../services/ui/infinite-scroll.js';
 import { loadPostsByTag } from '../services/tag/tag-service.js';
 
 export function setupUIEventListeners() {
-    // Setup navigation handling
     setupNavigation();
 
-    // Setup auth-related UI
     setupAuthUI();
 
-    // Setup mobile menu
     setupMobileMenu();
 
     setupTagFilter();
 
     console.log('UI event listeners setup complete');
 
-    // Aggiungi handler per i tag buttons
     const tagButtons = document.querySelectorAll('.tag-button');
     tagButtons.forEach(button => {
         button.addEventListener('click', async (e) => {
@@ -53,12 +49,12 @@ function setupNavigation() {
         element.addEventListener('click', (e) => {
             e.preventDefault();
             const route = e.currentTarget.dataset.route;
-            
+
             // Cleanup notifications view if navigating away
             if (!route.startsWith('/notifications')) {
                 cleanupNotificationsView();
             }
-            
+
             Router.navigate(route);
             if (route.startsWith('/post/')) {
                 cleanupInfiniteScroll();
@@ -279,7 +275,6 @@ function setupAuthUI() {
     }
 }
 
-// Add new function to handle app state reset
 async function resetAppState() {
     try {
         // Stop all active processes
@@ -343,7 +338,6 @@ function clearAllIntervals() {
     }
 }
 
-// Modify the updateNavigationUI() function
 function updateNavigationUI() {
     const isLoggedIn = steemConnection.isConnected;
 
@@ -381,8 +375,6 @@ function updateNavigationUI() {
         }
     }
 
-    // ...resto del codice esistente per gli altri elementi...
-
     const authDependentItems = [
         { id: 'notifications-link', show: isLoggedIn },
         { id: 'profile-link', show: isLoggedIn },
@@ -408,7 +400,6 @@ function updateNavigationUI() {
     }
 }
 
-// Modifica la gestione del menu mobile
 function setupMobileMenu() {
     const hamburger = document.querySelector('.hamburger-menu');
     const navMenu = document.querySelector('.nav-menu');
@@ -471,15 +462,4 @@ function setupTagFilter() {
             }
         });
     });
-}
-
-function showErrorMessage(container) {
-    container.innerHTML = `
-        <div class="error-message">
-            Failed to load posts. Please try again.
-            <button onclick="window.location.reload()" class="retry-button">
-                <i class="fas fa-redo"></i> Retry
-            </button>
-        </div>
-    `;
 }
